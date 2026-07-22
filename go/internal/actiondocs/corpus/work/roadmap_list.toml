@@ -1,0 +1,13 @@
+surface = "work"
+action = "roadmap_list"
+purpose = "List the roadmap (cross-project by default; pass `project` to scope). Returns entries sorted by position, plus their open/closed status from the underlying chain/task."
+notes = "Default scope is CROSS-PROJECT. Pass a top-level `project` to scope to one project's rows.\n\nReturned `status` reflects the underlying chain/task's status at query time (read via proj_chain_status / proj_current_tasks). In practice every returned row has status='open' because closed chains are pruned from proj_roadmap_view by the ChainClosed projection fold (internal/projections/roadmap.go), and cancelled/completed tasks are pruned by the TaskCancelled / TaskCompleted folds. There is no roadmap-side status filter because there is nothing to filter against — the live roadmap holds only open work.\n\nThe result is every proj_roadmap_view row for the requested scope; the action does NOT silently truncate. If the caller expects a row and doesn't see it, the row is genuinely absent from proj_roadmap_view (never inserted, or removed when its underlying chain/task closed) — not hidden by a default filter.\n\nEmpty result marshals as `[]` not `null` (RoadmapListEntries.MarshalJSON)."
+
+[[params]]
+  name = "project"
+  type = "optional_string"
+  required = false
+  description = "Project id to scope to (top-level param, not in `params`)."
+
+[[examples]]
+  call = "{}"

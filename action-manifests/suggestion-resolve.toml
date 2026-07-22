@@ -1,0 +1,28 @@
+[skill]
+name = "suggestion-resolve"
+version = "1.0.0"
+description = "Resolve a suggestion with one of three kinds: adopted (the proposal lands or is queued in a chain), deferred (agreed but not now), rejected (declined). NOTE: distinct vocabulary from bug_resolve — fixed/wontfix/etc. are rejected with an explicit error naming the suggestion-side enum."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "resolve the suggestion",
+    "close the suggestion",
+    "adopt the suggestion",
+    "defer the suggestion",
+    "reject the suggestion",
+    "suggestion adopted",
+    "suggestion deferred",
+    "suggestion rejected",
+    "suggestion_resolve",
+]
+when_not = [
+    "the suggestion should be reopened — use suggestion_reopen instead",
+    "the resolved_commit_sha needs backfilling — use suggestion_stamp_sha instead",
+    "filing a new suggestion — use forge(suggestion, …) instead",
+    "the suggestion is already resolved — suggestion_resolve rejects repeat-close attempts",
+    "resolving a bug — use bug_resolve (separate entity, separate vocabulary)",
+]
+
+[instructions]
+path = "action-manifests/instructions/suggestion-resolve.md"

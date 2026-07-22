@@ -1,0 +1,12 @@
+supported_ops = ["create"]
+
+[schema]
+name = "broken"
+prefix = "BROKEN"
+output_dir = "notes/broken"
+filename_pattern = "{prefix}_{slug}.md"
+
+[[fields]]
+name = "x"
+type = "telephone_number"
+description = "Made-up type."

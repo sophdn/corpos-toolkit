@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BridgeHarnessV1AuditCompleted.json",
+  "title": "BridgeHarnessV1AuditCompleted payload",
+  "description": "Emitted by the chain bridge-harness-mcp-client retrospective to record that the bridge-harness v1 (a Python agent-loop harness at clients/bridge-harness/ that drives a cheap orchestrator-tier model with escalation to a strong tier via the chain-15 escalation contract, loads the mcp-servers skills tree as its system prompt, dispatches MCP tools to toolkit-server, and persists per-session conversation state in SQLite) has been verified against the chain's completion-condition items (a)-(i). Same Findings array shape as ArchitectureAuditCompleted and the other *AuditCompleted events. Self-hosting check: the harness's own tool-dispatch + EscalationProposed telemetry lands through the same write-side ledger this closing audit lands through, exercised via go/cmd/bridge-harness-v1-audit-emit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the audit source-doc the findings were keyed against — clients/bridge-harness/ARCHITECTURE.md (T1 design) and the chain's completion_condition."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome — what landed, what was deferred, which downstream harness-swap work becomes forgeable now that the harness has shipped."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the next phase of work (e.g. wiring a live DeepSeek endpoint, or the chain-17/19 hook consumers). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per completion-condition item / audit checklist item. Severity uses the audit-convention enum (low / medium / high / critical); use n/a for informational findings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Audit checklist item identifier and short description."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = criterion satisfied; fail = criterion not satisfied (must file follow-on); partial = satisfied with documented gap; deferred = explicitly out of scope for this chain."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence supporting status — test name, commit SHA, doc pointer, live-run result, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

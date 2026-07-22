@@ -1,0 +1,15 @@
+[Unit]
+Description=Back up the canonical toolkit ledger nightly at 02:30 local
+
+[Timer]
+# 02:30 so the shipped copy is in place before the backup host's restic run at
+# 03:00 picks it up. Keep these ordered if either time moves.
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=5min
+# The dev box is a workstation and is not always on at 02:30. Persistent=true
+# runs the job on the next boot after a missed window, so a backup is taken
+# even on a laptop-shaped schedule.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

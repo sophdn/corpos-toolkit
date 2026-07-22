@@ -1,0 +1,137 @@
+{
+  "_meta": {
+    "schema_note": "Internal fixture for the directive-intent detector. Each entry under `fixtures` names one IntentShape from go/internal/refresolve/intent_detect.go's IntentShape constants (verify/implement/fix/audit/explain/summarize/status/list/none). The `prompts` array carries verbatim agent-prompt strings that MUST classify to that shape. T5's pattern-detector tests load this file, run DetectIntent over each prompt, and assert the returned shape matches.",
+    "real_session_prompts_marked": "Four prompts are marked `[T4-named]` in their note field — they're the real-session prompts T4's acceptance criteria called out by name. These four are load-bearing: T5 MUST classify them correctly or revisit the pattern set / consider Qwen-rubric fallback.",
+    "out_of_scope": "This fixture does NOT cover the harness-level TaskCreate/TodoWrite over-firing — see PARSE_CONTEXT.md §13.8."
+  },
+  "fixtures": [
+    {
+      "shape": "verify",
+      "definition": "Confirm that something works / sanity-check current state. Read-mostly.",
+      "prompts": [
+        {"text": "please sanity check go-toolkit-dry-extraction-audit-followup", "note": "[T4-named] real-session prompt"},
+        {"text": "verify that the cache invalidation is firing on TaskStarted", "note": ""},
+        {"text": "confirm the migration ran cleanly on staging", "note": ""},
+        {"text": "double-check the latency budget hasn't regressed since T8", "note": ""},
+        {"text": "are the new envelope fields surfacing in the dashboard?", "note": ""},
+        {"text": "make sure the precommit gate still catches the orphan-stash case", "note": ""}
+      ]
+    },
+    {
+      "shape": "implement",
+      "definition": "Build new behavior or wire a new feature. Writes substantive code.",
+      "prompts": [
+        {"text": "please implement that fix after filing it", "note": "[T4-named] real-session prompt"},
+        {"text": "add a new resolver for memory_entry per the design", "note": ""},
+        {"text": "wire the directive-intent detector into the handler", "note": ""},
+        {"text": "build the kiwix fallback path for low-confidence envelopes", "note": ""},
+        {"text": "ship the discipline-skill resolver", "note": ""},
+        {"text": "create a new action under the work surface for suggestion_batch_close", "note": ""}
+      ]
+    },
+    {
+      "shape": "fix",
+      "definition": "Diagnose + repair a reported defect. Starts from a symptom or bug slug; ends with a regression test.",
+      "prompts": [
+        {"text": "I'd like the banner to work properly", "note": "[T4-named] real-session prompt"},
+        {"text": "fix bug 1426 — tokens appear in both references[] and no_hit_tokens[]", "note": ""},
+        {"text": "the cache isn't hitting on identical re-resolutions — please repair", "note": ""},
+        {"text": "the post-commit advisor's stash-pop path corrupts user edits; fix the merge", "note": ""},
+        {"text": "resolve_references returns empty source_refs on cached hits — debug it", "note": ""},
+        {"text": "the dashboard's context pull inspector shows null source_type — track it down", "note": ""},
+        {"text": "please solve our open bugs", "note": "solve fold (§14.3): backlog-drain is fix-intent over the open-bug set"},
+        {"text": "clear the bug backlog using the bug fixing discipline", "note": "solve fold"},
+        {"text": "please use bug fixing discipline to solve our open bugs", "note": "solve fold"}
+      ]
+    },
+    {
+      "shape": "audit",
+      "definition": "Survey current state for issues, debt, or cleanup candidates. Output is a findings list.",
+      "prompts": [
+        {"text": "Any cleanup to do?", "note": "[T4-named] real-session prompt"},
+        {"text": "audit the refresolve package for unused exports", "note": ""},
+        {"text": "what's the state of open bugs across all surfaces?", "note": ""},
+        {"text": "survey the migration directory for SQLite-incompatible syntax", "note": ""},
+        {"text": "look across the codebase for forbidigo violations", "note": ""},
+        {"text": "are there any orphan stashes lying around?", "note": ""},
+        {"text": "this function does too much, break it apart", "note": "refactor-intent ⊆ audit; no literal trigger keyword — chain refactor-intent-discipline-surfacing"},
+        {"text": "make this easier to follow", "note": "refactor-shape; surfaces refactoring-discipline via the audit conditional"},
+        {"text": "this method is doing way too much", "note": "refactor-shape"},
+        {"text": "this code is too tangled — untangle it", "note": "refactor-shape"},
+        {"text": "please take a look at toolsearch-rerank-hook chain", "note": "review fold (§14.3): survey-the-surface intent"},
+        {"text": "review the refresolve package before we ship it", "note": "review fold"},
+        {"text": "look through the migration directory for issues", "note": "review fold"}
+      ]
+    },
+    {
+      "shape": "execute",
+      "definition": "Drive named existing work (a chain/task, or the open-bug backlog) to completion. The dominant directive shape in real usage (§14.1). Added by chain parse-context-directive-intent-extension.",
+      "prompts": [
+        {"text": "please work through reference-resolution-substrate-frontend", "note": "the canonical chain-execution form"},
+        {"text": "please complete parse-context-directive-intent-extension on a new worktree", "note": "complete X on a worktree"},
+        {"text": "please pick up harvest-the-consolidation. you can work through tasks until you need my input", "note": "pick up X"},
+        {"text": "can we finish up parse-context-lean-orienting?", "note": "finish up X"},
+        {"text": "rust-retirement-and-db-hardening please resume", "note": "slug-prefixed resume"},
+        {"text": "start the task-edit-control-param-typing chain", "note": "start X"},
+        {"text": "please continue working on parse-context-lean-orienting", "note": "continue X"}
+      ]
+    },
+    {
+      "shape": "explain",
+      "definition": "Describe what something is or does. Read-only; response is prose.",
+      "prompts": [
+        {"text": "explain how the fold hook chain works in events.SetFoldHook", "note": ""},
+        {"text": "what does PolicyShortFiveTurns do?", "note": ""},
+        {"text": "how does the dispatcher short-circuit lower-priority resolvers?", "note": ""},
+        {"text": "what's the difference between resolve_references and parse_context?", "note": ""},
+        {"text": "describe the role of the post-commit advisor", "note": ""}
+      ]
+    },
+    {
+      "shape": "summarize",
+      "definition": "Compress a body of state into a brief overview. Read-only.",
+      "prompts": [
+        {"text": "summarize the recent commits on this branch", "note": ""},
+        {"text": "give me a brief overview of the parse-context-lean-orienting chain", "note": ""},
+        {"text": "tl;dr the migration plan for substrate-crud-retirement", "note": ""},
+        {"text": "recap what landed in the last session", "note": ""},
+        {"text": "summary of open bugs by surface please", "note": ""}
+      ]
+    },
+    {
+      "shape": "status",
+      "definition": "Report current pending/active/blocked state. Read-only; tabular or list output.",
+      "prompts": [
+        {"text": "what's the status of chain parse-context-lean-orienting?", "note": ""},
+        {"text": "is bug 1428 still open?", "note": ""},
+        {"text": "show me the in-progress tasks across all chains", "note": ""},
+        {"text": "where are we with T4?", "note": ""},
+        {"text": "current state of the roadmap please", "note": ""}
+      ]
+    },
+    {
+      "shape": "list",
+      "definition": "Enumerate items of a known kind. Read-only; the surface is a query, not a question.",
+      "prompts": [
+        {"text": "list every open bug in mcp-servers", "note": ""},
+        {"text": "show me all chains in the project", "note": ""},
+        {"text": "enumerate the pending tasks on parse-context-lean-orienting", "note": ""},
+        {"text": "list the action manifests under the work surface", "note": ""},
+        {"text": "what skills are installed?", "note": "borderline; status-list overlap acceptable"}
+      ]
+    },
+    {
+      "shape": "none",
+      "definition": "No directive shape detected. Greetings, conversational acknowledgments, ambiguous prose.",
+      "prompts": [
+        {"text": "thanks", "note": "false-positive guard"},
+        {"text": "ok cool", "note": "false-positive guard"},
+        {"text": "hmm", "note": "false-positive guard"},
+        {"text": "interesting, keep going", "note": "false-positive guard"},
+        {"text": "that's a good point about the cache invalidation", "note": "conversational; no directive"},
+        {"text": "Right now, when i look at the front end of mcp-servers, and im looking at the tasks/chains page, I think the layout is off", "note": "review-fold FP guard (§14.3): 'look at the front end' is a UI bug report, NOT a review directive — bare 'look at' deliberately excluded from the review patterns"},
+        {"text": "now please implement suggestion #18", "note": "anchor-limitation guard: 'now please implement' isn't polite-stripped, stays none — pre-existing, out of scope for the execute extension"}
+      ]
+    }
+  ]
+}

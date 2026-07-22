@@ -1,0 +1,3 @@
+surface = "work"
+action = "forge_schemas"
+purpose = "List all registered schemas (name, supported_ops, source_file)."

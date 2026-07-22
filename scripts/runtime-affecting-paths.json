@@ -1,0 +1,14 @@
+{
+  "_comment": "Path patterns flagged by the post-commit advisor as requiring a daemon restart (NEED_HTTP_RESTART or NEED_STDIO_RESTART). Consumed by scripts/post-commit-restart-advisor.sh as the classification source-of-truth. Patterns are POSIX shell-glob style (case-sensitive). This repo is Go-only post-rust-retirement (T6) and post-frontend-split (chain auto-startup-dev-services T3) — the retired crates/** + inference-clients/** globs and the apps/dashboard arm were dropped with that residue (bug 985).",
+  "_doc": "When editing: keep arms in sync with scripts/post-commit-restart-advisor.sh's classification arms; scripts/test-runtime-affecting-paths-parity.sh (run by the gate) pins that parity.",
+  "runtime_affecting_globs": [
+    "go/cmd/**",
+    "go/internal/**",
+    "go/go.mod",
+    "go/go.sum",
+    "go/Makefile",
+    "go/launch.sh",
+    "blueprints/forge-schemas/**",
+    "blueprints/rubrics/**"
+  ]
+}

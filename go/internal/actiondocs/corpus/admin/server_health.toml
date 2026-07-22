@@ -1,0 +1,4 @@
+surface = "admin"
+action = "server_health"
+purpose = "Return the toolkit server's health status — liveness, DB connectivity, registered surfaces. Accepts the alias 'health' (see admin.health for the alias chunk)."
+notes = "The health action name is registered as an alias for the same handler — admin.action_describe('admin', 'health') resolves to the alias chunk; the canonical name is server_health."

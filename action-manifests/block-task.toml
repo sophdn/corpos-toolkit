@@ -1,0 +1,31 @@
+# Canonical Go action: work.task_block (see go/internal/actiondocs/corpus/work/task_block.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers like "block the task" map here, then dispatch the canonical action.
+
+[skill]
+name = "block-task"
+version = "1.0.0"
+description = "Record a blocking dependency between two tasks — the blocked task's status flips to blocked and the chain visibly carries the dependency edge."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "block the task",
+    "block this task",
+    "task is blocked by",
+    "depends on",
+    "waiting on",
+    "blocked until",
+    "add a blocker",
+    "record a dependency",
+    "block_task",
+]
+when_not = [
+    "the dependency was just resolved — use unblock_task instead",
+    "the task is genuinely abandoned — use cancel_task instead",
+    "the task is just hard, not blocked by another task — leave it active",
+    "moving a task between chains — use move_task instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/block-task.md"

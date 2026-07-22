@@ -1,0 +1,44 @@
+surface = "knowledge"
+action = "resolve_references"
+purpose = "Soft alias of parse_context (the canonical orienting call). Resolves every reference-shape token in a user message in one round-trip — chain/task/bug slugs, paths, skill names, project names, tool names, forge schemas, library entries, domain terms, external-technical terms, friction shapes. Returns per-reference shape + confidence tier + recommended_action + PresentedAs. New callers should prefer parse_context (which adds skills/memory/vault/kiwix/discipline coverage and a filter cache); existing callers keep working unchanged."
+notes = "Shape coverage and which catalog each shape resolves against:\n\n  • chain_slug / task_slug / bug_slug → DB row in the corresponding table\n  • path → filesystem under RepoRoot (file or directory)\n  • skill_name → skills/*.toml basenames\n  • tool_name → action-manifests/*.toml basenames\n  • forge_schema → blueprints/forge-schemas/*.toml basenames\n  • project_name → KnownProjects catalog\n  • library_entry → library_index.slug (case-sensitive) OR title (case-insensitive)\n  • domain_term → vault_search via Qwen rubric classifier (when configured)\n  • external_technical → kiwix_search\n  • friction_shape → a synthetic 'binding' suggesting a bug-filing call; supersedes the friction-filing-reminder Stop hook for in-message detection\n\nConfidence tier semantics (see docs/REFERENCE_RESOLUTION.md §4):\n\n  • single_exact → recommended_action=use_directly; PresentedAs is the canonical attribution string.\n  • fuzzy_multi → recommended_action=ask_user_to_disambiguate; PresentedAs enumerates the top candidates.\n  • weak_domain → recommended_action=mention_as_possibly_relevant; PresentedAs hedges with the top hit and score.\n  • no_hit → recommended_action=acknowledge_no_hit_and_ask; PresentedAs says the token didn't resolve.\n\nEach resolved reference also carries a grounding_event_id (T5). Every call emits one grounding_events row per detected reference with query_source='reference_resolution' so downstream telemetry (query_interactions, retrieval-success scoring) attributes the work to the resolver layer rather than the underlying per-shape tools.\n\nThe v1 reference-resolution skill (action-manifests/resolve-references.toml + .md) teaches the trigger discipline and presentation conventions; this MCP action is the mechanism the skill delegates to. Call this action directly when authoring an agent loop that needs reference binding without invoking the skill.\n\nDefault total_budget_ms is 2000. Pre-bug-1410, truncated_by_budget only fired on caller-supplied budgets; the handler now applies defaults locally so the flag fires on the default 2s ceiling too.\n\nHistory: shipped by chain reference-resolution-substrate T4 (commit 8a88a0e); T5 added grounding-events emission; T6 added the friction_shape detector + supersession of the Stop-hook reminder. This action-docs chunk was backfilled when bug `resolve-references-missing-from-action-docs-corpus` flagged that the action was invisible to admin.action_describe despite being live in the dispatch table. Reference-resolution-migration T5 demoted it to a soft alias of parse_context; both dispatch into the same handler core.\n"
+
+[[params]]
+  name = "message_text"
+  type = "string"
+  required = true
+  description = "The user message (or any agent-facing text) to scan for unresolved references. Empty string returns an empty References list and zero resolver calls."
+
+[[params]]
+  name = "top_k_per_shape"
+  type = "integer"
+  required = false
+  description = "Cap on candidates each resolver returns after dispatcher post-processing. Defaults to 5."
+
+[[params]]
+  name = "include_no_hits"
+  type = "bool"
+  required = false
+  description = "When true, references that resolved to no_hit stay in the References list (with recommended_action = acknowledge_no_hit_and_ask) instead of collapsing into the NoHitTokens slice. Default false."
+
+[[params]]
+  name = "total_budget_ms"
+  type = "integer"
+  required = false
+  description = "Dispatcher wall-clock cap for the whole call, in milliseconds. Defaults to 2000 (2s). When the budget trips, truncated_by_budget=true is set on the response envelope; resolvers not reached surface ErrTotalBudgetExceeded as partial_failures."
+
+[[errors]]
+  condition = "registry not configured"
+  message = "Returned when the server started without the refresolve registry wired (degraded mode). Returns {error: 'registry not configured'} on the response envelope instead of a Go error."
+
+[[examples]]
+  description = "Basic call — detect every shape in a mixed message."
+  call = "{\"action\":\"resolve_references\",\"params\":{\"message_text\":\"Working on reference-resolution-substrate and considering the Tripolar Invariant alongside docs/REFERENCE_RESOLUTION.md\"}}"
+
+[[examples]]
+  description = "Tighter budget for latency-sensitive contexts. Default budget is 2000ms — pass a smaller value when you want to fail fast on slow resolvers (vault rerank, kiwix index)."
+  call = "{\"action\":\"resolve_references\",\"params\":{\"message_text\":\"look up budget-trip\",\"total_budget_ms\":500}}"
+
+[[examples]]
+  description = "Keep no_hit references inline so the agent can acknowledge each one explicitly — useful when authoring a response that names everything the user mentioned."
+  call = "{\"action\":\"resolve_references\",\"params\":{\"message_text\":\"compare the alpha-spec and beta-spec proposals\",\"include_no_hits\":true}}"

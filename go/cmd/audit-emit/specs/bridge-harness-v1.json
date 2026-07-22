@@ -1,0 +1,75 @@
+{
+  "actor_id": "claude-opus-4-7-bridge-harness-mcp-client-T9",
+  "entity": {
+    "kind": "chain",
+    "slug": "bridge-harness-mcp-client",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "BridgeHarnessV1AuditCompleted",
+      "rationale": "Chain bridge-harness-mcp-client T9 retrospective — emitting the closing audit through the same write-side events ledger the harness's own tool-dispatch + EscalationProposed telemetry use. Completion criteria (a)-(i) all pass; the harness is the cheap-orchestrator agent-loop driver that consumes the chain-15 escalation contract, sited inside mcp-servers at clients/bridge-harness/ (next to clients/escalation/), not a standalone repo.",
+      "payload": {
+        "audit_doc": "clients/bridge-harness/ARCHITECTURE.md (T1 design — module layout, the new-thin-MCP-client choice, the per-session SQLite schema, the eight-hook surface, cost-ledger semantics, model routing over chain-15) + the chain completion_condition items (a)-(i).",
+        "summary": "bridge-harness v1 ships verified end-to-end. A Python agent-loop harness (clients/bridge-harness/, sibling to clients/escalation/) drives a cheap orchestrator-tier model (deepseek-v4-pro default; qwen for matching turns) and escalates the next turn to a strong tier (claude-opus-4-7) via the chain-15 EscalationRouter, de-escalating after K clean turns. It loads the mcp-servers skills tree (both shapes + _manifest.toml ambient bucket) as the session system prompt, dispatches MCP tools to toolkit-server over HTTP POST /mcp/\u003csurface\u003e (a thin urllib client generalising escalation.client), classifies every call (transient/tool_error/parse_failure/fatal) into chain-14 tool_call telemetry rows AND chain-15 TurnSignals, and persists per-session conversation state in versioned SQLite (run-id-keyed ULID). The eight-hook surface (session_start/pre_user_prompt/pre_turn/pre_tool_use/post_tool_use/post_turn/stop/session_end) fires in declared order, non-blocking, enumerable for chain-17/19. The `bridge` CLI offers new/--resume/--cost/--inspect/--skills. NOTE on models: deepseek-v4-pro is an identifier only — no live DeepSeek endpoint is wired in this repo; the OpenAICompatAdapter serves Qwen (llama.cpp) now and DeepSeek the moment an endpoint+key are configured, and the EchoAdapter backs offline/CI round-trips. Verified: a live round trip against the :3000 daemon dispatched work.chain_state(266) over the real wire, persisted it, loaded skills, and recorded cost; a simulated repeated_tool_error escalated the next turn to the strong tier and persisted the transition. 92 Python tests (ruff + ruff format + mypy --strict clean) plus 2 live integration tests.",
+        "recommended_next_phase": "Wire a live cheap-tier endpoint (a DeepSeek V4 Pro base_url + key, or point cheap at the local Qwen llama.cpp) so the harness drives real cheap-tier turns end-to-end, then dogfood it on a real chain. Downstream: chain-17 (cross-harness-reflex-port) and chain-19 consume the hook surface — pre_user_prompt for parse_context, post_turn for arc-close filing review. Once an EscalationProposed corpus accumulates from real harness runs, the chain-15 follow-on classifier can replace the threshold heuristics.",
+        "findings": [
+          {
+            "item": "(a) clients/bridge-harness/ exists with Python package, pyproject.toml, `bridge` CLI entry-point, tests scaffold",
+            "status": "pass",
+            "evidence": "Commits 733fbabc (ARCHITECTURE.md) + c059fb79 (bootstrap). pyproject toolkit-bridge-harness with [project.scripts] bridge = bridge.cli:main, ruff+mypy-strict+pytest config, path dep on toolkit-escalation. src/bridge/ package + tests/ scaffold. Sited at clients/bridge-harness/ inside mcp-servers (user-confirmed placement; the chain text's ~/dev/bridge-harness/ predated the clients/ convention).",
+            "severity": "low"
+          },
+          {
+            "item": "(b) round-trip: bridge starts a session, calls work.chain_state, prints result, persists state, exits cleanly",
+            "status": "pass",
+            "evidence": "tests/test_integration.py::test_live_round_trip_chain_state — run against the live :3000 daemon: the EchoAdapter-scripted turn dispatched work.chain_state(266) over the real HTTP wire, the real chain row came back (status open), one tool_call row + two cost rows persisted, the assistant text printed, the session closed cleanly. Offline counterpart: test_session.py::test_round_trip_dispatches_tool_and_persists.",
+            "severity": "low"
+          },
+          {
+            "item": "(c) per-turn model routing driven by chain-15's escalation contract — verified by simulated triggers",
+            "status": "pass",
+            "evidence": "models/router.py ModelRouter wraps escalation.EscalationRouter; next_adapter() maps the chosen model id to an adapter with cold-start fallback. test_router.py proves retry_exhaustion / explicit_handoff escalate the next turn's adapter and K clean turns de-escalate; test_session.py + the live test_live_simulated_escalation_routes_to_strong drive a repeated_tool_error turn that escalates to claude-opus-4-7 and persists the row. Commit 3274e6c3.",
+            "severity": "low"
+          },
+          {
+            "item": "(d) skills loader pulls markdown from the mcp-servers tracked skills tree; system prompt at session start contains the active set",
+            "status": "pass",
+            "evidence": "skills.py SkillsLoader discovers both shapes (\u003cname\u003e/SKILL.md + top-level \u003cname\u003e.md), parses frontmatter, and reads _manifest.toml ambient bucket for default selection. test_skills.py::test_loads_real_skills_tree discovers bug-filing-discipline + a non-empty ambient set against the real tree; the live round trip asserts comps.system_prompt is non-empty. Commit d0934163.",
+            "severity": "low"
+          },
+          {
+            "item": "(e) hook surface complete (8 hooks); pre_user_prompt + post_turn fire on every turn",
+            "status": "pass",
+            "evidence": "hooks.py HOOK_ORDER = session_start/pre_user_prompt/pre_turn/pre_tool_use/post_tool_use/post_turn/stop/session_end; declared_kinds() enumerates without a session (chain-17/19). Non-blocking (exception logged + on ctx.errors). test_session.py::test_per_turn_hooks_fire_each_turn drives 3 prompts and asserts pre_user_prompt + post_turn fire 3x each, session_start/end once. Commit 85b65521.",
+            "severity": "low"
+          },
+          {
+            "item": "(f) telemetry: every tool call lands per chain-14's schema; every escalation lands per chain-15's event type",
+            "status": "pass",
+            "evidence": "dispatch.py record_dispatch lands a chain-14 tool_call row (surface/action/params/result/ok/error_class/latency_ms/model/span_id) for every call; session.py wires the chain-15 escalation emitter (escalation.EscalationClient.propose → EscalationProposed) on escalate edges + records the row. test_dispatch.py + test_session.py cover both; the escalation event path is the same one chain-15's own live integration test proved. Commits c1826069 + 8b369fe8.",
+            "severity": "low"
+          },
+          {
+            "item": "(g) cost ledger: `bridge --cost` prints per-session running cost",
+            "status": "pass",
+            "evidence": "cost.py PRICE_TABLE + price_call (unknown models -\u003e 0, flagged UNPRICED) + CostLedger; session records a cost row per model call; cli `--cost [run_id]` renders a per-session breakdown or all-sessions total via summarize_records. test_cost.py + test_cli.py::test_cost_and_inspect_after_session; the live round trip recorded two cost rows. CLI smoke printed a $0.0016 total. Commit 8b369fe8.",
+            "severity": "low"
+          },
+          {
+            "item": "(h) README documents daily-use workflow + escape hatches",
+            "status": "pass",
+            "evidence": "clients/bridge-harness/README.md: install (path dep on escalation), the five CLI modes, the full env-var configuration table, the deepseek-v4-pro identifier-only note + escape hatches (BRIDGE_OFFLINE, BRIDGE_CHEAP_BASE_URL/key, ANTHROPIC_API_KEY), and the gate command. Commit c059fb79 (expanded across the chain).",
+            "severity": "low"
+          },
+          {
+            "item": "(i) BridgeHarnessV1AuditCompleted event lands through the write-side ledger",
+            "status": "pass",
+            "evidence": "THIS event is the (i) deliverable — emitted by go/cmd/bridge-harness-v1-audit-emit through internal/events.Emit. Schema at blueprints/events/BridgeHarnessV1AuditCompleted.json + the go/internal/events/schemas embed (synced via sync-event-schemas.sh); BridgeHarnessV1AuditCompletedPayload registered + EVENT_CATALOG row; TestIsRegisteredType green.",
+            "severity": "low"
+          }
+        ]
+      }
+    }
+  ]
+}

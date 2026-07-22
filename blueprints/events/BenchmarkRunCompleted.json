@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BenchmarkRunCompleted.json",
+  "title": "BenchmarkRunCompleted payload",
+  "description": "Emitted at successful completion of a benchmark run. Carries the closing metrics — per-token-stream-and-wall-clock summary — plus (added 2026-05-20 via T3 of agent-substrate-crud-retirement, §9.6) an optional result_columns block mirroring the rubric-side columns of the benchmark_results CRUD row so payload-only fold reconstruction can rebuild proj_benchmark_results without joining the CRUD table. Per-step MetricRecorded events fire during the run with refs.caused_by_event_id pointing at the corresponding BenchmarkRunStarted; this Completed event marks the run's terminal success state. Provenance is NOT repeated here — it lives on the corresponding BenchmarkRunStarted, joined via refs.caused_by_event_id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "wall_clock_ms"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The run_id from the existing benchmark_results schema. Stays as the join key while the legacy benchmark_results table coexists with events."
+    },
+    "score": {
+      "type": ["number", "null"],
+      "description": "Aggregate rubric score for the run. null for runs that didn't produce a scalar score (e.g. completion-only smoke tests)."
+    },
+    "wall_clock_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "End-to-end wall time in milliseconds. Mirrors the benchmark_results.wall_clock_ms column."
+    },
+    "input_tokens": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Prompt tokens consumed by the run; null if the API didn't expose this."
+    },
+    "output_tokens": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Completion tokens emitted; null if not exposed."
+    },
+    "tool_use_tokens": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Tool-use tokens where available; null otherwise. Mirrors benchmark_results."
+    },
+    "result_columns": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.6 audit finding). Optional snapshot of the rubric-side columns of the benchmark_results CRUD row this completion produced, so payload-only fold reconstruction can rebuild proj_benchmark_results without joining the CRUD table. Every sub-field mirrors a benchmark_results column verbatim. Optional for backward compatibility with pre-T3 events; once T5 lands, every new event carries this block.",
+      "properties": {
+        "tool_name": { "type": "string", "description": "Mirrors benchmark_results.tool_name." },
+        "model_name": { "type": "string", "description": "Mirrors benchmark_results.model_name." },
+        "layer": { "type": ["string", "null"], "description": "Mirrors benchmark_results.layer (e.g. 'e4', 'l3')." },
+        "task_shape": { "type": ["string", "null"], "description": "Mirrors benchmark_results.task_shape (Classify / Extract / Retrieve / Summarize)." },
+        "task_id": { "type": ["string", "null"], "description": "Mirrors benchmark_results.task_id (rubric name for L-tier; scenario_id for E-tier)." },
+        "run_shape": { "type": ["string", "null"], "description": "Mirrors benchmark_results.run_shape ('production' / 'benchmark' / etc.)." },
+        "accuracy_score": { "type": ["number", "null"], "description": "Mirrors benchmark_results.accuracy_score." },
+        "honesty_score": { "type": ["number", "null"], "description": "Mirrors benchmark_results.honesty_score." },
+        "ranking_quality_score": { "type": ["number", "null"], "description": "Mirrors benchmark_results.ranking_quality_score." },
+        "within_budget_score": { "type": ["number", "null"], "description": "Mirrors benchmark_results.within_budget_score." },
+        "invocation_ok": { "type": "boolean", "description": "Mirrors benchmark_results.invocation_ok (1/0 → true/false)." },
+        "args_match": { "type": ["boolean", "null"], "description": "Mirrors benchmark_results.args_match." },
+        "extracted_args": { "type": ["string", "null"], "description": "Mirrors benchmark_results.extracted_args." },
+        "interpretation_ok": { "type": ["boolean", "null"], "description": "Mirrors benchmark_results.interpretation_ok." },
+        "detected_tool": { "type": ["string", "null"], "description": "Mirrors benchmark_results.detected_tool." },
+        "notes": { "type": ["string", "null"], "description": "Mirrors benchmark_results.notes." },
+        "invoked_contextually": { "type": "boolean", "description": "Mirrors benchmark_results.invoked_contextually (1/0 → true/false)." }
+      },
+      "required": ["tool_name", "model_name", "invocation_ok", "invoked_contextually"]
+    },
+    "benchmark_result_id": {
+      "type": ["string", "null"],
+      "description": "T5-benchmarks additive bump (2026-05-21): the benchmark_results.id UUID (distinct from run_id) — needed for proj_benchmark_results.id when reconstructing from event alone. Optional; pre-T5 events lack it and the fold falls back to skipping the row."
+    },
+    "project_id": {
+      "type": ["string", "null"],
+      "description": "T5-benchmarks additive bump (2026-05-21): project_id for the row. Cross-cutting events don't carry it in the envelope, so it lands in the payload here."
+    },
+    "scenario_id": {
+      "type": ["string", "null"],
+      "description": "T5-benchmarks additive bump (2026-05-21): scenario_id, lives on the corresponding BenchmarkRunStarted today; mirrored here so the fold doesn't need a cross-event lookup."
+    },
+    "provenance_id": {
+      "type": ["string", "null"],
+      "description": "T5-benchmarks additive bump (2026-05-21): the benchmark_provenance.id FK target."
+    },
+    "run_at": {
+      "type": ["integer", "null"],
+      "description": "T5-benchmarks additive bump (2026-05-21): unix-seconds timestamp of the run. The event envelope's ts is an ISO string; the column is INTEGER seconds."
+    }
+  }
+}

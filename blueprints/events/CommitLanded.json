@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/CommitLanded.json",
+  "title": "CommitLanded payload",
+  "description": "Emitted when a git commit lands in the project repo. Wired from scripts/post-commit-restart-advisor.sh via the one-shot go/cmd/commit-landed-emit binary so every post-commit hook fire produces one events row, regardless of whether the commit touched runtime-affecting paths. The arcreview substrate listener (chain arc-close-filing-review-substrate-listener-wiring T4) subscribes to this type — every CommitLanded event triggers a session-scoped review fire for the project's most-recently-active session. The fail-open discipline of the advisor extends here: a failed emit drift-logs and never blocks the commit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commit_sha"],
+  "properties": {
+    "commit_sha": {
+      "type": "string",
+      "description": "The commit SHA that just landed. Full 40-char hex (the abbreviated 7-char form is fine for human reading but the full SHA is canonical for cross-substrate lookups). The envelope's entity_slug also carries this value so consumers can dedupe."
+    },
+    "branch": {
+      "type": ["string", "null"],
+      "description": "Branch name when the commit lands on a named branch (e.g. 'main', 'feature/x'). NULL when HEAD is detached (e.g. mid-rebase, or a checkout-by-SHA workflow). The advisor reads this via `git rev-parse --abbrev-ref HEAD` and passes it through unmodified."
+    },
+    "files_changed_count": {
+      "type": ["integer", "null"],
+      "description": "Number of files changed in this commit (per `git show --stat --format='' HEAD | wc -l` minus the summary line). Optional because git_show parsing edge cases (binary diffs, mode-only changes, renames) make a precise count tricky; the emit binary best-efforts the integer and passes NULL when uncertain."
+    },
+    "author": {
+      "type": ["string", "null"],
+      "description": "Commit author in 'Name <email>' form. Optional. Useful for the dashboard's commit-author projection (future); not load-bearing for the substrate listener."
+    },
+    "subject": {
+      "type": ["string", "null"],
+      "description": "First line of the commit message (the conventional-commit subject). Optional. The arcreview listener uses this for surface display when summarizing the trigger; not used for trigger eligibility (every CommitLanded fires, regardless of subject)."
+    }
+  }
+}

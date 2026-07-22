@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArcCloseFilingReviewSubstrateListenerWiringCompleted.json",
+  "title": "ArcCloseFilingReviewSubstrateListenerWiringCompleted payload",
+  "description": "Emitted by chain arc-close-filing-review-substrate-listener-wiring T10 as the closing audit event. Mirrors the parent chain's ArcCloseFilingReviewSubstrateAuditCompleted (one-shot retrospective program writes the row through events.Emit). Records the chain's structural deliveries (substrate-listener wiring + 5/5 trigger events + read-side audit action), the two ML follow-on chains forged, the T9 corpus snapshot path, and the wiring SHA. Substrate self-host: the chain that built the listener emits its closing event through the listener's substrate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "follow_on_chain_slugs", "observer_wiring_sha"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Path to the chain retrospective doc (typically docs/ARC_CLOSE_FILING_REVIEW_SUBSTRATE_LISTENER_RETROSPECTIVE_<YYYY-MM-DD>.md)."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-paragraph narrative summary of what the chain shipped and what remains as follow-on work."
+    },
+    "tasks_completed": {
+      "type": ["array", "null"],
+      "items": {"type": "string"},
+      "description": "Task slugs closed during the chain. Optional; the retrospective doc carries the same list with commit SHAs."
+    },
+    "follow_on_chain_slugs": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Slugs of chains forged during T10 (typically the two trained-* ML follow-ons)."
+    },
+    "corpus_snapshot_path": {
+      "type": ["string", "null"],
+      "description": "Path to the T9 tuning corpus doc, the load-bearing artifact the ML follow-ons consume."
+    },
+    "observer_wiring_sha": {
+      "type": "string",
+      "description": "Commit SHA that landed the SubstrateReviewObserver registration in main.go. The wiring's load-bearing line; future readers tracing 'when did substrate-side observation become real?' look here first."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Optional pointer to the next chain in the substrate-listener evolution: corpus accumulation gates, ML promotion gates, or operator-side rollout."
+    },
+    "findings": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {"type": "string"},
+          "status": {"type": "string", "enum": ["pass", "fail", "partial", "deferred"]},
+          "evidence": {"type": ["string", "null"]},
+          "severity": {"type": ["string", "null"]}
+        }
+      },
+      "description": "Per-acceptance-criterion findings list, mirroring the ArchitectureAuditCompleted shape. Optional; the retrospective doc carries the canonical version."
+    }
+  }
+}

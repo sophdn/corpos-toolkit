@@ -1,0 +1,4 @@
+surface = "admin"
+action = "step_probe"
+purpose = "Probe whether one recipe-step would apply against a host (deferred stub in the current Go server). Callers receive a structured deferred-stub envelope identifying the action rather than a real probe result."
+notes = "Deferred stub: the full port lands when a concrete need (host re-setup) drives it. Until then, calls return the deferred envelope unchanged."

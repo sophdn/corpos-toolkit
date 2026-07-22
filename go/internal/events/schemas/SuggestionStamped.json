@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/SuggestionStamped.json",
+  "title": "SuggestionStamped payload",
+  "description": "Emitted when a suggestion's resolved_commit_sha is set via suggestion_stamp_sha. Distinct from SuggestionResolved(kind=\"adopted\", commit_sha=...) because suggestion_stamp_sha is a separate action used when adoption work lands AFTER the suggestion was resolved (resolve at decision time queuing a chain+task; stamp later when the implementing commit lands). Distinct from any future SuggestionEdited so readers can filter for SHA stamps without parsing field-name arrays.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commit_sha"],
+  "properties": {
+    "commit_sha": {
+      "type": "string",
+      "description": "The commit that lands the adopted suggestion's work, or the literal sentinel 'unversioned' for artifacts outside any git repo (user-level scripts, vault docs)."
+    }
+  }
+}

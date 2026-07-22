@@ -1,0 +1,7 @@
+surface = "work"
+action = "returns_doc"
+purpose = "Fixture covering the [returns] block; the action itself isn't real."
+
+[returns]
+shape = "ReturnsDocResult"
+description = "Carries an `ok` boolean + an `event_id` recording the cascade landing. Consumers that ignore the event_id are forward-compatible; the field is stable across the action's payload schema bumps."

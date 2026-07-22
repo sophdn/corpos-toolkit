@@ -1,0 +1,13 @@
+supported_ops = ["create"]
+
+[schema]
+name = "bad-pattern"
+prefix = "BAD"
+output_dir = "notes/bad"
+filename_pattern = "{prefix}_{slug}.md"
+
+[[fields]]
+name = "x"
+type = "string"
+description = "Field with an uncompilable regex."
+pattern = "["

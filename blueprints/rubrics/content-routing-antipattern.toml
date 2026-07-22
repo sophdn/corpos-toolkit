@@ -1,0 +1,54 @@
+name        = "content-routing-antipattern"
+description = "Detects content-routing anti-patterns: memory tracking DB state, vault pointers, process-docs restating conventions, skills listing chain tasks, code comments naming bug numbers."
+is_deployed = true
+output_enum = ["matches", "doesn't_match", "unclear"]
+
+criteria = [
+  "matches: the artifact IS an anti-pattern instance (memory tracking toolkit-DB state; memory pointing at a vault entry; process-doc restating a skill/convention; skill listing chain task descriptions; code comment naming a past bug/ticket to explain current behavior).",
+  "doesn't_match: the artifact does NOT exhibit those patterns — appropriate for its surface.",
+  "unclear: the artifact has characteristics of both appropriate content and an anti-pattern; needs more context.",
+]
+
+prompt_template = """You are given a description of a content artifact (a memory entry, vault \
+note, skill file, process-doc, or code comment). Decide whether it exhibits \
+one of the content-routing anti-patterns.
+
+- **matches** — the artifact IS an anti-pattern instance:
+  - Memory entry that tracks toolkit-DB state (e.g. 'chain X has N tasks', \
+'open bugs include Y', 'task T5 is pending').
+  - Memory entry that just points at a vault entry (e.g. 'see vault/decisions/X.md \
+for the approach') — vault is agent-readable; pointer entries duplicate without adding.
+  - Process-doc that restates a skill or convention (permanent repeatable \
+rule content that belongs in a skill file, not a process-doc).
+  - Skill file that only lists a chain's task descriptions verbatim (the \
+chain DB is the source of truth for task descriptions; skills encode rules \
+the chain ASSUMES, not the chain itself).
+  - Code comment that names a past bug or ticket by number to explain \
+current behavior (e.g. '// per bug #1099'; describe the current rule, not \
+the bug that motivated it).
+
+- **doesn't_match** — the artifact does NOT exhibit the above patterns \
+(it is appropriate for its surface).
+- **unclear** — the artifact has characteristics of both appropriate content \
+and an anti-pattern; a human reviewer would need more context to decide.
+
+**Bias toward `doesn't_match` when uncertain** — incorrectly flagging \
+appropriate artifacts wastes attention."""
+
+[[examples]]
+text      = """Surface: auto-memory.
+Content: 'The chain "benchmarks-framework-reshape" currently has 3 pending tasks: T4 (migrate E2 runner), T5 (migrate E3 runner), T6 (migrate E5 runner). Task T3 was completed on 2026-05-09.'"""
+label     = "matches"
+reasoning = "Memory entry tracking toolkit-DB state (chain task count and status). Toolkit DB is queryable; this pointer duplicates without adding value."
+
+[[examples]]
+text      = """Surface: vault.
+Content: A note titled 'Local LLM routing needs grounding (cross-project pattern)' describing a pattern observed when deploying Qwen2.5-32B across seed-packet and dm-toolkit, where rubric-grounded prompts outperformed bare-rubric by 38 percentage points on classification accuracy. Covers inference-router dispatcher design."""
+label     = "doesn't_match"
+reasoning = "Genuine cross-project learning (both projects, real comparison data). Vault is the correct surface; the content is not available from any queryable DB."
+
+[[examples]]
+text      = """Surface: process-docs.
+Content: A doc titled 'severity rubric reference' listing: low = paper-cut, medium = workflow-blocking or silent divergence, high = ships broken. Two paragraphs explaining when to use each tier."""
+label     = "matches"
+reasoning = "Restates content from bug-filing-discipline skill (permanent repeatable rule). Belongs in the skill, not in process-docs."

@@ -1,0 +1,9 @@
+surface = "measure"
+action = "classify_pre_commit_failure"
+purpose = "Dispatches the pre-commit-failure rubric via Qwen — classifies the dominant failure cause in a pre-commit hook stderr dump; label ∈ {lint, typecheck, test, lifecycle, unclassifiable}; writes a benchmark_results row; returns {label, latency_ms, model_name}."
+
+[[params]]
+  name = "stderr"
+  type = "string"
+  required = true
+  description = "The pre-commit hook stderr dump to classify."

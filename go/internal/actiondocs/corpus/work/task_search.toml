@@ -1,0 +1,30 @@
+surface = "work"
+action = "task_search"
+purpose = "Search tasks by slug/title pattern. Returns compact rows. With `chain` filter, pattern is optional and results return in position order."
+
+[[params]]
+  name = "chain"
+  type = "optional_string"
+  required = false
+  description = "Chain slug to scope to. Alias: chain_slug."
+
+[[params]]
+  name = "chain_id"
+  type = "integer"
+  required = false
+  description = "Numeric chain PK to scope to (resolved to the slug) — the same chain handle chain_state accepts, so a chain_find result works on either action. A slug accidentally passed here is tolerated (routed to the chain slug)."
+
+[[params]]
+  name = "pattern"
+  type = "optional_string"
+  required = false
+  description = "Substring to match (case-insensitive). Aliases: query, text, q."
+
+[[params]]
+  name = "verbose"
+  type = "bool"
+  required = false
+  description = "Return full Task records instead of compact rows."
+
+[[examples]]
+  call = "{\"chain\":\"agent-first-substrate\",\"verbose\":true}"

@@ -1,0 +1,21 @@
+# AppArmor profile for bubblewrap (bwrap).
+#
+# Ubuntu 23.10+ sets kernel.apparmor_restrict_unprivileged_userns=1, which blocks
+# bwrap from creating the user namespace its sandbox needs (bwrap is not setuid).
+# This profile grants bwrap the `userns` capability so it can build its sandbox
+# unprivileged, the same shape Ubuntu ships for chrome/flatpak/userbindmount.
+#
+# Installed by the owned-exec-shell-surface work so toolkit-server's sys.exec
+# sandbox=bwrap backend works. rootless podman needs no such profile.
+# See docs/OWNED_EXEC_SECURITY.md and vault reference
+# 2026-06-01_owned-exec-sandbox-bwrap-userns-ubuntu-2404.
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+
+  # Site-specific additions and overrides.
+  include if exists <local/bwrap>
+}

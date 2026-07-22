@@ -1,0 +1,93 @@
+{
+  "actor_id": "claude-opus-4-7-action-docs-corpus-frontend-AF3",
+  "entity": {
+    "kind": "chain",
+    "slug": "action-docs-corpus-frontend",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ActionDocsFrontendAuditCompleted",
+      "rationale": "Chain action-docs-corpus-frontend AF3 retrospective — emitting the action-docs-frontend audit findings through the events ledger the parent chain (agent-substrate-frontend) made readable. Self-hosting check: the dashboard surfaces that browse the per-action documentation corpus record their own audit outcome through the events ledger those same surfaces (per-entity timeline, audit-ledger page) make readable.",
+      "payload": {
+        "audit_doc": "docs/ACTION_DOCS_FRONTEND.md (§1–§12 design doc) plus chain action-docs-corpus-frontend completion_condition items (a)–(e).",
+        "summary": "All five chain completion criteria pass. (a) /docs/actions lists every action across work/knowledge/measure/admin grouped by surface with intra-surface alphabetical ordering, with _general chunks rendered first in each surface; (b) /docs/actions/\u003csurface\u003e/\u003caction\u003e resolves for every entry — live verification against the running daemon shows 86 chunks across 4 surfaces with parse_errors=[]; (c) requires_rationale state matches action-manifests/dispatch-policy.toml — write_actions map enriched fresh per request from the policy file with 26 entries reflecting the mutating-action set; (d) bidirectional cross-link with /admin/dispatch-policy: outbound 'see dispatch policy entry' chip on the detail view + inbound 'docs' link per policy row + id='\u003csurface\u003e.\u003caction\u003e' anchor target, both keyed on the same surface.action shape F5 left as data-action-key — verified by tests on both pages; (e) keyboard navigation works — tablist with role=tab/aria-selected, semantic \u003ctable\u003e for params, aria-current=page on the active list row, and a focusable back button on the detail header. The whole surface ships read-only — corpus editing remains a PR + restart workflow.",
+        "recommended_next_phase": "Author the missing work.work_actions chunk noted in the action-docs-corpus closure (orphan-from-the-other-side: registered in work.BuildTable but no chunk on disk). When usage data has accumulated, re-evaluate the action-docs-corpus T5 spike's DEFER for Shape B (Qwen-mediated action_ask) and Shape C (proactive hook); the browse surface now in place is the data-collection point that makes that re-evaluation possible.",
+        "findings": [
+          {
+            "item": "§2 data source — observe-HTTP wrapper, not direct MCP",
+            "status": "pass",
+            "evidence": "GET /admin/action-docs in go/internal/observehttp/actiondocs.go serves the pre-aggregated corpus from the in-process actiondocs.Registry. Avoids 85 browser→MCP round-trips per page load; reuses the established observe-HTTP boundary. Live curl returns count=86, surfaces=[admin,knowledge,measure,work].",
+            "severity": "low"
+          },
+          {
+            "item": "§3 endpoint contract — GET /admin/action-docs",
+            "status": "pass",
+            "evidence": "Request: optional ?surface=, ?action=; ?action without ?surface returns 400; ?reload=1 forces a fresh actiondocs.Load. Response: {count, surfaces, actions, write_actions, corpus_path, parse_errors}. JSON tags on actiondocs.ActionDoc match TOML field names — disk shape and wire shape are one schema. 9 handler tests in go/internal/observehttp/actiondocs_test.go pin every branch.",
+            "severity": "low"
+          },
+          {
+            "item": "§4 route + URL contract — /docs/actions/\u003csurface\u003e/\u003caction\u003e",
+            "status": "pass",
+            "evidence": "Three React Router routes mounted in apps/dashboard/src/router/index.tsx; one ActionDocsPage component owns all three (useParams drives surface tab + detail-view selection). _general findable via /docs/actions/\u003csurface\u003e/_general per spec. Sidebar gained an 'Action Docs' entry below 'Dispatch Policy' as designed.",
+            "severity": "low"
+          },
+          {
+            "item": "§5 listing layout — grouped by surface, alphabetical, _general first",
+            "status": "pass",
+            "evidence": "apps/dashboard/src/pages/ActionDocs/index.tsx SurfaceList sorts _general to top, rest alphabetical. Test 'sorts _general to the top of its surface, other actions alphabetical' pins ordering with the fixture corpus (work._general, work.bug_read, work.bug_resolve).",
+            "severity": "low"
+          },
+          {
+            "item": "§6 detail-view layout — typed sections, no Markdown surface",
+            "status": "pass",
+            "evidence": "DetailView renders purpose / Parameters / Param aliases / Value aliases / Errors / Examples / Notes in schema order; absent sections omitted entirely; white-space: pre-wrap on prose without Markdown rendering. Test 'renders every TOML section for a fully-populated chunk' covers the full set; 'omits sections that are absent from the chunk' covers the minimal-chunk path.",
+            "severity": "low"
+          },
+          {
+            "item": "§7 cross-link contract — bidirectional with /admin/dispatch-policy",
+            "status": "pass",
+            "evidence": "Outbound: detail view chip 3 links to /admin/dispatch-policy#\u003csurface\u003e.\u003caction\u003e; test 'detail-view policy link targets /admin/dispatch-policy#\u003csurface\u003e.\u003caction\u003e' verifies. Inbound: each policy row gains id='\u003csurface\u003e.\u003caction\u003e' (anchor target) + a 'docs' link to /docs/actions/\u003csurface\u003e/\u003caction\u003e; two new tests on AdminDispatchPolicy pin both. The data-action-key attr F5 left behind on each row is preserved; one piece of work earns three uses (registry key, data-attr, anchor id).",
+            "severity": "low"
+          },
+          {
+            "item": "§8 caching + reload semantics — fresh-per-?reload=1",
+            "status": "pass",
+            "evidence": "Default GET reads the startup-loaded actiondocs.Registry without I/O. ?reload=1 calls actiondocs.Load(corpusDir) fresh and serves THAT registry for the response (no shared-state swap — concurrency surface buys no UX gain). Design doc §8 was tightened post-AF1 to match this shape. Test 'reload fresh loads from disk' adds a chunk after Load and verifies stale-vs-fresh.",
+            "severity": "low"
+          },
+          {
+            "item": "§9 accessibility / responsive — semantic HTML + ARIA",
+            "status": "pass",
+            "evidence": "Semantic \u003cnav role=tablist\u003e, \u003cmain\u003e, \u003ctable\u003e; aria-selected on tabs, aria-current=page on active list row, aria-label on lists, aria-labelledby on detail sections. Two-pane layout above 1024px, single-pane below. Tests 'renders the tab strip with role=tablist and tab/aria-selected per surface' + 'renders the parameter table as a semantic \u003ctable\u003e' + 'marks the active list row with aria-current=page' pin the a11y surface.",
+            "severity": "low"
+          },
+          {
+            "item": "§10 testing surface — (a)–(h) coverage",
+            "status": "pass",
+            "evidence": "19 page tests in apps/dashboard/src/pages/ActionDocs/index.test.tsx cover all eight (a)–(h) items: load states, listing groups + chips, detail-view sections, deep-link resolves, kind/rationale chips, empty-state, accessibility, cross-link. 9 Go handler tests in go/internal/observehttp/actiondocs_test.go pin the wire contract. 2 new dispatch-policy tests pin the inbound docs link + anchor id.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion criterion (e) — closing event lands through the substrate",
+            "status": "pass",
+            "evidence": "This very event row is the (e) deliverable. ActionDocsFrontendAuditCompleted is registered in blueprints/events/, EVENT_CATALOG.md, go/internal/events/payloads.go, events_test.go, and the embed dir; the emit binary (go/cmd/action-docs-frontend-audit-emit/) runs through events.Emit using the same dual-write tx the meta-tool handlers use. Self-hosting check satisfied.",
+            "severity": "low"
+          },
+          {
+            "item": "work.work_actions orphan — registered in BuildTable but no chunk on disk",
+            "status": "deferred",
+            "evidence": "Flagged in action-docs-corpus closure_summary as orphan-from-the-other-side. The dashboard renders the policy row but the detail-view link resolves to the 'action not found' empty-state. The empty-state copy points the operator to the right authoring move. One-off authoring or a small cleanup task can close this; not gating chain closure.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Qwen-mediated action_ask (Shape B) + proactive hook (Shape C)",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1 row 2. The action-docs-corpus T5 spike concluded DEFER for both; the recommendation is to re-evaluate after Shape A (the browse surface this chain ships) has been in use long enough to surface usage-data-driven friction patterns. Spike artifacts preserved under /spike/ paths in case re-evaluation flips either recommendation.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    }
+  ]
+}

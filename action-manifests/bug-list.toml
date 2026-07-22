@@ -1,0 +1,35 @@
+[skill]
+name = "bug-list"
+version = "1.0.0"
+description = "List bugs from the bug tracker, optionally filtered by status, surface tag, severity, or filing date. Returns a summary row per bug ordered most-recent first."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "list bugs",
+    "show bugs",
+    "open bugs",
+    "bug triage",
+    "what bugs are open",
+    "bugs by surface",
+    "filter bugs",
+    "bugs in area",
+    "outstanding bugs",
+    "unresolved bugs",
+    "bug audit",
+    "bug list",
+    "bugs tagged",
+    "high severity bugs",
+    "recent bugs",
+    "routed bugs",
+]
+when_not = [
+    "reading a specific bug's full detail — use bug_read for the complete row including problem statement and AC",
+    "resolving or closing a bug — use bug_resolve",
+    "reopening a closed bug — use bug_reopen",
+    "searching task content — use search_task_content",
+    "checking bug resolution patterns over time — use bug_resolution_mix for the doc/source ratio breakdown",
+]
+
+[instructions]
+path = "action-manifests/instructions/bug-list.md"

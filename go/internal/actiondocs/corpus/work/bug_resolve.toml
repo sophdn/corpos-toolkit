@@ -1,0 +1,111 @@
+surface = "work"
+action = "bug_resolve"
+purpose = "Resolve a bug (kind=fixed / wontfix / dup / routed). When commit_sha is supplied and kind is omitted, kind defaults to 'fixed' — the dominant 'fix landed in commit X' shape. For routed, supply routed_chain_slug + routed_task_slug."
+notes = "'upstream' (added in bug 1330) means \"real, reproducible, traceable to a dependency we don't author; not fixed locally for that reason\" — distinct from wontfix's \"out of scope / working as intended\". Verb-form aliases are normalized to the past-participle enum: fix→fixed, route→routed, wont_fix→wontfix, duplicate→dup, external/externalized/upstreamed→upstream."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Bug id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+
+[[params]]
+  name = "resolution_kind"
+  type = "optional_string"
+  required = false
+  description = "fixed / wontfix / dup / routed. Alias: kind. Defaults to 'fixed' when commit_sha is supplied; required otherwise."
+
+[[params]]
+  name = "resolution_note"
+  type = "optional_string"
+  required = false
+  description = "Free-form note. For kind=fixed: what changed. For wontfix: reasoning. For dup: target bug slug + note. Aliases: notes, resolution_summary, summary."
+
+[[params]]
+  name = "commit_sha"
+  type = "optional_string"
+  required = false
+  description = "SHA the fix landed in. Required for kind=fixed unless the artifact lives outside any git repo (then 'unversioned'). When set, defaults kind=fixed."
+
+[[params]]
+  name = "routed_chain_slug"
+  type = "optional_string"
+  required = false
+  description = "When kind=routed, the chain absorbing this bug's work."
+
+[[params]]
+  name = "routed_task_slug"
+  type = "optional_string"
+  required = false
+  description = "When kind=routed, the specific task in routed_chain_slug."
+
+[[params]]
+  name = "routed_suggestion_slug"
+  type = "optional_string"
+  required = false
+  description = "When the bug's resolution surfaces a structural improvement worth proposing, the suggestion slug. Symmetric counterpart to suggestion.routed_bug_slug."
+
+[[param_aliases]]
+  from = "kind"
+  to = "resolution_kind"
+
+[[param_aliases]]
+  from = "notes"
+  to = "resolution_note"
+
+[[param_aliases]]
+  from = "resolution_summary"
+  to = "resolution_note"
+
+[[param_aliases]]
+  from = "summary"
+  to = "resolution_note"
+
+[[param_aliases]]
+  from = "sha"
+  to = "commit_sha"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "fix"
+  to = "fixed"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "route"
+  to = "routed"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "wont_fix"
+  to = "wontfix"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "duplicate"
+  to = "dup"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "external"
+  to = "upstream"
+  notes = "Also accepts externalized and upstreamed for the same canonical 'upstream' resolution."
+
+[[errors]]
+  condition = "missing resolution_kind"
+  message = "Returns an explicit error naming all five accepted values."
+
+[[examples]]
+  call = "{\"slug\":\"my-bug\",\"commit_sha\":\"abc1234\",\"resolution_note\":\"Fixed by adding X\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

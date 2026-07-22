@@ -1,0 +1,35 @@
+[skill]
+name = "suggestion-list"
+version = "1.0.0"
+description = "List suggestions from the suggestion box, optionally filtered by status (open/adopted/deferred/rejected), priority (low/medium/high), surface tag, or filing date. Returns a summary row per suggestion ordered most-recent first."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "list suggestions",
+    "show suggestions",
+    "open suggestions",
+    "suggestion box",
+    "what suggestions are open",
+    "suggestions by surface",
+    "filter suggestions",
+    "outstanding suggestions",
+    "high priority suggestions",
+    "recent suggestions",
+    "adopted suggestions",
+    "deferred suggestions",
+    "rejected suggestions",
+    "improvement ideas",
+    "session retro suggestions",
+    "suggestion_list",
+]
+when_not = [
+    "reading a specific suggestion's full detail — use suggestion_read for the complete row including problem statement and AC",
+    "adopting / deferring / rejecting a suggestion — use suggestion_resolve",
+    "reopening a closed suggestion — use suggestion_reopen",
+    "filing a new suggestion — use forge(suggestion, …) instead",
+    "listing observed-friction bugs — use bug_list (suggestions are forward-looking proposals; bugs are observed friction)",
+]
+
+[instructions]
+path = "action-manifests/instructions/suggestion-list.md"

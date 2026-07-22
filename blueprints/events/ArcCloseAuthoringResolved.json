@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArcCloseAuthoringResolved.json",
+  "title": "ArcCloseAuthoringResolved payload",
+  "description": "Emitted by the unreviewed-fallback sweep (chain arc-close-decision-authoring-split T5/T7) when it resolves a session's staged body-heavy decisions. One event per sweep that resolved at least one staged decision. Carries the author-vs-fallback split: authored_count = staged decisions the in-session agent authored (a matching artifact existed), fallback_forged_count = staged decisions the agent never authored, so Qwen's retained draft was forged flagged unreviewed. The author-vs-fallback RATE = authored_count / (authored_count + fallback_forged_count) over a window is the seat-strength instrument: how drivable the authoring reflex is per seat/model. Per telemetry-conventions, only meaningful after warmup (enough staged decisions accumulated).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "authored_count",
+    "fallback_forged_count"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Session whose staged decisions this sweep resolved. Joins back to the ArcCloseFilingReviewed fires (same session_id) that staged them."
+    },
+    "authored_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Staged decisions the agent authored: a matching artifact (knowledge_pointers vault note / MemoryWritten entry) existed at sweep time, so the fallback was suppressed and the staging row transitioned to 'authored'. The numerator of the author-vs-fallback rate."
+    },
+    "fallback_forged_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Staged decisions the agent never authored by the trigger (session end / grace expiry): Qwen's retained draft was forged flagged unreviewed+qwen-authored so capture was not lost. The fallback half of the rate."
+    },
+    "rows_marked": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of pending_decisions rows transitioned out of 'staged' by this sweep (authored or fallback_forged). Diagnostic; a row may carry multiple staged decisions."
+    }
+  }
+}

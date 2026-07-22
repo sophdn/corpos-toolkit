@@ -1,0 +1,34 @@
+# Canonical Go action: work.chain_find (see go/internal/actiondocs/corpus/work/chain_find.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "find-chain"
+version = "1.0.0"
+description = "Fuzzy-match a chain by approximate name: tokenizes the query and scores chains by token overlap against their slug. Use when you know part of a chain name but not the exact slug."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "find a chain",
+    "search for a chain",
+    "which chain handles",
+    "what chain is about",
+    "look up chain by name",
+    "chain named",
+    "locate chain",
+    "chain that deals with",
+    "fuzzy match chain",
+    "find chain slug",
+    "chain related to",
+    "which chain covers",
+]
+when_not = [
+    "listing all chains — use chain_status for a full project overview",
+    "reading a specific chain's task table when you already know the slug — use get_chain_state",
+    "reading a specific task's content — use read_task",
+    "searching task content by keyword — use search_task_content",
+]
+
+[instructions]
+path = "action-manifests/instructions/find-chain.md"

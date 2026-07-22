@@ -1,0 +1,7 @@
+surface = "work"
+action = "work_actions"
+purpose = "Return this catalog: every registered work-surface action with its parameter spec + example. Self-referential entry so the catalog is fully discoverable from itself."
+notes = "Filed via bug action-docs-corpus-t3-spec-gaps-on-prose-less-actions-and-orphans — work_actions was registered in work.BuildTable but not named in workDescription's Actions: list, so chain action-docs-corpus T3 produced no chunk for it. This chunk closes that orphan; admin.action_describe(surface=\"work\", action=\"work_actions\") now resolves.\n\nThe handler lives in go/internal/work/actions_discovery.go (HandleWorkActions). The catalog itself is the static `actionSpecs` slice in the same file — each entry carries name, description, params, example. Updating the catalog is a manual edit to that slice; the lint to keep it in sync with the dispatch.Table is at go/internal/work/actions_discovery_test.go."
+
+[[examples]]
+  call = "{}"

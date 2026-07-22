@@ -1,0 +1,15 @@
+surface = "ecosystem"
+action = "_general"
+purpose = "Local-ecosystem surface — the deterministic, tenant-agnostic map of this agent-host's world (hosts, services, access methods). Answers \"do I have access to X?\" the same way every time, replacing a probabilistic vault/memory retrieval that cold agents kept missing."
+
+notes = """
+SHIPS EMPTY, LEARNS AS DATA. Nothing here hardcodes any host or service. A tenant's ecosystem is populated via the learn actions (host_learn / service_learn / access_learn) as data, never code — so the surface is tenant-agnostic and portable to any adopter.
+
+UNKNOWN, NEVER A HALLUCINATED NO. access_check on a target that has not been learned returns status="unknown" (with an instruction to learn it), NOT status="no". This is the empty-tenant guardrail: the service never fabricates a negative access answer for something it simply hasn't been told about.
+
+CREDENTIAL-POINTER INVARIANT. The store holds POINTERS to where secrets live (a path or env name like ~/.ssh/id_ed25519 or ~/.git-credentials), NEVER a secret value. host_learn (ssh_key_path) and access_learn (credential_pointer) reject values that look like inline secrets. Real secrets stay in the filesystem/agent, untouched.
+
+DETERMINISM-VS-RAG BOUNDARY. This surface answers the crystallized, exactly-one-right-answer facts: WHETHER / WHERE / HOW-TO-REACH. The procedural HOW-TO prose (transfer methods, deploy flows, gotchas, decisions) legitimately stays soft in the vault; a record's soft_ref points back at it. The service is the deterministic index; the vault is the narrative.
+
+LEARN/QUERY SPLIT. Writes (host_learn / service_learn / access_learn) are idempotent upserts, rationale-gated for agent actors. Reads (access_check / describe / list) are ungated — deterministic reads cannot mutate state.
+"""

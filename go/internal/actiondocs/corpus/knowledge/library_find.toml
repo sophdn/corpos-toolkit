@@ -1,0 +1,9 @@
+surface = "knowledge"
+action = "library_find"
+purpose = "Free-text find across the project's library entries. Entry point for catalogue lookup when you don't know the slug."
+
+[[params]]
+  name = "query"
+  type = "string"
+  required = true
+  description = "Free-text search query."

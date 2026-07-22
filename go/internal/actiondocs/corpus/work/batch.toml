@@ -1,0 +1,35 @@
+surface = "work"
+action = "batch"
+purpose = "Execute a list of allowlisted mutating work-surface ops inside a single outer write tx. Per-op rationale required (rejected pre-execution if missing). Default mode aborts on first error and rolls back the whole batch; pass `continue_on_error: true` to commit each op independently and report per-op outcomes. v1 allowlist: task_complete, task_start, bug_resolve, forge_edit. Cross-op read-after-write within a batch flows through the outer tx for the tx-aware reads (resolveTaskChain, lookupChainProject, taskHasStructuralBlockers)."
+notes = "Current allowlist: task_complete, task_start, bug_resolve, forge_edit, chain_close, forge. Other mutating actions reject pre-execution with NotAllowlisted error_kind. Expanding the allowlist requires adding the action to batchAllowlist + a tx-aware dispatch entry in batchDispatchInTx (go/internal/work/batch.go). chain_close enables the canonical chain-finalize (batch([task_complete, chain_close])). forge (create) is scoped to schema_name in {bug, suggestion, task}; other schemas reject pre-dispatch with a scope error.\n\nCreating a chain WITH its tasks: do NOT batch forge(chain) + forge(task) ops — chain is not batch-creatable, so a forge(chain) op rejects and (abort-on-first-error) rolls back the whole batch. Use forge(chain, tasks=[{full-object task entries}]) directly, which creates the chain and all its tasks atomically in one call. work.batch's forge(task) support is for ADDING tasks to an already-existing chain in bulk; createTaskInTx computes position = MAX+1 through the outer tx, so a run of batched tasks gets sequential positions rather than all colliding on the same slot.\n\nRollback semantics: default abort-on-first-error uses the outer write tx — prior ops UNDONE on rollback. Reads in tx-aware handlers (resolveTaskChain, lookupChainProject, taskHasStructuralBlockers) flow through the outer tx via the queryer interface so op2's reads see op1's pending writes; this closes the auto-clear-blocked-then-start path that bit the first refactor pass.\n\nEvent emit: each sub-op emits its existing event type unchanged (TaskCompleted, TaskStarted, BugResolved, etc.) with the per-op rationale on envelope.rationale. One additional BatchExecuted event emits per batch carrying the per-op outcomes; rolled-back batches produce zero events (the BatchExecuted record would be inside the same rolled-back tx)."
+
+[[params]]
+  name = "ops"
+  type = "object[]"
+  required = true
+  description = "List of {op, params, rationale} triples. op is the work-surface action name; params is the action's normal params object; rationale is the per-op 'why'. All three are required on every entry."
+
+[[params]]
+  name = "continue_on_error"
+  type = "bool"
+  required = false
+  description = "Default false (abort-on-first-error with outer-tx rollback). True runs every op regardless; failures land in per-op status without rollback."
+
+[[params]]
+  name = "batch_rationale"
+  type = "optional_string"
+  required = false
+  description = "Optional 'why these ops were grouped' note, recorded on the BatchExecuted event payload distinct from the envelope-level rationale ('why this MCP call')."
+
+[[examples]]
+  call = "{\"ops\":[{\"op\":\"task_complete\",\"params\":{\"task_id\":123,\"commit_sha\":\"abc1234\"},\"rationale\":\"T1 deliverable landed\"},{\"op\":\"task_start\",\"params\":{\"task_id\":124},\"rationale\":\"T2 picked up\"}],\"continue_on_error\":false}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Envelope-level rationale is the 'why this MCP call' grain — separate from each op's per-op rationale (enforced by the HandleBatch validator). Both grains record on the BatchExecuted event payload."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "BatchResult"
+  description = "Per-op outcomes plus the batch-level envelope: ok, op_count, succeeded, failed, continue_on_error, rolled_back, batch_event_id, ops[]. Each ops[] entry carries position, action, ok, rationale, and either event_id (on commit) or error_kind+error_message (on failure). When rolled_back=true, ok=true entries lose their event_id (the cascade events were rolled back with the outer tx)."

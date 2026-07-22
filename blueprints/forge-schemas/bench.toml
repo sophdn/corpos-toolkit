@@ -1,0 +1,59 @@
+# Bench schema — register a benchmark harness so measure.bench_run can
+# re-execute it with the same flag_set + diff against a stored baseline.
+#
+# Each row is one bench: a binary that prints a parseable result (JSON
+# v1; markdown_table + key_value_pairs flagged as follow-on per T6 spec)
+# and a baseline file that future runs compare against. The agent
+# stores the harness once, then calls measure.bench_run(slug=…) per
+# replay — no more remembering flag combinations across sessions.
+#
+# T6 of work-batching-and-forge-templates. The worked-example consumer
+# is go/cmd/parse-context-bench/ (the parse-context-lean-orienting T10
+# harness); registering it as the first bench_harnesses row converts
+# the post-fix ad-hoc /tmp/parse-context-bench --out-json=... workflow
+# into a single measure.bench_run(slug='parse-context') call.
+
+supported_ops = ["create", "update"]
+
+[schema]
+name = "bench"
+prefix = "BENCH"
+output_dir = "process-docs/benches"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "bench_harnesses"
+key_columns = ["slug"]
+[storage.column_map]
+flag_set = "flag_set_json"
+
+[[fields]]
+name = "binary_path"
+type = "string"
+description = "Path to a COMPILED harness executable — e.g. `go/bin/parse-context-bench`, built by `make build`. bench_run execs it directly via os/exec.CommandContext with discrete args (no shell wrapping, no quoting). It is NOT a `go run` target and NOT a source directory (e.g. `go/cmd/parse-context-bench` won't execute) — register the built binary, or a wrapper script if shell semantics are needed. A RELATIVE path resolves against the registering project's root (projects.path), so `go/bin/parse-context-bench` works regardless of the MCP server's cwd; an absolute path is used as-is."
+
+[[fields]]
+name = "flag_set"
+type = "string"
+description = "JSON array of {flag, value} pairs OR a single command-line string of flags. The bench_run handler parses this into discrete os/exec args; quote-handling stays in the parser, NOT in the shell, so values with spaces are safe. The canonical authoring shape is the array-of-pairs form (e.g. `[{\"flag\":\"--http-url\",\"value\":\"http://localhost:3000\"},...]`); the single-string form is a convenience for one-liner registrations and gets re-tokenized at run time. The subprocess runs with cwd = the registering project's root (projects.path), so a relative path VALUE the harness reads (e.g. `--fixture go/internal/refresolve/testdata/directive_intent_fixtures.json`) resolves against the repo, not the MCP server's cwd."
+
+[[fields]]
+name = "baseline_json_path"
+type = "string"
+description = "Path to the JSON baseline file the harness's output is compared against. The file ships in the repo (typically under <package>/testdata/) so baseline updates land in version control. A RELATIVE path resolves against the registering project's root (projects.path) — so a repo-relative path like `go/internal/refresolve/testdata/parse_context_bench_baseline.json` works regardless of the MCP server's cwd; an absolute path is used as-is. With measure.bench_run(update_baseline=true) the file gets overwritten with the observed values, producing a zero diff for that run."
+
+[[fields]]
+name = "parse_output_as"
+type = "optional_string"
+description = "Closed enum: `json` (v1 only). Tells bench_run how to extract metrics from the harness's stdout. v1 ships json-only; markdown_table + key_value_pairs are flagged as stretch in the T6 spec and will land as a follow-on. Default `json` when omitted."
+
+[[fields]]
+name = "timeout_ms"
+type = "optional_string"
+description = "Wall-clock budget for the subprocess in milliseconds; default 60000 (60s). bench_run kills the subprocess on overrun and emits a BenchmarkDiff event with run_latency_ms=timeout + an error string. Authored as a string to fit the FieldType vocabulary; coerced to int by the bench_run handler."
+
+[[fields]]
+name = "gate_metrics"
+type = "optional_string"
+description = "Comma-separated allowlist of metric-name patterns that constitute the DETERMINISTIC regression gate. bench_run computes gate_passed over ONLY the matched metrics (each must have an exact-zero delta) and reports the rest as informational rows that don't fail the run. Empty (default) = report-only: gate_passed is null and the run reads as a non-gated characterization (the pre-fix behavior). A pattern matches a metric when the name equals it OR ends with `.`+pattern, so `n` gates every `<shape>.n`; an exact `none.envelope_bytes_p50` gates only that key. DETERMINISM DISCIPLINE: only name metrics that don't drift run-to-run — exclude latency (jittery) and any envelope/byte metric that resolves against live mutable data. For the parse-context harness the deterministic set is `n` (per-shape prompt count = corpus integrity) plus the no-intent shape's envelope (`none.envelope_bytes_p50`, `none.envelope_bytes_max` — it resolves no candidates, so its envelope is data-independent). A bench whose every metric is live-data-dependent should leave this empty and rely on update_baseline characterization, or move to a frozen DB-snapshot + corpus. See bug bench-diff-exact-equality-vs-live-data-defeats-regression-detection."

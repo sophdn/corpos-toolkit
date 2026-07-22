@@ -1,0 +1,25 @@
+surface = "work"
+action = "task_blockers"
+purpose = "List the structural task_blockers edges pointing at a task. Both intra-chain AND cross-chain edges surface — any task_block call that wrote an edge (whether or not blocker_chain_slug pointed at the same chain as the blocked task) appears in the response. Each entry's chain_slug field names the BLOCKER's chain, so callers can tell intra- from cross-chain at a glance. If a task has status='blocked' with NO structural edge at all (intra or cross), the response includes one synthetic entry with kind='status_only' — that's the prose-only signal: the chain's design_decisions records a wait that no task_block call ever made structural. Bug 1413 corrected this description from an earlier text that claimed cross-chain edges were not tracked; the underlying SQL has always returned them, only the docs lagged."
+notes = "Reports structural intra-chain task_blockers edges only. When a task carries status='blocked' but has no structural edges, the result includes a synthetic blocker entry of kind='status_only' (per bug 1379 fix at 0b8c29e) — that signals either a cross-chain prose wait OR a state that's about to be cleaned up by a sibling task_complete's auto-sweep (cleanupBlockersAfterClose for structural edges, sweepProseOnlyBlockedAfterClose for prose-only entries). After bug task-complete-doesnt-auto-unblock-intra-chain-prose-deps's fix, the prose-only intra-chain case auto-resolves on the next task_complete in the chain; status_only sentinels are now most often cross-chain prose waits."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id (preferred — id-by-default flows like chain_state → task_blockers avoid the extra slug lookup)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug."
+
+[[examples]]
+  call = "{\"slug\":\"interactions-and-resolutions-tables\",\"chain_slug\":\"query-telemetry-substrate\"}"

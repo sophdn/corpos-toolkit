@@ -1,0 +1,46 @@
+surface = "work"
+action = "task_stamp_sha"
+purpose = "Stamp a commit SHA on a task. On an already-closed task this records a late-discovered SHA. On a PENDING or ACTIVE task it ATOMICALLY CLOSES the task and stamps the SHA in one call (the stamp verb signals 'this commit captures the closure'); pass handoff_output to record the closure note in that same call. Blocked/cancelled tasks are rejected — reopen/unblock first."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug."
+
+[[params]]
+  name = "commit_sha"
+  type = "string"
+  required = true
+  description = "SHA to stamp. Alias: sha. Accepts 'unversioned' for non-repo fixes."
+
+[[params]]
+  name = "handoff_output"
+  type = "optional_string"
+  required = false
+  description = "Closure note recorded when this stamp closes a pending/active task (rides into the same TaskCompleted as the SHA, so 'stamp + record handoff + close' is one call — no follow-up task_complete, which would error closed→closed). Rejected on an already-closed task: stamp the SHA, then attach the handoff via task_edit(handoff_output=…)."
+
+[[param_aliases]]
+  from = "sha"
+  to = "commit_sha"
+
+[[examples]]
+  call = "{\"id\":6326,\"sha\":\"abc1234\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

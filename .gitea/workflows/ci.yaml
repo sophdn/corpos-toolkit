@@ -1,0 +1,115 @@
+# sophdn/toolkit CI — runs in Gitea Actions on every push and pull-request.
+#
+# Single job: invoke the unified pre-commit gate (`scripts/precommit.sh`),
+# the exact script the local `.git/hooks/pre-commit` symlink runs, so the
+# gate set has one owner and CI can never drift from local enforcement.
+# Its whole-tree stages all execute on a clean checkout: CONVENTIONS
+# layout integrity, the forbidden-pattern guards (retired CRUD refs,
+# ORDER BY event_id, agent-path log discipline), migration + event-schema
+# sync, go vet / golangci-lint run ./... / build-all / test, and the
+# dependency vulnerability gate. This is a Go-only repo — the dashboard
+# CSS-token / tsc / Go→TS-codegen stages moved to the
+# sophdn/corpos-toolkit-dashboard repo
+# when toolkit split out of the monorepo (chain auto-startup-dev-services
+# T2), so this workflow installs no node toolchain.
+#
+# One stage is intentionally a CI no-op: stage 3 (gofmt + ASCII-quote
+# normalization) is scoped to *staged blobs*, and a clean checkout has
+# nothing staged. Committed code is already gofmt'd by the local hook, so
+# this is an accepted no-op rather than a coverage gap — golangci-lint and
+# go vet still run whole-tree. (The post-commit restart-advisor and its
+# stdio-kill behaviour are NOT part of this script; they belong to the
+# git post-commit hook, so no `TOOLKIT_PRECOMMIT_FORCE_STDIO_KILL` is
+# needed here.)
+#
+# Toolchain notes:
+#   - The homelab Gitea Actions runner is registered with
+#     `ubuntu-latest:docker://node:22-bookworm` (shared with seed-packet
+#     and dm-toolkit). That image is buildpack-deps-based, so it ships gcc
+#     — required because the SQLite driver compiles under CGO via the
+#     `sqlite_fts5` build tag (the canonical TAGS invariant lives in
+#     go/Makefile, not duplicated here).
+#   - Go is installed by actions/setup-go from the version pinned in
+#     go/go.mod (1.26.3). Bump the pin there, not here.
+#   - golangci-lint is pinned to v1.62.2 to match the dev machine and the
+#     version scripts/precommit.sh documents (config: go/.golangci.yml).
+#     Installed via `go install`; the gate probes $(go env GOPATH)/bin
+#     when it isn't on PATH, so no PATH edit is needed.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  precommit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Gitea act_runner mounts the job workspace owned by a different
+      # uid than the in-container user, so git's dubious-ownership guard
+      # aborts the first git command. scripts/precommit.sh opens with
+      # `git rev-parse --show-toplevel`, making this the first gate in the
+      # fleet to trip it — seed-packet/dm-toolkit gates are cargo/pnpm and
+      # never shell out to git. Mark the tree safe before the gate runs.
+      - name: trust the checkout (git safe.directory)
+        run: git config --global --add safe.directory '*'
+
+      # jq is a hard dependency of two gate stages —
+      # scripts/test-runtime-affecting-paths-parity.sh (FATALs without it)
+      # and scripts/codemap-gen — but isn't in the node:22-bookworm image.
+      # The dev machine has it, so the local hook never surfaced the gap.
+      - name: install jq (gate parity + codemap stages require it)
+        run: apt-get update && apt-get install -y --no-install-recommends jq
+
+      # ripgrep (rg) is a runtime dependency of the fs surface's glob/grep
+      # handlers (go/internal/fs/{glob,grep}.go shell out via exec.LookPath("rg")).
+      # internal/fs alias tests (alias_params_test.go) invoke them unconditionally
+      # and FATAL without rg — same shape as the jq gap above; the dev box has rg.
+      - name: install ripgrep (internal/fs glob/grep handlers require it)
+        run: apt-get install -y --no-install-recommends ripgrep
+
+      - name: install go toolchain (version from go/go.mod)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      - name: install golangci-lint (pinned — matches dev machine + gate docs)
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
+
+      - name: run unified pre-commit gate
+        run: ./scripts/precommit.sh
+
+  # ── mirror-publish (chain 438) ─────────────────────────────────────────────
+  # Publish a scrubbed, squashed snapshot of main to the public GitHub mirror on
+  # every green push to main. Gated on the green precommit job and main-only.
+  # Content genericization is Option B: the private repo keeps real infra strings;
+  # publish-public.sh applies .publish-scrub-map and fail-closed-verifies against
+  # .pii-denylist before the tree is committed. secret-scan-tree.sh honors
+  # .secret-scan-allow so the deliberate fake-token test fixtures don't abort it.
+  mirror-publish:
+    needs: [precommit]
+    if: gitea.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: trust the checkout (git safe.directory)
+        run: git config --global --add safe.directory '*'
+
+      - name: Scrub, secret-scan, force-push public mirror
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          OUT="$(mktemp -d)/mirror"
+          bash scripts/publish-public.sh --repo . --out "$OUT"   # scrub HEAD → squashed tree
+          bash scripts/secret-scan-tree.sh "$OUT"                # fail-closed (honors .secret-scan-allow)
+          git -C "$OUT" push --force \
+            "https://x-access-token:${MIRROR_TOKEN}@github.com/sophdn/corpos-toolkit.git" \
+            HEAD:main

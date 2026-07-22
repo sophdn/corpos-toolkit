@@ -1,0 +1,48 @@
+name        = "retirement-signal"
+description = "Artifact retirement-type classifier"
+is_deployed = true
+output_enum = [
+  "tool-retirement",
+  "skill-retirement",
+  "workflow-retirement",
+  "not-retirement",
+]
+
+criteria = [
+  "tool-retirement: an MCP tool that has gone unused.",
+  "skill-retirement: a skill that has gone unloaded.",
+  "workflow-retirement: a workflow that has gone untriggered.",
+  "not-retirement: the observation is genuinely about something else. A new artifact landing, a rename, a refactor, a fix — none of these are retirements.",
+]
+
+prompt_template = """You classify ONE observation describing recent project activity, and \
+decide whether it fires a retirement signal AND if so what artifact-type \
+the retirement is for.
+
+Artifact types (mutually exclusive — pick the dominant one if multiple \
+overlap):
+
+- **tool-retirement**: an MCP tool that has gone unused.
+- **skill-retirement**: a skill that has gone unloaded.
+- **workflow-retirement**: a workflow that has gone untriggered.
+- **not-retirement**: the observation is genuinely about something else. \
+A new artifact landing, a rename, a refactor, a fix — none of these \
+are retirements.
+
+Bias toward **not-retirement** when uncertain — over-flagging clutters \
+the weekly retirement report and erodes the signal's trust."""
+
+[[examples]]
+text      = "Observation: `tools_used` aggregation across the last 200 sessions shows zero invocations of `mcp__seed-packet__signal_table_export`. The tool is registered in the seed-mcp dispatch arm but has not been called by any agent in the window."
+label     = "tool-retirement"
+reasoning = "Direct match: 60d window, zero invocations, registered tool."
+
+[[examples]]
+text      = "Observation: A new task landed at tasks/active/2026-05-10_qwen-rubric-smoke-prep.md referencing skills/instructions/artifact-review.md as input context."
+label     = "not-retirement"
+reasoning = "New active task; skill being USED as input, not retired. Growth observation."
+
+[[examples]]
+text      = "Announcement: The team is retiring our daily standup format in favor of async written standups. This is a process change, not a tooling change — no code, skill, or workflow moves with it."
+label     = "not-retirement"
+reasoning = "Human organizational process change; the word 'retire' refers to a meeting format, not a project artifact."

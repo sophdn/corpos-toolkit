@@ -1,0 +1,34 @@
+[skill]
+name = "forge"
+version = "1.0.0"
+description = "Create a new project artifact from a schema — DB row (task / chain), markdown file (pitch / script / task-decomp), or dual-stored shape."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "forge",
+    "create artifact",
+    "create task",
+    "create chain",
+    "create pitch",
+    "new task",
+    "new chain",
+    "new bug",
+    "new role",
+    "forge a task",
+    "forge a chain",
+    "forge a pitch",
+    "create a new",
+    "spin up a chain",
+    "ad-hoc schema",
+    "forge ad-hoc",
+]
+when_not = [
+    "editing an existing artifact — use forge_edit",
+    "deleting an artifact — use forge_delete",
+    "listing available schemas — use forge_list",
+    "filing a bug — pass schema_name='bug' to forge (forge IS the path; not a separate tool)",
+]
+
+[instructions]
+path = "action-manifests/instructions/forge.md"

@@ -1,0 +1,78 @@
+# Chain schema — design doc for a group of tasks working toward one output.
+#
+# ──────────────────────────────────────────────────────────────────────────
+# TOML layout convention for shape-registry schemas (T3/T4; resolved T17):
+# top-level scalars, then [[hooks]], then [schema], then [storage], then
+# [[fields]], then [[sections]]. See task.toml for the full rationale.
+# ──────────────────────────────────────────────────────────────────────────
+
+# `chain` is DB-only as of CHAIN_retire-markdown-chains Phase 2.
+# The schema's prefix / output_dir / filename_pattern still populate the
+# `chains.design_doc_path` column as a placeholder string; no markdown
+# file is written. The task rows encoded in the `tasks` field are emitted
+# as per-task TaskCreated events by construct.Create's chain-with-tasks
+# fan-out after the ChainCreated event lands (chain 311 T7 Stage 6 P2-C.2;
+# the former forge pipe-skeleton hook archived with forge). Only full task
+# objects are accepted — the legacy pipe-delimited shape is rejected.
+#
+# PROJECT-SCOPED. The `chains` table carries a `project_id`; create calls
+# require a top-level `project` parameter on the work meta-tool (e.g.
+# work(forge, project="seed-packet", schema_name="chain", …)). Same
+# constraint applies to task.toml and bug.toml.
+supported_ops = ["create", "update"]
+
+# Chains close via chain_close, not forge_delete. Surfaced in
+# HandleForgeDelete's rejection envelope (see [lifecycle] on task.toml
+# for the pattern).
+[lifecycle]
+soft_delete_action = "chain_close"
+
+[[hooks]]
+event = "after_create"
+callback = "chain_insert_task_skeletons_from_field"
+hook_class = "in_transaction"
+
+[schema]
+name = "chain"
+prefix = "CHAIN"
+output_dir = "process-docs/tasks"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "chains"
+key_columns = ["slug"]
+
+[[fields]]
+name = "output"
+type = "string"
+description = "One sentence — what exists when this chain is complete. Required so every chain lands in the DB with a human-readable summary; pre-migration rows stay valid via the column's NOT NULL DEFAULT ''."
+
+[[fields]]
+name = "design_decisions"
+type = "string"
+description = "Key design choices and their rationale. Required for the same reason as `output` — forge(chain, …) refuses to create a chain without it so the downstream panels (chain_status, get_chain_by_slug, Vantage ChainDetailPanel) have meaningful context to show."
+
+[[fields]]
+name = "tasks"
+type = "optional_string_or_list"
+description = "Task entries — one per task. Create a chain AND all its tasks in ONE forge(chain, …) call by passing entries here; do NOT forge the chain and then add tasks with separate per-child forge(task, …) calls (that's the slow one-by-one path). Each entry MUST be a full task object — {slug, problem_statement, acceptance_criteria, context_required, constraints, rationale} — landing a fully-populated task row indistinguishable from a standalone forge(task) (same TaskCreated event, same projection); per-task `rationale` is REQUIRED. (The legacy pipe-delimited string shape `slug | scope | pending` is REMOVED as of chain 311 T7 Stage 6 — a pipe entry now rejects with a migration message; pass full objects instead.) Accepts a list of entries OR a single entry (a 1-task chain coerces to a 1-element list). To ADD tasks to an ALREADY-EXISTING chain in bulk, use work.batch with N forge(task, …) ops (forge is batch-allowlisted for schema_name=task). To retroactively populate an existing skeleton row, call `populate_task_content`. Slug convention: use kebab-case descriptive slugs (e.g. `audit-db-authoritative`). Numeric slugs (`1`, `2`, …) and `TASK_slug_date.md`-shaped slugs are retired — they produced an orphan-scaffold pattern where the skeleton row went unused once a real task was forged at the same position under a descriptive slug."
+render_as = "table"
+table_columns = ["#", "Task", "Status"]
+
+[[fields]]
+name = "completion_condition"
+type = "string"
+description = "Observable state — what exists or is true when the chain is done. Checkable without judgment."
+
+[[sections]]
+heading = "Design decisions"
+fields = ["design_decisions"]
+
+[[sections]]
+heading = "Tasks"
+fields = ["tasks"]
+
+[[sections]]
+heading = "Completion condition"
+fields = ["completion_condition"]

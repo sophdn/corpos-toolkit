@@ -1,0 +1,32 @@
+# Canonical Go action: work.task_edit (see go/internal/actiondocs/corpus/work/task_edit.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "edit-task-content"
+version = "1.0.0"
+description = "Overwrite already-populated content fields on a task row. Partial-update: only named fields are written; omitted fields are left untouched. No force flag — overwriting is the intent."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "edit the task",
+    "edit task content",
+    "update the task spec",
+    "rewrite the task",
+    "revise the task",
+    "overwrite the task field",
+    "change the AC",
+    "update the problem statement",
+    "fix the task content",
+    "edit_task_content",
+]
+when_not = [
+    "the field is empty and you want to fill it — populate_task_content has cleaner semantics for empties",
+    "moving a task between chains — use move_task instead",
+    "changing task status — use start_task / complete_task / cancel_task / reopen_task",
+    "changing task position — use move_task / reorder_tasks",
+]
+
+[instructions]
+path = "action-manifests/instructions/edit-task-content.md"

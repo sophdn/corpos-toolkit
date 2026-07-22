@@ -1,0 +1,101 @@
+surface = "measure"
+action = "study_run_record"
+purpose = "Persist one corpos-lab behavioral-assay study run (parent provenance record + N child score-grid rows). Emits a StudyRunRecorded event whose fold writes proj_study_runs + proj_study_run_scores; on commit publishes an artifact_created SSE event so the dashboard refreshes live. Stores hashes/pointers only — responses_dir is a filesystem path, materials_hashes are SHA-256 digests; raw responses stay on disk. project comes from the dispatch envelope, NOT params."
+
+[[params]]
+  name = "name"
+  type = "string"
+  required = true
+  description = "Human-facing run name (e.g. 'casg-direct-v3-smoke')."
+
+[[params]]
+  name = "assay"
+  type = "string"
+  required = true
+  description = "The behavioral assay exercised (e.g. 'grounded-glyph-probe'). Primary dashboard filter."
+
+[[params]]
+  name = "status"
+  type = "string"
+  required = true
+  description = "Terminal status — 'completed' or 'failed'. Any other value is rejected with a structured param error."
+
+[[params]]
+  name = "run_at"
+  type = "string"
+  required = true
+  description = "RFC 3339 (UTC) timestamp of the run. Stored verbatim; the observe surface orders by run_at DESC."
+
+[[params]]
+  name = "rows"
+  type = "object[]"
+  required = false
+  description = "Score grid — one entry per condition×run cell. Each carries item, condition, run (index), rationale, and a verdict: EITHER flat (verdict_kind/verdict_reason) OR nested ({verdict:{kind,reason}}) — the handler flattens the nested form."
+
+[[params]]
+  name = "run_id"
+  type = "optional_string"
+  required = false
+  description = "Stable run id (entity slug + parent primary key). Auto-generated (UUIDv4) when omitted."
+
+[[params]]
+  name = "item_id"
+  type = "optional_string"
+  required = false
+  description = "Study item / scenario id (e.g. 'casg-direct')."
+
+[[params]]
+  name = "image"
+  type = "optional_string"
+  required = false
+  description = "Container image reference the run executed under."
+
+[[params]]
+  name = "image_digest"
+  type = "optional_string"
+  required = false
+  description = "Immutable image digest (sha256:...) pinning the image bytes."
+
+[[params]]
+  name = "error"
+  type = "optional_string"
+  required = false
+  description = "Failure detail; set when status='failed'."
+
+[[params]]
+  name = "study_digest"
+  type = "optional_string"
+  required = false
+  description = "SHA-256 (hex) digest of study.json."
+
+[[params]]
+  name = "materials_hashes"
+  type = "object"
+  required = false
+  description = "Map of material filename → SHA-256 hex digest. Small hashes, NOT blobs."
+
+[[params]]
+  name = "model_id"
+  type = "optional_string"
+  required = false
+  description = "Model identifier the run used (e.g. 'Qwen2.5-32B-Instruct-Q4_K_M.gguf')."
+
+[[params]]
+  name = "model_version"
+  type = "optional_string"
+  required = false
+  description = "Model version / quantization tag (e.g. 'q4km')."
+
+[[params]]
+  name = "responses_dir"
+  type = "optional_string"
+  required = false
+  description = "On-disk POINTER to the raw responses directory. Path only — blobs never enter the ledger."
+
+[[examples]]
+  description = "Persist a completed smoke run with a two-cell score grid"
+  call = "{\"action\":\"study_run_record\",\"project\":\"corpos-lab\",\"params\":{\"name\":\"casg-direct-v3-smoke\",\"assay\":\"grounded-glyph-probe\",\"item_id\":\"casg-direct\",\"status\":\"completed\",\"run_at\":\"2026-07-09T00:33:10Z\",\"model_id\":\"Qwen2.5-32B-Instruct-Q4_K_M.gguf\",\"model_version\":\"q4km\",\"responses_dir\":\"/abs/path/out/responses\",\"rows\":[{\"item\":\"casg-direct\",\"condition\":\"baseline\",\"run\":1,\"verdict_kind\":\"fail\",\"verdict_reason\":\"\",\"rationale\":\"…\"},{\"item\":\"casg-direct\",\"condition\":\"glyph_only\",\"run\":1,\"verdict_kind\":\"pass\",\"verdict_reason\":\"\",\"rationale\":\"…\"}]}}"
+
+[returns]
+  shape = "StudyRunRecordResult"
+  description = "On success: {run_id, status}. On param error: {error} naming the missing/invalid params."

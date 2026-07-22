@@ -1,0 +1,112 @@
+surface = "work"
+action = "suggestion_resolve"
+purpose = "Resolve a suggestion (kind=adopted / deferred / rejected — distinct vocabulary from bug_resolve's fixed/wontfix/etc.). When commit_sha is supplied and kind is omitted, kind defaults to 'adopted'. For adopted with routing, supply routed_chain_slug + routed_task_slug (and routed_bug_slug when the adoption uncovers a concrete fix tracked as a bug)."
+notes = "The suggestion-side vocabulary (adopted/deferred/rejected) is deliberately distinct from the bug-side (fixed/wontfix/upstream/dup/routed). adopted + routed_chain_slug + resolved_commit_sha is the canonical 'this shipped' shape — there is no separate `implemented` kind. routed_bug_slug exists for the bidirectional bug↔suggestion routing introduced in chain agent-suggestion-box (a suggestion's adoption can name the bug filed for the implementing work)."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Suggestion id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+
+[[params]]
+  name = "resolution_kind"
+  type = "optional_string"
+  required = false
+  description = "adopted / deferred / rejected. Alias: kind. Defaults to 'adopted' when commit_sha is supplied; required otherwise."
+
+[[params]]
+  name = "resolution_note"
+  type = "optional_string"
+  required = false
+  description = "Free-form note. For kind=adopted: what shipped (or the chain+task that will). For kind=deferred: why-not-now + revisit signal. For kind=rejected: reasoning. Aliases: notes, resolution_summary, summary."
+
+[[params]]
+  name = "commit_sha"
+  type = "optional_string"
+  required = false
+  description = "SHA the work landed in. Accepts 'sha' as alias and 'unversioned' for artifacts outside any git repo. When set, defaults kind=adopted."
+
+[[params]]
+  name = "routed_chain_slug"
+  type = "optional_string"
+  required = false
+  description = "When kind=adopted, the chain absorbing the work."
+
+[[params]]
+  name = "routed_task_slug"
+  type = "optional_string"
+  required = false
+  description = "When kind=adopted, the specific task in routed_chain_slug."
+
+[[params]]
+  name = "routed_bug_slug"
+  type = "optional_string"
+  required = false
+  description = "When kind=adopted and the adoption uncovers a concrete fix tracked as a bug, the bug slug. Symmetric counterpart to bug.routed_suggestion_slug — bidirectional bug↔suggestion routing."
+
+[[param_aliases]]
+  from = "suggestion_slug"
+  to = "slug"
+
+[[param_aliases]]
+  from = "suggestion_id"
+  to = "id"
+
+[[param_aliases]]
+  from = "kind"
+  to = "resolution_kind"
+
+[[param_aliases]]
+  from = "notes"
+  to = "resolution_note"
+
+[[param_aliases]]
+  from = "resolution_summary"
+  to = "resolution_note"
+
+[[param_aliases]]
+  from = "summary"
+  to = "resolution_note"
+
+[[param_aliases]]
+  from = "sha"
+  to = "commit_sha"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "adopt"
+  to = "adopted"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "defer"
+  to = "deferred"
+
+[[value_aliases]]
+  param = "resolution_kind"
+  from = "reject"
+  to = "rejected"
+
+[[errors]]
+  condition = "missing resolution_kind (and no commit_sha to default from)"
+  message = "Returns an explicit error naming all three accepted values."
+
+[[errors]]
+  condition = "bug-side kind supplied (fixed, wontfix, upstream, dup, routed)"
+  message = "Rejected with an error naming the suggestion-side vocabulary — adopted/deferred/rejected."
+
+[[examples]]
+  call = "{\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"kind\":\"adopted\",\"routed_chain_slug\":\"fts5-on-roadmap-list\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

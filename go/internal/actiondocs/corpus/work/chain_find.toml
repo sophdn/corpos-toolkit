@@ -1,0 +1,18 @@
+surface = "work"
+action = "chain_find"
+purpose = "Search or LIST chains. With a `pattern` (or alias query/text/q/slug) it substring-matches the slug; OMIT the pattern to list chains (optionally project-scoped). Unlike chain_status, closed/cancelled chains are included. Returns compact rows."
+
+[[params]]
+  name = "pattern"
+  type = "optional_string"
+  required = false
+  description = "Substring to match against the slug (case-insensitive). Omit to list all chains. Aliases: query, text, q, slug."
+
+[[params]]
+  name = "project"
+  type = "optional_string"
+  required = false
+  description = "Optional project to scope the list/search to. Omit for cross-project (the default). Falls back to the dispatch envelope project when set there."
+
+[[examples]]
+  call = "{\"pattern\":\"substrate\"}"

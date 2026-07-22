@@ -1,0 +1,10 @@
+[Unit]
+Description=Restore-test the canonical ledger backup weekly (Sun 04:00 local)
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

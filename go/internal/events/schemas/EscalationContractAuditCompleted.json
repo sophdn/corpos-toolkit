@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/EscalationContractAuditCompleted.json",
+  "title": "EscalationContractAuditCompleted payload",
+  "description": "Emitted by the chain orchestrator-tier-escalation-contract retrospective to record that the orchestrator-tier escalation contract (docs/ORCHESTRATOR_ESCALATION.md design + EscalationProposed event + escalation_thresholds config table + escalation_threshold_list/set/propose admin actions + the harness-agnostic clients/escalation Python library + the integration proof) has been verified against the chain's completion-condition items (a)-(f). Same Findings array shape as ArchitectureAuditCompleted and the other *AuditCompleted events. Self-hosting check: the contract's own EscalationProposed write-side ledger is the same ledger this closing audit lands through, exercised via go/cmd/orchestrator-escalation-audit-emit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the audit source-doc the findings were keyed against — docs/ORCHESTRATOR_ESCALATION.md (T1 design) and the chain's completion_condition."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome — what landed, what was deferred, which downstream driver-swap work becomes forgeable now that the contract has shipped."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the next phase of work (e.g. 'Build the cheap-orchestrator harness loop that consumes this contract'). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per completion-condition item / audit checklist item. Severity uses the audit-convention enum (low / medium / high / critical); use n/a for informational findings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Audit checklist item identifier and short description."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = criterion satisfied; fail = criterion not satisfied (must file follow-on); partial = satisfied with documented gap; deferred = explicitly out of scope for this chain."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence supporting status — SQL query result, test name, commit SHA, doc pointer, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

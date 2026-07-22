@@ -1,0 +1,163 @@
+# Suggestion schema — flat improvement-proposal record.
+#
+# A `suggestion` is a forward-looking improvement idea filed against the
+# project: a test that should exist, a refactor that would pay down debt, a
+# prose tidy-up, a missing skill, a workflow ergonomics nit. Unlike `bug`
+# (which captures observed friction — something interrupted the normal flow,
+# unintentional in the design), a suggestion is a deliberate proposal to
+# revisit a past decision in favour of an optimisation visible now. See
+# chain `agent-suggestion-box` design_decisions §7 for the verbatim
+# friction-vs-suggestion definition that drives this distinction.
+#
+# Mirrors `bug.toml`'s SHAPE but uses native vocabulary throughout:
+#   - `priority`        (low / medium / high)            — NOT `severity`
+#   - `routed_bug_slug` for suggestion → bug routing     — new field
+#   - resolution_kind enum (adopted / deferred / rejected) — enforced at
+#     the suggestion_resolve handler layer, NOT here. Same pattern as bug.
+#
+# The agent files suggestions only on user-prompted session retrospectives —
+# there is no observed-friction auto-trigger. The
+# `suggestion-filing-discipline` skill carries the protocol; the Qwen
+# filing-decision pipeline (arcreview) also proposes suggestions inline with
+# its forge_bug / forge_vault_note decisions, gated at a higher confidence
+# threshold (0.90 vs 0.85) because forward-looking proposals are noisier
+# than observed-friction filings.
+#
+# Layout convention matches task.toml / bug.toml: top-level scalars →
+# [lifecycle] → [schema] → [storage] → [[fields]] → [[sections]] (omitted
+# here — DB-only, no markdown render).
+
+# `suggestion` is DB-only — no markdown file written. Phase 1 ships
+# create + update; read/list/lifecycle live in dedicated MCP tools
+# (suggestion_list / suggestion_read / suggestion_resolve /
+# suggestion_reopen / suggestion_stamp_sha) rather than generic forge
+# ops, because the resolve-state transitions need validation that
+# doesn't fit the forge update path. Same pattern as bug.
+#
+# PROJECT-SCOPED. Every suggestion row carries a `project_id`, and the
+# create path requires the caller to pass a top-level `project`
+# parameter on the work meta-tool (e.g. work(forge, project="mcp-servers",
+# schema_name="suggestion", slug="…", fields={…})). Calls without
+# `project` fail fast.
+supported_ops = ["create", "update"]
+
+# Suggestions resolve via suggestion_resolve
+# (kind=adopted | deferred | rejected), not forge_delete. Surfaced in
+# HandleForgeDelete's rejection envelope (see [lifecycle] on bug.toml
+# for the parallel pattern).
+[lifecycle]
+soft_delete_action = "suggestion_resolve"
+
+[schema]
+name = "suggestion"
+prefix = "SUG"
+output_dir = "process-docs/suggestions"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "suggestions"
+key_columns = ["slug"]
+
+[[fields]]
+name = "title"
+type = "string"
+description = "Short human description — one line, sentence-style. Rendered in the suggestion list alongside slug. NOTE: distinct from `slug` and BOTH are required. `slug` is the kebab identifier ('add-fts5-coverage-to-roadmap-list'); `title` is the human sentence ('roadmap_list lacks the FTS5 coverage other lists have'). Don't conflate them."
+
+[[fields]]
+name = "problem_statement"
+type = "string"
+description = "What the suggestion proposes and why it would help. The 'friction shape if we don't do this' is fine here; this is where the case for the change lives. Mirrors bug.problem_statement structurally but differs in voice — bugs are observed; suggestions are proposed."
+
+[[fields]]
+name = "surface"
+type = "optional_string"
+description = "Subsystem / crate / concept the suggestion lives in. Multi-tag convention: comma-separated, lowercase-kebab, no spaces (e.g. `observatory`, `arcreview,prompt-shape`, `forge,registry`). Convention matches bug.surface — suggestion_list's surface filter splits on `,` and matches any token, so err toward more tags."
+
+[[fields]]
+name = "priority"
+type = "optional_string"
+description = "Accepted values: `low`, `medium`, `high`. Default `medium` when omitted. NOTE: native vocabulary — this is the suggestion-side analogue of bug.severity. The distinction matters: suggestions are forward-looking, so the relevant ordering is 'how much would this improve things' rather than 'how broken is this'. Enum enforcement is downstream — FieldType has no enum variant."
+
+[[fields]]
+name = "source"
+type = "optional_string"
+description = "Where the suggestion was surfaced. Conventional value for skill-driven filings is `session retro on <YYYY-MM-DD>`; for arcreview-pipeline filings it's the originating session/arc identifier. Free-form note also accepted."
+
+[[fields]]
+name = "acceptance_criteria"
+type = "optional_string_or_list"
+description = "What 'adopted' looks like — the observable end-state after the proposal lands. Accepts a list of strings (one bullet per criterion) or a single string (validator coerces to a 1-element list). Optional at file-time; can be filled in later or at resolve-time."
+
+[[fields]]
+name = "constraints"
+type = "optional_string"
+description = "Scope limits — don't-over-build notes, boundaries the implementation must respect. Paragraph prose; stored as a single string. Distinct from `acceptance_criteria` which is list-shaped."
+
+[[fields]]
+name = "tags"
+type = "optional_string"
+description = "Categorical labels — broader than bug.tags because suggestions cover 'anything at all' (testing, lint, docs, tooling, prose, architecture, skill, workflow). Comma-separated, lowercase-kebab, no spaces. Accepts a list of strings (validator joins on `,`) or a single comma-separated string."
+
+[[fields]]
+name = "status"
+type = "optional_string"
+set_by = "suggestion_resolve"
+description = "Accepted values: `open`, `adopted`, `deferred`, `rejected`. Default `open` when omitted. Transitions landed via `suggestion_resolve` / `suggestion_reopen`, NOT forge_edit — those tools enforce the required fields per kind. The set_by annotation makes forge_edit reject status edits pre-emit, so a forge_edit can't bypass the resolve-state machine. Mirrors bug.status. Bug `forge-edit-on-lifecycle-fields-bypasses-state-machine-and-suggestion-edit-broken`."
+
+[[fields]]
+name = "resolution_note"
+type = "optional_string"
+set_by = "suggestion_resolve"
+description = "Populated on close by `suggestion_resolve` (NOT via forge_edit — same retired-projection-column shape as bug.resolution_note). For kind=adopted: what shipped (or the chain+task that will ship it). For kind=deferred: why-not-now + revisit signal. For kind=rejected: reasoning."
+
+[[fields]]
+name = "routed_chain_slug"
+type = "optional_string"
+description = "When the suggestion is adopted and the work is tracked in a chain, the chain that absorbed it. Set together with routed_task_slug by `suggestion_resolve(kind='adopted', …)` — adoption + routing is the canonical 'this shipped' shape (no separate `implemented` resolution_kind)."
+
+[[fields]]
+name = "routed_task_slug"
+type = "optional_string"
+description = "When status=adopted-and-routed, the specific task in routed_chain_slug that executes the work."
+
+[[fields]]
+name = "routed_bug_slug"
+type = "optional_string"
+description = "When the adopted suggestion uncovers a concrete fix (bug filed for the implementation), the bug slug that tracks it. Symmetric counterpart to bugs.routed_suggestion_slug — bidirectional routing per chain `agent-suggestion-box` design_decisions §1."
+
+[[sections]]
+heading = "Title"
+fields = ["title"]
+
+[[sections]]
+heading = "Problem statement"
+fields = ["problem_statement"]
+
+[[sections]]
+heading = "Surface"
+fields = ["surface"]
+
+[[sections]]
+heading = "Priority"
+fields = ["priority"]
+
+[[sections]]
+heading = "Source"
+fields = ["source"]
+
+[[sections]]
+heading = "Acceptance criteria"
+fields = ["acceptance_criteria"]
+
+[[sections]]
+heading = "Constraints"
+fields = ["constraints"]
+
+[[sections]]
+heading = "Status"
+fields = ["status"]
+
+[[sections]]
+heading = "Resolution"
+fields = ["resolution_note", "routed_chain_slug", "routed_task_slug", "routed_bug_slug"]

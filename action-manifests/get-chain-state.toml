@@ -1,0 +1,34 @@
+# Canonical Go action: work.chain_state (see go/internal/actiondocs/corpus/work/chain_state.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "get-chain-state"
+version = "1.0.0"
+description = "Get the full state of a chain — task table (slug, order, status), completion condition, design decisions, and output prose — for navigation and planning decisions."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "what tasks are in chain",
+    "chain state",
+    "show me the chain",
+    "list tasks in chain",
+    "what's the status of the chain",
+    "chain task table",
+    "completion condition for chain",
+    "design decisions for chain",
+    "chain overview",
+    "what tasks remain",
+    "which tasks are pending in",
+    "check chain progress",
+]
+when_not = [
+    "looking up all chains — use chain_status for a summary across all chains",
+    "reading a specific task's content — use read_task",
+    "searching task content by keyword — use search_task_content",
+    "fuzzy-matching chains by name — use find_chain",
+]
+
+[instructions]
+path = "action-manifests/instructions/get-chain-state.md"

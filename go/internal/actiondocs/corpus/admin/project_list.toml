@@ -1,0 +1,3 @@
+surface = "admin"
+action = "project_list"
+purpose = "List every registered project. Use this when you need to discover what projects exist or confirm a project_id before scoping a write action against it."

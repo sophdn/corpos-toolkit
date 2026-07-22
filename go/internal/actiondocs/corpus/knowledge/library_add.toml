@@ -1,0 +1,9 @@
+surface = "knowledge"
+action = "library_add"
+purpose = "Add a new entry to the project's library catalogue. Mutates the library state."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

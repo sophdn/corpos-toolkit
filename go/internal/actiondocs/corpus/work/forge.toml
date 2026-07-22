@@ -1,0 +1,38 @@
+surface = "work"
+action = "forge"
+purpose = "DEPRECATED (chain 311 T7 Stage 5 — prefer `record`): create a new artifact for a registered schema. The forge create surface now routes through the construct umbrella and is mirrored by `record` with a forge-shaped sugar mode — `record({schema_name, slug, fields})` (op defaults to create). forge still works identically and is archived at Stage 6. For per-schema field details + call envelope, use forge_schema(schema_name='<name>')."
+notes = "forge accepts two equivalent param shapes — structured {schema_name, slug, fields: {<name>: <value>, ...}} OR sugar {schema_name, slug, <field-name>: <value>, ...} (matches forge_edit's sugar form). Reserved control words (slug/date/project/commit_sha) are excluded from the sugar pass so they aren't mis-collected as field values."
+
+[[params]]
+  name = "schema_name"
+  type = "string"
+  required = true
+  description = "Schema to forge. Alias: kind."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Slug for the new artifact. May be auto-derived from `title` for schemas that have a title field."
+
+[[params]]
+  name = "project"
+  type = "optional_string"
+  required = false
+  description = "Top-level envelope param (not inside fields) scoping the create to a project. Required for project-scoped schemas (chain, task, bug, suggestion) unless the server resolver derives it from CWD or --default-project."
+
+[[params]]
+  name = "fields"
+  type = "object"
+  required = false
+  description = "Field payload. May also be passed as top-level sugar keys instead of nested fields object."
+
+[[param_aliases]]
+  from = "kind"
+  to = "schema_name"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

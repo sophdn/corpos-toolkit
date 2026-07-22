@@ -1,0 +1,87 @@
+{
+  "actor_id": "claude-opus-4-7-memory-substrate-within-vault-T7",
+  "entity": {
+    "kind": "chain",
+    "slug": "memory-substrate-within-vault",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "MemorySubstrateAuditCompleted",
+      "rationale": "Chain memory-substrate-within-vault T7 retrospective — emitting the substrate audit findings through the write-side events ledger as the self-hosting proof. Completion criteria (a)/(b)/(c)/(e)/(f)/(g)/(h) pass; (d) passes-with-gap (migration is auditable via MemoryWritten source=migration rather than the originally-specified distinct MemoryMigratedFromHarnessDefault event type). The substrate's vault-mediated path is verified correct end-to-end on real traffic (98 MemoryWritten events, 82 vault entries 1:1 with proj_memories, all materialized); the only outstanding correctness gap — the still-active legacy harness-default writer leaking 14 direct-writes past the vault path plus duplicate MEMORY.md index lines — is out of scope here and routed to chain own-memory-read-then-disable-harness-auto-memory (299).",
+      "payload": {
+        "audit_doc": "docs/MEMORY_SUBSTRATE.md (T1 design — schema-shape decision, forge dispatch, materialization hook, migration, parse_context integration, arc-close hook routing) + docs/MEMORY_SUBSTRATE_RETROSPECTIVE_2026-05-24.md.",
+        "summary": "Vault-mediated memory substrate ships verified. Memory entries now land via forge(schema_name=memory, ...) as vault/memory/\u003ckind\u003e/\u003cname\u003e.md (kind in {user,feedback,project,reference}), emit a MemoryWritten event, project into proj_memories, surface through parse_context + vault_search, and materialize into the harness's ~/.claude/projects/\u003cproject\u003e/memory/ path so Claude Code's auto-load is preserved. Completion criteria: (a) design doc committed dba8b717; (b) forge schema + dispatch + MemoryWritten event committed fcc02d5a — 98 events, 82 live vault entries; (c) SessionStart materialization hook committed 0a25bf49 (project-scope fix 3e837b54) — all 82 vault entries materialize, zero vault-only; (d) one-shot migration committed b1eb19e4, 92 MemoryWritten source=migration rows — PARTIAL: auditable via the source discriminator rather than the spec'd distinct MemoryMigratedFromHarnessDefault event; (e) parse_context memory-aware resolution committed 744b1a03, verified live (gitea-api-access→single_exact, linguistic-tics→fuzzy_multi); (f) arc-close-filing-review-hook.sh memory_write routes through forge(memory) committed fcc02d5a; (g) real-work round-trip validated — 5+ non-migration writes (4 manual + 1 user-correction) land via the new path and materialize for next-session auto-load; (h) THIS event lands the closing audit through the write-side ledger. The proj_memories projection (T8's data source) was built by sibling chain substrate-health-audit-projections T7 (eb7ac4b3) and is clean (82 rows, 1:1, no dup slugs). The substrate's correctness is bounded by one out-of-scope gap: the legacy harness-default auto-memory writer is still active and leaks direct-writes that bypass the vault path (14 orphans, 11 written post-ship through 2026-05-24) plus duplicate MEMORY.md index lines (6) — both attributable to the legacy writer, both vanishing once chain 299 disables it. Per substrate-health-before-ml the orphans are NOT backfilled here; the writer is fixed at source in 299, then reconciled.",
+        "recommended_next_phase": "Run chain own-memory-read-then-disable-harness-auto-memory (299): (1) disable the harness-native auto-memory writer so the forge→vault path is the single writer of both memory files and MEMORY.md index lines; (2) one idempotent re-run of the T4 migration sweep to reconcile the 14 orphaned direct-writes into vault; (3) make MEMORY.md single-writer (the T3 materialization hook) to eliminate the duplicate index lines that cause parse_context spurious ask_user_to_disambiguate. The magnitude evidence (14 orphans, 6 dup index lines, last leak 2026-05-24 19:01) is the why-now for 299. The stale-cleanup leg of T6 (#7 — delete a vault entry, confirm next-session removal of the materialized copy) is staged but unobserved in-session; it becomes meaningfully testable only once 299 makes the hook the sole writer.",
+        "findings": [
+          {
+            "item": "(a) docs/MEMORY_SUBSTRATE.md committed with schema-shape decision: rationale for a dedicated `memory` forge schema vs extending the vault-note schema",
+            "status": "pass",
+            "evidence": "Commit dba8b717 — docs(memory-substrate): T1. A dedicated blueprints/forge-schemas/memory.toml schema was chosen over extending vault-note; the four-value kind taxonomy (user/feedback/project/reference) and frontmatter shape are documented. Design doc §7 documents the deferred edit/delete-event decision (the materialization hook discovers vault-side deletions by tree-walk, not by listening).",
+            "severity": "low"
+          },
+          {
+            "item": "(b) forge(schema_name=memory, ...) creates vault/memory/\u003ckind\u003e/\u003cname\u003e.md with frontmatter + body + writes a MemoryWritten event",
+            "status": "pass",
+            "evidence": "Commit fcc02d5a — memory forge schema + dispatch + MemoryWritten event. Live: 98 MemoryWritten events in the ledger (first 2026-05-22T18:34, last 2026-05-24T23:38); 82 vault/memory/\u003ckind\u003e/\u003cname\u003e.md entries on disk (feedback 49, project 18, reference 12, user 3); proj_memories holds 82 rows 1:1 with no duplicate names.",
+            "severity": "low"
+          },
+          {
+            "item": "(c) session-init materialization hook installed at ~/.claude/hooks/ + wired in settings.json + tracked in skills/_manifest.toml; copies vault/memory/* into the harness memory dir; cleans up stale entries",
+            "status": "pass",
+            "evidence": "Commit 0a25bf49 (project-scope materialization fix 3e837b54). SessionStart hook present in ~/.claude/settings.json → $HOME/.claude/hooks/materialize-memory.sh; tracked in skills/_manifest.toml [[hook]] name=materialize-memory. All 82 vault entries are materialized into ~/.claude/projects/-home-sophi-dev/memory/ (zero vault-only — the vault→harness direction is exhaustive). Stale-cleanup operates on sentinel-marked files only, so user-curated and legacy direct-write entries are correctly never touched (this is why the legacy orphans persist — the hook is behaving as designed, not leaking).",
+            "severity": "low"
+          },
+          {
+            "item": "(d) existing harness-dir entries migrated via a one-shot script that re-forges them and emits MemoryMigratedFromHarnessDefault events",
+            "status": "partial",
+            "evidence": "Commit b1eb19e4 — scripts/migrate-memories-to-vault.py ran: 92 MemoryWritten events carry source=migration. GAP: the migration is auditable, but via a `source` discriminator on the existing MemoryWritten event type rather than the originally-specified distinct MemoryMigratedFromHarnessDefault event type. The distinct type was judged unnecessary — one event type with a source field keeps the events catalog smaller and the proj_memories writer single-path. The 92 migrated vs 82 current vault entries delta is expected: ~10 entries were deleted/superseded post-migration per the memory-hygiene discipline (delete memories that turn out wrong).",
+            "severity": "low"
+          },
+          {
+            "item": "(e) parse_context surfaces memory entries on resolvable tokens (verified via a worked example)",
+            "status": "pass",
+            "evidence": "Commit 744b1a03 — T5 parse_context worked example, verify-only. Live worked example: parse_context on 'remember the gitea-api-access detail and watch for my linguistic-tics' resolves gitea-api-access → memory_entry single_exact (recommended_action use_directly) and linguistic-tics → memory_entry fuzzy_multi. The fuzzy_multi/ask_user_to_disambiguate result is itself the symptom of the MEMORY.md duplicate-index finding below, not a resolver defect.",
+            "severity": "low"
+          },
+          {
+            "item": "(f) arc-close-filing-review-hook.sh memory_write path updated to call forge(schema_name=memory, ...) instead of direct Write",
+            "status": "pass",
+            "evidence": "Commit fcc02d5a (hook update shipped alongside the schema). hooks/arc-close-filing-review-hook.sh forge_row helper routes the auto-execute memory_write decision through forge(schema_name=memory, ...) via curl POST — no longer writes directly to a hardcoded ~/.claude/projects/-home-sophi-dev/memory dir; the file lands at the vault path and materializes back.",
+            "severity": "low"
+          },
+          {
+            "item": "(g) at least one real session writes a memory via the new path AND the entry auto-loads on the next session start (round-trip)",
+            "status": "pass",
+            "evidence": "Real-work validation: of 98 MemoryWritten events, 6 are non-migration new-path writes (4 source=manual + 1 source=user-correction-2026-05-22 + 1 unset). All 82 vault entries materialize into the harness memory dir + MEMORY.md is rebuilt with their index lines, so the next session's auto-load reads them. Round-trip (write via forge → vault on disk → MemoryWritten event → materialize → next-session auto-load → parse_context surfacing) verified end-to-end across the 2026-05-22→2026-05-24 traffic window spanning many session boundaries.",
+            "severity": "low"
+          },
+          {
+            "item": "(h) closing MemorySubstrateAuditCompleted event emitted via the audit-emit pattern",
+            "status": "pass",
+            "evidence": "THIS event is the (h) deliverable — emitted by go/cmd/memory-substrate-audit-emit through the substrate's own internal/events.Emit path. Schema at blueprints/events/MemorySubstrateAuditCompleted.json + go/internal/events/schemas/MemorySubstrateAuditCompleted.json (synced via scripts/sync-event-schemas.sh in precommit); registered in TestIsRegisteredType.",
+            "severity": "low"
+          },
+          {
+            "item": "Outstanding correctness gap (out of scope; routed to chain 299): legacy harness-default auto-memory writer still active — leaks direct-writes bypassing the vault path",
+            "status": "partial",
+            "evidence": "14 files materialized in ~/.claude/projects/-home-sophi-dev/memory/ have no vault/memory source; 11 of them were written AFTER the substrate went live (latest 2026-05-24T19:01), so the legacy writer is demonstrably still active, not a migration miss. These direct-writes never reach vault / proj_memories / MemoryWritten, so the projection (and any future trained classifier over it) under-counts real memory activity. Per substrate-health-before-ml these are NOT backfilled here — the writer is fixed at source in chain own-memory-read-then-disable-harness-auto-memory (299), then reconciled with one idempotent migration sweep.",
+            "severity": "medium"
+          },
+          {
+            "item": "Outstanding correctness gap (out of scope; routed to chain 299): MEMORY.md duplicate index lines from the legacy writer racing the T3 hook rebuild",
+            "status": "partial",
+            "evidence": "MEMORY.md has 99 index lines pointing at 93 unique targets = 6 duplicate lines (title-case variants duplicating kebab-case entries: feedback-backup-before-destructive-db-work, feedback-default-to-implement-now-not-defer, feedback-frontend-visual-verify, feedback-stop-foregrounding-over-firer-reminders, linguistic-tics, worktree-agents-pattern). The duplicates cause parse_context to return the same file as multiple candidates with a spurious ask_user_to_disambiguate. Fix is single-writer MEMORY.md (the T3 hook) once 299 disables the legacy writer.",
+            "severity": "low"
+          },
+          {
+            "item": "Cross-chain seam: proj_memories projection (T8's data source) built by sibling chain substrate-health-audit-projections T7",
+            "status": "pass",
+            "evidence": "proj_memories was added by chain substrate-health-audit-projections T7 (commit eb7ac4b3), not this chain — memories were the only entity kind lacking a projection table. This chain's T8 dashboard render consumes it. The projection is clean (82 rows, 1:1 with vault entries, no duplicate names), confirming the dashboard's data source is trustworthy and that the dup-index defect lives only in the legacy harness/MEMORY.md layer, never in the vault-mediated projection.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    }
+  ]
+}

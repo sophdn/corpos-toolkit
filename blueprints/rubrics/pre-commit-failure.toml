@@ -1,0 +1,53 @@
+name        = "pre-commit-failure"
+description = "Pre-commit hook failure dominant-cause classifier"
+is_deployed = true
+output_enum = ["lint", "typecheck", "test", "lifecycle", "unclassifiable"]
+
+criteria = [
+  "lint: a static-analysis tool flagged a violation. Examples: clippy warnings escalated to errors; rustfmt diff non-empty; eslint / ruff; structure-lint rule violations.",
+  "typecheck: type errors from the language's type system. Examples: `cannot find type X`; `expected struct Y, found struct Z`; tsc errors.",
+  "test: a test assertion failed. Examples: `assertion failed`; `panic at`; `test result: FAILED`; jest / pytest / cargo test failures.",
+  "lifecycle: a hook lifecycle script failed (state-machine-doc-gen, schema validation, reference-checker, frontmatter linter, etc.).",
+  "unclassifiable: the failure is genuinely off-rubric. Examples: cargo registry unreachable; permission denied; SIGSEGV; network timeouts; missing tool binary.",
+]
+
+prompt_template = """You classify ONE pre-commit hook stderr dump by its dominant failure \
+cause. The hook runs multiple checks (lint, typecheck, tests, lifecycle \
+scripts); failure stderr typically surfaces one or two stages prominently.
+
+- **lint**: a static-analysis tool flagged a violation. Examples: clippy \
+warnings escalated to errors; rustfmt diff non-empty; eslint / ruff; \
+structure-lint rule violations.
+- **typecheck**: type errors from the language's type system. Examples: \
+`cannot find type X`; `expected struct Y, found struct Z`; tsc errors.
+- **test**: a test assertion failed. Examples: `assertion failed`; \
+`panic at`; `test result: FAILED`; jest / pytest / cargo test failures.
+- **lifecycle**: a hook lifecycle script (state-machine-doc-gen, schema \
+validation, reference-checker, frontmatter linter — anything declared \
+in `.git-hooks/pre-commit` that's not lint/typecheck/test) failed.
+- **unclassifiable**: the failure is genuinely off-rubric. Examples: \
+`error: failed to fetch; cargo registry unreachable`; `permission \
+denied`; SIGSEGV; network timeouts; missing tool binary.
+
+Bias: when stderr surfaces multiple categories, pick the FIRST one \
+emitted (typically the most-upstream stage that failed)."""
+
+[[examples]]
+text      = "running cargo clippy --all-targets --all-features\nwarning: variable does not need to be mutable\n   --> crates/forge-lib/src/engine/validate.rs:127:13\nerror: lint warnings emitted under -D warnings\nexit 1"
+label     = "lint"
+reasoning = "Clippy-emitted lint warning escalated to error."
+
+[[examples]]
+text      = "running cargo test -p inference-router\ntest dispatcher::tests::compose_classify ... FAILED\nthread '...' panicked at dispatcher.rs:996:9: assertion `left == right` failed\ntest result: FAILED. 41 passed; 1 failed\nexit 1"
+label     = "test"
+reasoning = "Cargo-test assertion failure with named failing test and panic backtrace."
+
+[[examples]]
+text      = "running state-machine-doc-gen --check\nERROR: skills/instructions/chain-assessment.md state-machine block out of sync with mcp-servers/crates/work-lib/src/transitions.rs.\nRun `cargo run -p state-machine-doc-gen` to regenerate.\nexit 1"
+label     = "lifecycle"
+reasoning = "Pre-commit lifecycle hook reported docs-vs-code drift."
+
+[[examples]]
+text      = "running cargo clippy --all-targets --all-features\nerror: failed to download `serde_json v1.0.114`\n  Caused by: dns lookup failed: Name or service not known\nexit 101"
+label     = "unclassifiable"
+reasoning = "Network-layer failure: DNS lookup failed. Off-rubric infrastructure issue."

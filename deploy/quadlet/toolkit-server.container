@@ -1,0 +1,37 @@
+# Quadlet container unit — the containerized toolkit-server BACKEND (MCP + HTTP
+# API). Rootless, systemd-user-managed. Serves on host :3001 (alt port); the
+# native :3000 daemon stays canonical during the coexist/validation phase (DB
+# strategy c). The dashboard is a separate app — this is backend only.
+#
+# image-lags-HEAD (the deliberate stability boundary, chain req 3): this runs
+# localhost/toolkit-server:dev AS BUILT. Editing source does NOT change the
+# running container — advance it explicitly with:
+#     scripts/build-toolkit-image.sh && systemctl --user restart toolkit-server
+# (Contrast: the native :3000 daemon is auto-rebuilt+restarted by the
+# post-commit advisor. The containerized surface is intentionally NOT — its lag
+# IS the image-lags-HEAD boundary. See deploy/quadlet/README.md §advisor.)
+#
+# corpos is a CLI (oneshot), NOT a daemon — there is deliberately no corpos
+# .container unit. Run it on demand; recipe in deploy/quadlet/README.md.
+[Unit]
+Description=toolkit-server backend (containerized) — MCP + HTTP API on :3001
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=toolkit-server
+Image=localhost/toolkit-server:dev
+Network=corpos.network
+PublishPort=3001:3000
+Volume=toolkit-server-data.volume:/data
+# Server flags are the image's baked CMD (--http-only, baked config paths, DB on
+# the volume). Override here with Exec= only if a flag needs to change.
+
+[Service]
+# A crash should bring it back; the backend holds no un-restartable state (the
+# DB is on the volume, sessions are per-request).
+Restart=on-failure
+TimeoutStartSec=90
+
+[Install]
+WantedBy=default.target

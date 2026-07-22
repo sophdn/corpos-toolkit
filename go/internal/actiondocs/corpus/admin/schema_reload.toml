@@ -1,0 +1,9 @@
+surface = "admin"
+action = "schema_reload"
+purpose = "Re-scan the bundled blueprints/forge-schemas dir + BLUEPRINTS_PROJECT_DIR (if set) and atomically replace the in-memory registry — use after adding or editing schemas on disk to avoid restarting the server."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

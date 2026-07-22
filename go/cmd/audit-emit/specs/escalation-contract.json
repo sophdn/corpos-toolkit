@@ -1,0 +1,57 @@
+{
+  "actor_id": "claude-opus-4-7-orchestrator-tier-escalation-contract-T5",
+  "entity": {
+    "kind": "chain",
+    "slug": "orchestrator-tier-escalation-contract",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "EscalationContractAuditCompleted",
+      "rationale": "Chain orchestrator-tier-escalation-contract T5 retrospective — emitting the closing audit through the same write-side events ledger the contract's own EscalationProposed events use. Completion criteria (a)-(f) all pass; the contract is the driver-swap-enabling substrate artifact from the two-axes-of-llm-offload vault decision, ready for a cheap-orchestrator harness loop to consume.",
+      "payload": {
+        "audit_doc": "docs/ORCHESTRATOR_ESCALATION.md (T1 design — 5 triggers, EscalationProposed payload, next-turn hot-switch, K-turn de-escalation hysteresis, threshold tunables, the three contract surfaces) + the chain completion_condition items (a)-(f).",
+        "summary": "The orchestrator-tier escalation contract ships verified end-to-end. A cheap orchestrator-tier model (DeepSeek V4 Pro / Qwen) drives the loop; on any of 5 closed triggers (retry_exhaustion / low_confidence / repeated_tool_error / parse_failure / explicit_handoff) the contract proposes handing the NEXT turn to a strong tier (Opus 4.7), records an EscalationProposed event through the write-side ledger, switches the router's next_model(), and de-escalates back after K consecutive clean turns (hysteresis). Per-trigger thresholds + K live in the escalation_thresholds config table (migration 080, seeded global defaults, per-project overrides) read/written by admin actions escalation_threshold_list / escalation_threshold_set; escalation_propose emits the event. The reference detector + router library lives at clients/escalation/ (stdlib-only Python, importable by any harness). Verified: a live worktree-mcp integration run round-tripped the threshold config, fired EscalationProposed on a simulated retry-exhaustion, switched the next turn's model, de-escalated after K turns, and confirmed the event landed in the ledger. This contract is the driver-swap-ENABLING substrate artifact (vault decision two-axes-of-llm-offload, 2026-05-19), neither offload axis on its own — the cheap-orchestrator harness loop that consumes it is the follow-on.",
+        "recommended_next_phase": "Build the cheap-orchestrator harness loop (the agent-loop-driver swap proper) that consumes this contract: a DeepSeek-V4-Pro/Qwen conversational driver that gathers TurnSignals, calls EscalationRouter.observe/next_model each turn, and hot-switches to Opus 4.7 on escalation. Once a corpus of EscalationProposed events accumulates, a follow-on can train a classifier to score escalation decisions (replacing the threshold heuristics) — the event payload was shaped as that training corpus.",
+        "findings": [
+          {
+            "item": "(a) docs/ORCHESTRATOR_ESCALATION.md documents triggers, payload, hot-switch, de-escalation hysteresis, threshold tunables",
+            "status": "pass",
+            "evidence": "Commit 1f69c4ab — docs/ORCHESTRATOR_ESCALATION.md: §2 the 5 triggers + per-trigger threshold semantics/defaults; §3 the EscalationProposed payload + entity/actor; §4 next-turn hot-switch semantics (record-on-fire, swap-at-turn-boundary, advisory); §5 K-turn de-escalation hysteresis; §6 the escalation_thresholds tunables; §7 the three contract surfaces. Cross-references the two-axes-of-llm-offload vault decision and the atomic-tasks worker-tier tier-bump lineage.",
+            "severity": "low"
+          },
+          {
+            "item": "(b) EscalationProposed event type added to write-side events ledger with JSON schema validation",
+            "status": "pass",
+            "evidence": "Commit c304c4c3 — blueprints/events/EscalationProposed.json (synced to the go/internal/events/schemas embed by sync-event-schemas.sh) + EscalationProposedPayload in payloads.go + EVENT_CATALOG row. Validated at emit time by the events package's jsonschema validator (registered via RegisteredTypes; TestIsRegisteredType green). The live integration run landed a schema-valid row (entity orchestrator_session, trigger retry_exhaustion, state_after escalated).",
+            "severity": "low"
+          },
+          {
+            "item": "(c) config table for per-trigger thresholds exists; admin MCP action reads/writes",
+            "status": "pass",
+            "evidence": "Commit c304c4c3 — migration 080 escalation_thresholds (per (project_id, trigger_kind); CHECK-constrained 5-trigger enum; seeded global defaults; testutil mirror) + admin actions escalation_threshold_list (effective global+override merge read) and escalation_threshold_set (upsert preserving omitted fields, rationale-gated). internal/admin/escalation_test.go pins the seeded defaults, the set/list effective-merge round-trip, and omitted-field preservation; the live integration run round-tripped a project override.",
+            "severity": "low"
+          },
+          {
+            "item": "(d) reference Python implementation library importable by any harness; library emits events through toolkit-server",
+            "status": "pass",
+            "evidence": "Commits 8eb72ec2 (detectors + client) + ad61462d (router). clients/escalation/ — stdlib-only Python (no third-party runtime dep), src/ layout + pyproject. escalation.triggers (pure per-trigger detectors), escalation.client (EscalationClient over POST /mcp/admin emitting EscalationProposed + reading/writing thresholds), escalation.router (cheap\u003c-\u003estrong state machine with K-turn hysteresis + the two-call observe/next_model harness contract). 32 unit tests + ruff + mypy --strict all clean. The live integration run proved the client emits EscalationProposed events through the toolkit-server HTTP wire.",
+            "severity": "low"
+          },
+          {
+            "item": "(e) integration test: simulated trigger fires EscalationProposed, switches next turn's model, de-escalation observed after K configurable turns; threshold config round-trips; ledger event landed",
+            "status": "pass",
+            "evidence": "clients/escalation/tests/test_integration.py — run against a live scripts/worktree-mcp.sh --fresh daemon (branch binary git_sha ad61462d, migration 080 applied). test_threshold_config_round_trips set+listed a project override; test_full_escalation_arc_lands_event fired a simulated retry_exhaustion (router cheap-\u003eescalated, next_model deepseek-v4-pro-\u003eclaude-opus-4-7), observed de-escalation back to the cheap model after K=2 clean turns, and read the EscalationProposed row back from the ledger DB by event_id (type/entity_kind/entity_slug all confirmed). Both passed. The Go-side internal/admin/escalation_test.go TestEscalationPropose_EmitsEventToLedger is the gate-protected in-process counterpart.",
+            "severity": "low"
+          },
+          {
+            "item": "(f) EscalationContractAuditCompleted event lands through write-side ledger",
+            "status": "pass",
+            "evidence": "THIS event is the (f) deliverable — emitted by go/cmd/orchestrator-escalation-audit-emit through the contract's own internal/events.Emit path. Schema at blueprints/events/EscalationContractAuditCompleted.json + the go/internal/events/schemas embed (synced via sync-event-schemas.sh); EscalationContractAuditCompletedPayload registered + EVENT_CATALOG row; TestIsRegisteredType green.",
+            "severity": "low"
+          }
+        ]
+      }
+    }
+  ]
+}

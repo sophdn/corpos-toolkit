@@ -1,0 +1,44 @@
+surface = "work"
+action = "forge_edit"
+purpose = "DEPRECATED (chain 311 T7 Stage 5 — prefer `record`): update an existing artifact. Mirrored by `record({schema_name, slug, fields, op:\"update\"})`. forge_edit still works identically and is archived at Stage 6. For task schema, chain_slug is required at the top level (slug isn't globally unique). See forge_schema(schema_name='<name>') for the per-schema call_envelopes."
+notes = "forge_edit on a task accepts the same {chain_slug, slug, <fields…>} top-level shape as task_edit (the composite key is synthesized from chain_slug + slug); the structured form on tasks needs key: {chain_slug, slug}."
+
+[[params]]
+  name = "schema_name"
+  type = "string"
+  required = true
+  description = "Schema to edit."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Slug of the artifact to edit."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Required for task schema (disambiguates the row)."
+
+[[params]]
+  name = "project"
+  type = "optional_string"
+  required = false
+  description = "Top-level envelope param (not inside fields) scoping the edit to a project. Resolved from CWD or --default-project when omitted."
+
+[[params]]
+  name = "fields"
+  type = "object"
+  required = false
+  description = "Updated field values. May also be passed as top-level sugar keys."
+
+[[param_aliases]]
+  from = "kind"
+  to = "schema_name"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

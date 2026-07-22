@@ -1,0 +1,36 @@
+surface = "fs"
+action = "glob"
+purpose = "Match files by glob pattern (ripgrep file enumeration). The owned replacement for the harness Glob tool; results are sorted newest-first by modification time and capped at 100 files."
+notes = "CONTRACT (see go/internal/fs/testdata/parity/GREP_GLOB_CONTRACT.md): rides ripgrep's glob dialect (one engine for grep + glob), hidden-aware, excludes version-control metadata dirs, honors .gitignore. A bare *.ext matches at any depth (ripgrep semantics), unlike a shell *.ext — documented, not faithful to a shell glob. Capped at 100 files; truncated flags elision."
+
+[[params]]
+  name = "pattern"
+  type = "string"
+  required = true
+  description = "The glob (ripgrep dialect: ** spans directories, */? within a segment, {a,b} groups). e.g. \"**/*.go\", \"src/**/*.ts\"."
+
+[[params]]
+  name = "path"
+  type = "optional_string"
+  required = false
+  description = "Directory to search in; defaults to the working directory. Results are relative to it."
+
+[[param_aliases]]
+  from = "file_path"
+  to = "path"
+
+[[errors]]
+  condition = "pattern missing or empty"
+  message = "fs.glob requires pattern"
+
+[[errors]]
+  condition = "the search path does not exist"
+  message = "fs.glob: path does not exist: <path>"
+
+[[errors]]
+  condition = "the path is not a directory"
+  message = "fs.glob: <path> is not a directory"
+
+[returns]
+  shape = "GlobResult"
+  description = "filenames (relative to the search root, newest-first), num_files, truncated (true when the 100-file cap elided matches), duration_ms."

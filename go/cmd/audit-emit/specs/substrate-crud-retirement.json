@@ -1,0 +1,87 @@
+{
+  "actor_id": "claude-opus-4-7-agent-substrate-crud-retirement-T7",
+  "entity": {
+    "kind": "chain",
+    "slug": "agent-substrate-crud-retirement",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ArchitectureAuditCompleted",
+      "rationale": "Chain agent-substrate-crud-retirement T7 retrospective. Emitting the architecture audit findings through the substrate the chain just retired the CRUD-shadow of — the self-hosting check completion_condition (g) names. All nine completion-condition clauses verified; the eight artifact-lifecycle CRUD tables are dropped; reads flow through proj_* tables; writes flow through events; rebuild-from-empty produces row-for-row byte-identical projection state vs live for every projection.",
+      "payload": {
+        "audit_doc": "docs/SUBSTRATE_CRUD_RETIREMENT.md (chain agent-substrate-crud-retirement T1 audit + design, T6a §14 frontend equivalence verification) + the chain's completion_condition (a)–(i) inline in design_decisions",
+        "summary": "All nine completion_condition clauses pass. (a) The seven retired CRUD tables (bugs / tasks / chains / task_blockers / benchmark_results / roadmap_items / suggestions) plus the dead task_dependencies table dropped via migration 060 in one transaction at 725e854; the binary builds + the daemon serves. (b) toolkit-server rebuild-projections from empty produces row-for-row byte-identical state to live for every projection as of c9cadca: 277 chains, 849 bugs, 2864 tasks, 4 suggestions, 7 task_blockers, 716 benchmarks, 38 roadmap items. Verified by scripts/equivalence-harness.sh stage 2b. (c) Zero CRUD reads of the retired tables remain in any production code path; the precommit lint added in 53f38d8 enforces this going forward. (d) The fold hook constructs projection rows from event payload alone for every retired entity kind; the previous post-update CRUD reflection path is deleted, not just bypassed. (e) Pre-substrate-entity history was handled via Option A (synthesize initial-state events) and four follow-on migrations (061 backfill, 062 phantom-task retire via the new TaskRetired event type, 063 benchmark synthesis with full payload, 064 task-blocker edge synthesis), all documented in docs/SUBSTRATE_CRUD_RETIREMENT.md §13 + §14. (f) Events envelope schema_version stays at 1; T3's additive payload bumps are backward-compatible (six bumps: BugReported/BugEdited/TaskEdited/ChainEdited/TaskTransitioned/ BenchmarkRunCompleted) plus T5-roadmap bump (RoadmapUpdated. items[]), T5-bugs bump (BugResolved.routed_suggestion_slug), and T5-benchmarks bump (BenchmarkRunCompleted identifying columns). One new event type (TaskRetired) added in T6a. (g) This event itself is the self-hosting proof — the substrate is exercised to record its own retirement audit. (h) docs/SUBSTRATE_CRUD_RETIREMENT.md is the durable artifact: §1 scope, §2 read-site inventory, §3 write-site inventory, §4 projection-gap matrix, §5 event-payload-coverage matrix, §6 pre-substrate-entity strategy decision, §7 FTS5 handling, §11 MCP read-path coverage matrix (T4a), §12 frontend coverage matrix (T4b), §13 T5 split outcomes, §14 frontend equivalence verification (T6a). (i) Rendered-state equivalence: scripts/equivalence-harness.sh --playwright-against-live 85/85 pass against live daemon byte-identical to rebuild. Vitest 424/424 pass against rebuilt-DB-backed daemon. Backend test suite (make -C go test) passes against post-T6 binary with CRUD tables dropped.",
+        "recommended_next_phase": "Two cousin cleanups follow naturally: phase-4-legacy-field-deprecation (FIELD-level cleanup of legacy free-form fields, gated on agent-substrate-frontend 30-day production bake-in; chain shell now has 4 tasks populated) and the substrate optimisation tier (trained-arc-close-filing-classifier-v1 + trained-smart-snapshot-filter-v1, chain shells now populated with 6 tasks each). No new chain proposed by this retrospective; the existing pipeline absorbs the follow-on work.",
+        "findings": [
+          {
+            "item": "completion_condition (a) — eight CRUD tables dropped via single migration",
+            "status": "pass",
+            "evidence": "Migration 060 at 725e854 drops bugs/tasks/chains/task_blockers/task_dependencies/benchmark_results/roadmap_items/suggestions in one transaction. Verified live: SELECT name FROM sqlite_schema WHERE name IN (...8 names...) returns zero rows.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (b) — rebuild-from-empty byte-identical to live",
+            "status": "pass",
+            "evidence": "scripts/equivalence-harness.sh stage 2b diffs row counts: every projection matches exactly post-c9cadca. Verification rerun documented in docs/SUBSTRATE_CRUD_RETIREMENT.md §14.1 table.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (c) — zero CRUD reads of retired tables in production code",
+            "status": "pass",
+            "evidence": "scripts/precommit.sh added retired-CRUD lint at 53f38d8: greps go/internal/, go/cmd/, go/smoketest/, benchmarks/, crates/ for INSERT/SELECT/UPDATE/DELETE against the eight retired table names (excluding Go // comment lines + migrations/ + scenario_e[14]/ fixtures). Lint clean at every commit since.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (d) — fold constructs from payload alone, not post-update CRUD reflection",
+            "status": "pass",
+            "evidence": "T5's six sub-commits (c7c5d6e..7128e48) flipped every fold module. The agent-substrate-crud-retirement T1 design doc §5 documents the per-event-type payload→column mapping; T5 sub-commits land the writer-side population. Post-c9cadca, no fold reads from a retired CRUD table.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (e) — pre-substrate entity history via Option A + four backfill migrations",
+            "status": "pass",
+            "evidence": "Migrations 061 (chain/bug/task synth + roadmap.set), 062 (TaskRetired for 6 phantom flip-write-contract-* slugs), 063 (BenchmarkRunStarted+Completed for 716 pre-T5 rows), 064 (TaskTransitioned with blocker_slug for 5 pre-T3-guard-lift edges). One new event type added (TaskRetired) with fold semantics that DELETE projection rows + cleanup task_blockers edges.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (f) — events envelope schema_version stays at 1; payload bumps additive only",
+            "status": "pass",
+            "evidence": "Verified via blueprints/events/_envelope.json schema_version remains 1; T3 + T5 bumps documented in §13.1's commit ledger. One new event type (TaskRetired) added; no other event-type renames or removals.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (g) — self-hosting proof via this very event",
+            "status": "pass",
+            "evidence": "This ArchitectureAuditCompleted event lands in the events table via go/cmd/substrate-crud-retirement-audit-emit, exercising the substrate the chain retired the CRUD shadow of. The substrate signs its own retirement audit.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (h) — durable artifact at docs/SUBSTRATE_CRUD_RETIREMENT.md",
+            "status": "pass",
+            "evidence": "14 sections covering scope (§1), read-site inventory (§2), write-site inventory (§3), projection-gap matrix (§4), event-payload-coverage matrix (§5), pre-substrate-entity strategy (§6), FTS5 handling (§7), task-by-task scope handoff (§8), audit findings (§9), open questions (§10 with Q3 resolved at T2 close), MCP read-path coverage matrix T4a (§11), frontend coverage matrix T4b (§12), T5 split outcomes (§13), frontend equivalence verification T6a (§14). Sufficient for a future agent to add a new event-sourced entity without re-deriving the contract.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (i) — rendered-state equivalence verified",
+            "status": "pass",
+            "evidence": "scripts/equivalence-harness.sh runs three stages: SQL row-count diff (load-bearing, all 7 projections match), Vitest 424/424 against rebuilt-DB-backed daemon, Playwright 85/85 against live daemon (workaround for spec port-hardcoding documented in §14.1 + follow-up bug `playwright-specs-hardcode-localhost-3000-which-blocks-isolated-daemon-runs`).",
+            "severity": "low"
+          },
+          {
+            "item": "Scope discovery: T4 + T5-benchmarks Rust-side gaps surfaced during T6",
+            "status": "partial",
+            "evidence": "T4 (read repointing) scoped to go/internal/ but missed Rust crates/chain-assessment + go/cmd/curate-discover; T5-benchmarks shipped Go-side at 94618fe but missed Rust crates/shared-db/src/benchmark_dispatch.rs + benchmarks/src/db.rs. All caught + closed during T6 (725e854) per the chain's `+ crates/` clause in completion_condition (c). 16 Go test files + ~700 lines of Rust benchmark crate refactored to match the post-T6 contract.",
+            "severity": "medium"
+          },
+          {
+            "item": "Scope discovery: pre-existing fold + event-coverage gaps surfaced during T6a sanity-check",
+            "status": "partial",
+            "evidence": "Five gaps surfaced + closed: bug 1493 (TaskCreated payload string-vs-[]string drift at fold time, fixed by UnmarshalJSON tolerance); 1495 (Option-A backfill missed chains/bugs/most tasks → migration 061); rebuild-phantom-tasks (6 forge_delete orphans → TaskRetired + migration 062); benchmark_results pre-T5 events lacked identifying cols → migration 063; task_blockers pre-T3-guard-lift edges + cleanup-on-close gap → migration 064 + taskBlockers fold extension. All landed in c9cadca.",
+            "severity": "medium"
+          }
+        ]
+      }
+    }
+  ]
+}

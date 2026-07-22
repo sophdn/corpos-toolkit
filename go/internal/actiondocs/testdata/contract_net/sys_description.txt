@@ -1,0 +1,5 @@
+Owned system surface — read-only introspection of live host state: ps (processes), ports (listening sockets + owning pid), units (systemd-user units), containers (podman/docker). All actions are ungated (observation cannot mutate state) and return structured rows rather than raw shell text. (The gated exec action was retired from this surface; host command execution is owned by the agent loop natively.)
+
+Actions (alphabetical): containers, ports, ps, units.
+
+For per-action details (params, aliases, errors, examples, notes), call admin.action_describe(surface="sys", action="<name>"). For surface-wide conventions (structured-row introspection of live host state), call admin.action_describe(surface="sys", action="_general").

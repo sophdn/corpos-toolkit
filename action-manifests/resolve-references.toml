@@ -1,0 +1,31 @@
+[skill]
+name = "resolve-references"
+version = "1.0.0"
+description = "Resolve every reference-shape token in a user message in one call. Detects chain/task/bug slugs, paths, skill / project / tool names, forge schemas, library entries, domain terms, and external technical terms; dispatches to the appropriate resolver per shape; returns formatted resolution context with confidence tiers (single_exact / fuzzy_multi / weak_domain / no_hit) and presentation recommendations. Call when a user message names specific things you can't bind to current context — the unified-dispatch alternative to per-shape tool calls (chain_find, task_search, vault_search, kiwix_search, …). Verbose-and-explicit by design: presented strings name what was found and where it came from."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "resolve references",
+    "look up everything in this message",
+    "what does this message refer to",
+    "bind these slugs",
+    "what is this referring to",
+    "look up all references",
+    "resolve all the things",
+    "scan this message for references",
+    "find all the bindings",
+    "resolve mixed references",
+    "what should I check before responding",
+]
+when_not = [
+    "resolving a SINGLE known slug — call chain_find / task_search / bug_list directly (cheaper, simpler)",
+    "reading a specific entity's full detail — use chain_status / task_read / bug_read",
+    "the user already provided the binding inline — trust the inline binding, don't re-resolve",
+    "no reference-shape tokens are in the message — trivial messages return zero references; the call is a no-op but still costs a round trip",
+    "the agent already has the references bound in current context — de-duplication is the agent's discipline",
+    "auto-firing on every message — this action is agent-invoked per the reference-resolution skill, not system-fired (proactive-injection is a deferred separate feature)",
+]
+
+[instructions]
+path = "action-manifests/instructions/resolve-references.md"

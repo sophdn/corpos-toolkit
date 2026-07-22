@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ChainAndTasksForged.json",
+  "title": "ChainAndTasksForged payload",
+  "description": "OPTIONAL grouping/analytics signal for a chain-create-with-tasks — NOT a do-everything composite, despite the name. It does NOT create the chain or its tasks: the chain comes from the ChainCreated event and each task from its own TaskCreated event, and NO projection folds this event (it touches no entity state). It is a parent+children SUMMARY that sits ALONGSIDE those per-entity events (carrying task_count + the task_slugs + the entry `mode`), which the chain-close-completeness audit + analytics consumers join on. So: when creating a chain-with-tasks via `record`, the load-bearing events are ChainCreated + one TaskCreated per task (in that order); emit ChainAndTasksForged too ONLY if you want the grouping signal — the chain + tasks are complete without it. (forge(schema_name='chain', tasks=[…]) emits all of them for you.) The `mode` field discriminates the task-entry shape: 'full_objects' (every entry a full task object), 'pipe_delimited' (slug|scope|status strings), 'mixed', or 'empty' (chain forged with no tasks). T1 design audit added this as one of the eight original event types; landed in T7 of work-batching-and-forge-templates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["chain_slug", "task_slugs", "task_count", "mode"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The chain that was created with these tasks. Matches the slug on the sibling ChainCreated event."
+    },
+    "chain_id": {
+      "type": ["integer", "null"],
+      "description": "Numeric chain id resolved at create time. Optional because the projection fold assigns the id; on a fresh chain emit the chain_id MAY be unavailable until the fold lands."
+    },
+    "task_slugs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Per-task slugs in creation order. Empty when mode='empty'."
+    },
+    "task_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of tasks created with the chain. Matches len(task_slugs)."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["full_objects", "pipe_delimited", "mixed", "empty"],
+      "description": "Which shape the caller used for the tasks list. Analytics signal: T8's retro reports on how often agents use the full-object shape vs the legacy pipe-delimited shape."
+    },
+    "per_task_rationales": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Per-task rationale strings (parallel to task_slugs). Empty strings for pipe-delimited entries (which don't carry a rationale). Required-on-full-object validation runs at HandleForge entry; this field is informational on the events ledger."
+    }
+  }
+}

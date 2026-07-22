@@ -1,0 +1,75 @@
+surface = "admin"
+action = "escalation_propose"
+purpose = "Emit one EscalationProposed event through the write-side ledger — the orchestrator-tier escalation contract's observable escalation/de-escalation signal. The reason is recorded as the event rationale. Entity is the orchestrator_session (slug=session_id), project-scoped when project_id is supplied. See docs/ORCHESTRATOR_ESCALATION.md §3."
+
+[[params]]
+  name = "trigger"
+  type = "string"
+  required = true
+  description = "Which of the 5 closed trigger kinds fired (retry_exhaustion / low_confidence / repeated_tool_error / parse_failure / explicit_handoff). Required."
+
+[[params]]
+  name = "from_model"
+  type = "string"
+  required = true
+  description = "Identifier of the model proposing the handoff — the cheap orchestrator model on an escalate edge (e.g. deepseek-v4-pro), the strong model on a de-escalation edge. Required."
+
+[[params]]
+  name = "to_model"
+  type = "string"
+  required = true
+  description = "Identifier of the model the next turn is proposed to run on — the strong model on an escalate edge (e.g. claude-opus-4-7), the cheap model on a de-escalation edge. Required."
+
+[[params]]
+  name = "session_id"
+  type = "string"
+  required = true
+  description = "The orchestrator session the proposal belongs to (also the event entity slug). Required."
+
+[[params]]
+  name = "turn_index"
+  type = "integer"
+  required = false
+  description = "Which turn produced the proposal (0-based). Optional; defaults to 0."
+
+[[params]]
+  name = "state_before"
+  type = "string"
+  required = true
+  description = "Router state at proposal time: cheap, escalated, or de_escalated. Required."
+
+[[params]]
+  name = "state_after"
+  type = "string"
+  required = true
+  description = "Router state after the recorded transition: cheap, escalated, or de_escalated. An escalate edge is cheap->escalated; a de-escalation edge is escalated->de_escalated. Required."
+
+[[params]]
+  name = "trigger_detail"
+  type = "optional_string"
+  required = false
+  description = "Free-form evidence the detector captured (retries used, observed confidence, error kind). Optional; human-readable, not parsed."
+
+[[params]]
+  name = "fired_threshold"
+  type = "object"
+  required = false
+  description = "Snapshot of the threshold_value (a JSON number) that fired, recorded on the event's threshold_value field so a reader sees the config at decision time. Named distinctly from threshold_set's required threshold_value param. Optional; omit on de-escalation edges."
+
+[[params]]
+  name = "project_id"
+  type = "optional_string"
+  required = false
+  description = "Project to scope the event entity to. Optional — omit for a cross-cutting (project-agnostic) escalation event, as a harness-agnostic library would."
+
+[[params]]
+  name = "reason"
+  type = "optional_string"
+  required = false
+  description = "Why the contract proposed this transition — recorded as the event's envelope rationale so the 'why' lands even for the system-actor HTTP path. Optional but recommended."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

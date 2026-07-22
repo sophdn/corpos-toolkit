@@ -1,0 +1,14 @@
+surface = "sys"
+action = "containers"
+purpose = "List containers from podman and docker, each row tagged with its runtime. Read-only and ungated; fail-soft when a runtime is absent."
+notes = "podman ps --format json (a JSON array) and docker ps --format '{{json .}}' (newline-delimited objects) are parsed into a unified row shape. An absent runtime contributes no rows and is omitted from runtimes_queried. See go/internal/sys/testdata/INTROSPECTION_CONTRACT.md."
+
+[[params]]
+  name = "running_only"
+  type = "bool"
+  required = false
+  description = "Only running containers (default false → include stopped via -a)."
+
+[returns]
+  shape = "ContainersResult"
+  description = "containers (rows of {runtime, id, image, names, state, status, ports}), count, and runtimes_queried (which runtimes were probed)."

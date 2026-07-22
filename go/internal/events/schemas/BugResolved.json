@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BugResolved.json",
+  "title": "BugResolved payload",
+  "description": "Emitted when a bug closes via bug_resolve. Kind-discriminated: the `kind` field names the resolution. The five kinds match the existing bug.status enum (fixed/wontfix/upstream/dup/routed). Field-shape requirements per kind live in the bug_resolve handler (e.g. routed→fixed requires commit_sha); the schema enforces only the kind enum + nullable typing so the existing handler reality validates without retrofit. For kind=routed, the routed task is also recorded in envelope refs.related_entities so projection folds can join without re-parsing the payload.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind"],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": ["fixed", "wontfix", "upstream", "dup", "routed"],
+      "description": "Resolution kind. `upstream` (bug 1330) means real, reproducible, traceable to a dependency we don't author and therefore not fixed locally — distinct from `wontfix` (out of scope / WAI). Verb-form aliases (fix/route/duplicate/external/externalized/upstreamed/wont_fix) normalise to these enum values inside the handler before the event is emitted."
+    },
+    "commit_sha": {
+      "type": ["string", "null"],
+      "description": "For kind=fixed: the commit that landed the fix. Accepts the literal sentinel 'unversioned' for fixes whose artifacts live outside any git repo (user-level scripts, vault docs) per mcp__toolkit-server__work convention. May be null when the fix lands separately and gets stamped later via bug_stamp_sha (which emits its own BugStamped event)."
+    },
+    "dup_of": {
+      "type": ["string", "null"],
+      "description": "For kind=dup: the slug of the bug this one duplicates. The current bug_resolve handler does not yet have a typed dup_of param — dup pointers historically live in resolution_note; this field stays optional so the event validates either way."
+    },
+    "routed_chain_slug": {
+      "type": ["string", "null"],
+      "description": "For kind=routed: the chain that absorbed this bug's work. null for other kinds."
+    },
+    "routed_task_slug": {
+      "type": ["string", "null"],
+      "description": "For kind=routed: the specific task in routed_chain_slug that executes the fix. null for other kinds."
+    },
+    "routed_suggestion_slug": {
+      "type": ["string", "null"],
+      "description": "T5-bugs additive bump (2026-05-21): for kind=routed routing to a suggestion, the suggestion's slug. null for other kinds. The bug_resolve reroute path SETs the column in CRUD but pre-T5 the BugResolved emit didn't include it; payload-only fold couldn't reconstruct."
+    },
+    "resolution_note": {
+      "type": ["string", "null"],
+      "description": "Free-text note from the resolver. For kind=fixed: what changed beyond what the commit shows. For kind=wontfix / upstream: reasoning. For kind=dup: free text supplementing dup_of (currently the only place the dup target is recorded — see dup_of note). For kind=routed: may be null since the routed_* pointers carry the load. Distinct from envelope.rationale (required for agent actors, answers 'why this resolution'); resolution_note is operational context for downstream readers."
+    }
+  }
+}

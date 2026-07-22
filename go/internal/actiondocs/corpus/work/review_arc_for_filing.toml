@@ -1,0 +1,49 @@
+surface = "work"
+action = "review_arc_for_filing"
+purpose = "Run an arc-close filing review for one session. Reads the transcript snapshot, runs a two-pass Qwen review, returns typed filing decisions partitioned into auto_execute / surface_for_confirm / skip. Debounced per session_id (60s backoff). Fail-open: Qwen-unreachable / parse failure / empty snapshot all return non-error responses with a typed status. See docs/ARC_CLOSE_FILING_REVIEW.md."
+notes = "Wired onto the work meta-tool because the typed forge actions the review's output dispatches to live there. The action does NOT itself execute the decisions — the caller (Claude Code Stop hook or bridge-harness post_turn hook) reads the partition and dispatches forges in-band. Per design Q5: auto_execute contains forge_bug / forge_vault_note / memory_write at confidence ≥ 0.85; surface_for_confirm contains skill_update at any confidence and other actions at confidence 0.50-0.85; skip contains everything below 0.50 plus all nothing_to_file decisions."
+
+[[params]]
+  name = "session_id"
+  type = "string"
+  required = true
+  description = "Caller-provided session identifier; the debouncer keys off this."
+
+[[params]]
+  name = "transcript_path"
+  type = "string"
+  required = true
+  description = "Absolute path to the Claude Code JSONL transcript."
+
+[[params]]
+  name = "triggers"
+  type = "list"
+  required = false
+  description = "Trigger slugs the detector matched (e.g. counter_user_turns_5, user_shape_done)."
+
+[[params]]
+  name = "fired_at"
+  type = "optional_string"
+  required = false
+  description = "ISO-8601 timestamp the detector emitted the trigger payload at."
+
+[[params]]
+  name = "user_turns_since_review"
+  type = "integer"
+  required = false
+  description = "Counter value at fire time (telemetry)."
+
+[[errors]]
+  condition = "missing session_id or transcript_path"
+  message = "Returns a non-error response with status='skipped' and a Reason naming the missing field. The action is not a precondition gate; it logs and continues."
+
+[[errors]]
+  condition = "debouncer suppression"
+  message = "status='debounced'. last_fire_at carries the prior fire timestamp; Reason names the elapsed seconds. The agent or harness should NOT retry — the suppression is by design."
+
+[[errors]]
+  condition = "Qwen unreachable / llama-server down"
+  message = "status='qwen_unreachable'. Reason wraps the dispatch error string. The current discipline (parse_context + agent-internalized skill-body firing) keeps working; this action's failure mode is purely additive."
+
+[[examples]]
+  call = "{\"session_id\":\"sess-123\",\"transcript_path\":\"/home/u/.claude/projects/.../session.jsonl\",\"triggers\":[\"user_shape_done\"]}"

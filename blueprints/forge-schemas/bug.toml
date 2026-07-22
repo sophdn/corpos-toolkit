@@ -1,0 +1,154 @@
+# Bug schema — flat friction record.
+#
+# A `bug` is a filed observation: something broken, suboptimal, or paper-cut-
+# grade that deserves capture but does not participate in a chain. Bugs have
+# no chain membership — they live in a global slug namespace and are
+# queried flatly (`bug_list({ status?, surface?, severity?, since? })`).
+#
+# Distinguished from `task`: tasks work toward a chain's shared output and
+# close via chain-rollup. Bugs have no shared aim; they close individually
+# via `bug_resolve` (fix / wontfix / routed / dup). A bug that warrants
+# real work can be *routed* to a chain+task pair — the bug row stays as
+# historical record; the task is the execution artifact.
+#
+# Layout convention: see task.toml for the shape-registry ordering rules
+# (top-level scalars → [[hooks]] → [schema] → [storage] → [[fields]] →
+# [[sections]]).
+
+# `bug` is DB-only — no markdown file written. Phase 1 ships create+update;
+# read/list/delete live in dedicated MCP tools (bug_read / bug_list / etc.)
+# rather than generic forge ops, because the resolve-state transitions need
+# validation that doesn't fit the forge update path.
+#
+# PROJECT-SCOPED. Every bug row carries a `project_id`, and the create
+# path requires the caller to pass a top-level `project` parameter on the
+# work meta-tool (e.g. work(forge, project="mcp-servers", schema_name="bug",
+# slug="…", fields={…})). Calls without `project` fail fast with a
+# project-required error rather than silently filing into a default bucket.
+# Same constraint applies to chain.toml and task.toml.
+supported_ops = ["create", "update"]
+
+# Bugs resolve via bug_resolve (kind=fixed | wontfix | dup | routed),
+# not forge_delete. Surfaced in HandleForgeDelete's rejection envelope
+# (see [lifecycle] on task.toml for the pattern).
+[lifecycle]
+soft_delete_action = "bug_resolve"
+
+[schema]
+name = "bug"
+prefix = "BUG"
+output_dir = "process-docs/bugs"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "bugs"
+key_columns = ["slug"]
+
+[[fields]]
+name = "title"
+type = "string"
+description = "Short human description — one line, sentence-style. Rendered in the bug list alongside slug. NOTE: distinct from `slug` and BOTH are required. `slug` is the kebab identifier ('forge-bug-title-omitted'); `title` is the human sentence ('Agents routinely omit title on forge(bug, …)'). Don't conflate them — agents commonly send slug + problem_statement and skip title because the slug already encodes the gist; the renderer needs both."
+
+[[fields]]
+name = "problem_statement"
+type = "string"
+description = "What was observed: behavior, symptom, reproduction steps. Mirrors task.problem_statement."
+
+[[fields]]
+name = "surface"
+type = "optional_string"
+description = "Subsystem / crate / concept the bug lives in. Multi-tag convention: comma-separated, lowercase-kebab, no spaces (e.g. `observatory`, `seed-mcp`, `seed-mcp,bug_list,surface-filter`, `forge,chain-management`). Include every subsystem a reader might search for — bug_list's surface filter splits the query on `,` and match-any's each token, so a bug tagged `seed-mcp,library,foo` surfaces under a query of `library` OR a query of `seed-mcp`. A bug tagged `seed-mcp` alone does not. Err toward more tags."
+
+[[fields]]
+name = "severity"
+type = "optional_string"
+description = "Accepted values: `low`, `medium`, `high`. Default `medium` when omitted. Enum enforcement is downstream — FieldType has no enum variant."
+
+[[fields]]
+name = "source"
+type = "optional_string"
+description = "Where the bug was surfaced — e.g. a session identifier, verification run name, chain slug that produced it, or free-form note."
+
+[[fields]]
+name = "acceptance_criteria"
+type = "optional_string_or_list"
+description = "What 'fixed' looks like. Accepts a list of strings (one bullet per criterion) or a single string, which the validator coerces to a 1-element list. Optional at file-time; can be filled in later or at resolve-time."
+
+[[fields]]
+name = "constraints"
+type = "optional_string"
+description = "Scope limits — don't-over-fix notes, boundaries that the fix must respect. Paragraph prose; stored as a single string. Distinct from `acceptance_criteria` which is list-shaped."
+
+[[fields]]
+name = "tags"
+type = "optional_string"
+description = "Categorical labels for this bug. Comma-separated, lowercase-kebab, no spaces (e.g. `kiwix,forge,db-schema`). Accepts a list of strings (validator joins on `,`) or a single comma-separated string. Storage convention matches `surface`: callers and consumers split on `,`."
+
+[[fields]]
+name = "status"
+type = "optional_string"
+set_by = "bug_resolve"
+description = "Accepted values: `open`, `fixed`, `wontfix`, `routed`, `dup`. Default `open` when omitted. Transitions landed via `bug_resolve` / `bug_reopen`, NOT forge_edit — those tools enforce the required fields per kind (e.g. routed needs chain+task pointers) and the kind-transition checks. The set_by annotation makes forge_edit reject status edits pre-emit: a forge_edit-driven status change would emit a BugEdited event whose fold rejects the column (isAllowedBugColumn excludes status), AND would bypass bug_resolve's commit_sha / transition validation. Bug `forge-edit-on-lifecycle-fields-bypasses-state-machine-and-suggestion-edit-broken`."
+
+[[fields]]
+name = "resolution_note"
+type = "optional_string"
+set_by = "bug_resolve"
+description = "Populated on close by `bug_resolve` (NOT via forge_edit — the value rides on the BugResolved event payload; migration 065 dropped the projection column, so a forge_edit attempt would crash the fold with 'unknown column'). For kind=fixed: what changed. For kind=wontfix: reasoning. For kind=dup: target bug slug + note. For kind=routed: may be empty since routed_chain_slug + routed_task_slug carry the pointer."
+
+[[fields]]
+name = "routed_chain_slug"
+type = "optional_string"
+description = "When status=routed, the chain that absorbed this bug's work. Set together with routed_task_slug by `bug_resolve(kind='routed', …)`."
+
+[[fields]]
+name = "routed_task_slug"
+type = "optional_string"
+description = "When status=routed, the specific task in routed_chain_slug that executes the fix."
+
+[[fields]]
+name = "routed_suggestion_slug"
+type = "optional_string"
+description = "When the bug's resolution surfaces a structural improvement worth proposing, the suggestion slug. Symmetric counterpart to suggestion.routed_bug_slug — bidirectional bug↔suggestion routing introduced in chain agent-suggestion-box. Optional; empty string is the default."
+
+[[fields]]
+name = "qwen_task_id"
+type = "optional_string"
+description = "Originating qwen inference task identifier when this bug was filed by an automated qwen pipeline (e.g. 'arc-review-decisions' for arc-close-filing-review-originated bugs). NULL when filed by an agent in-session via direct forge. Used by the inference dashboard's bug-count join (observehttp/inference_v2.go) and by attribution analyses that separate claude-in-session filings from qwen-automation filings. Agent-side filings via mcp__toolkit-server__work forge SHOULD leave this empty; only the qwen-pipeline filers (currently just the arc-close-filing-review hook) should populate it, naming the qwen task whose output produced the filing decision."
+
+[[sections]]
+heading = "Title"
+fields = ["title"]
+
+[[sections]]
+heading = "Problem statement"
+fields = ["problem_statement"]
+
+[[sections]]
+heading = "Surface"
+fields = ["surface"]
+
+[[sections]]
+heading = "Severity"
+fields = ["severity"]
+
+[[sections]]
+heading = "Source"
+fields = ["source"]
+
+[[sections]]
+heading = "Acceptance criteria"
+fields = ["acceptance_criteria"]
+
+[[sections]]
+heading = "Constraints"
+fields = ["constraints"]
+
+[[sections]]
+heading = "Status"
+fields = ["status"]
+
+[[sections]]
+heading = "Resolution"
+fields = ["resolution_note", "routed_chain_slug", "routed_task_slug", "routed_suggestion_slug"]

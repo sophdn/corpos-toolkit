@@ -1,0 +1,24 @@
+surface = "work"
+action = "trained_model_retire"
+purpose = "Flip a trained_model row to status='retired' from any prior state. Optional reason merges into eval_metrics.retirement_reason for in-row lifecycle metadata."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "trained_model row id (preferred — globally unique)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Slug of the trained_model row."
+
+[[params]]
+  name = "reason"
+  type = "optional_string"
+  required = false
+  description = "Free-form note explaining retirement; merged into eval_metrics.retirement_reason."
+
+[[examples]]
+  call = "{\"slug\":\"source-router-v1\",\"reason\":\"superseded by v2\"}"

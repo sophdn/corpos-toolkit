@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ChainCreated.json",
+  "title": "ChainCreated payload",
+  "description": "Emitted when a new chain is filed via forge(schema_name='chain', ...). Captures the create-time field values; mirrors the chain forge-schema. The skeleton task rows that the chain_insert_task_skeletons_from_field hook creates emit their own TaskCreated events as cascade-emits — each with refs.caused_by_event_id pointing at this ChainCreated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["output", "design_decisions", "completion_condition"],
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence — what exists when this chain is complete. Mirrors chain.toml's output."
+    },
+    "design_decisions": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Key design choices and their rationale. Mirrors chain.toml's design_decisions. Distinct from envelope.rationale: this is the durable design record; envelope.rationale is the per-event answer to 'why this event'."
+    },
+    "completion_condition": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Observable state — what is true when the chain is done. Checkable without judgment. Mirrors chain.toml."
+    },
+    "tasks": {
+      "type": ["string", "array", "null"],
+      "description": "Initial task entries (pipe-delimited per chain.toml convention) or empty for chains that follow up with per-task forge calls. The cascade TaskCreated events carry the per-task data; tasks here is the create-time string for reference.",
+      "items": { "type": "string" }
+    }
+  }
+}

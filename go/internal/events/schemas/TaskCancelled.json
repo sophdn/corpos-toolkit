@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskCancelled.json",
+  "title": "TaskCancelled payload",
+  "description": "Emitted when a task is cancelled via task_cancel without completing. Distinct from TaskCompleted — completed means the work was done; cancelled means the task is being removed from consideration (out-of-scope, duplicate, infeasible). The envelope's rationale answers 'why cancel' for audit; the payload's reason is the user-visible category.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "description": "Chain slug disambiguating which chain's task this event targets, so the fold scopes to one task rather than fanning out across same-slug tasks in the project (bug task-lifecycle-event-folds-fan-out-across-duplicate-task-slugs). Optional: pre-fix events omit it and the fold falls back to the legacy slug+project match."
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "description": "Why the task was cancelled. Free text — no closed enum (the cancellation cases are diverse: 'subsumed by sibling task', 'out of scope after design pivot', 'feature shipped through different path', etc.). Optional in this schema because the current task_cancel handler does not require a reason from callers; future T3 rationale tightening will gate on envelope.rationale rather than this payload field."
+    }
+  }
+}

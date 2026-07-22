@@ -1,0 +1,24 @@
+[skill]
+name = "bug-reopen"
+version = "1.0.0"
+description = "Rescind a prior bug resolution — flip status back to open and clear the resolved_at + resolved_commit_sha stamps. Used when the bug recurred or the prior resolution was wrong."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "reopen the bug",
+    "bug recurred",
+    "rescind bug resolution",
+    "wrongly closed bug",
+    "undo bug close",
+    "bug came back",
+    "bug_reopen",
+]
+when_not = [
+    "the bug is already open — bug_reopen rejects open bugs (nothing to rescind)",
+    "the bug should stay closed but the SHA needs fixing — use bug_stamp_resolved_sha instead",
+    "filing a fresh bug — use forge(bug, …) instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/bug-reopen.md"

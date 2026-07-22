@@ -1,0 +1,50 @@
+name        = "artifact-review"
+description = "Per-criterion artifact review verdict rubric"
+is_deployed = true
+output_enum = ["pass", "fail", "mixed", "n-a"]
+
+criteria = [
+  "pass: the artifact clearly satisfies the criterion. The evidence is visible in the artifact text — no inference required.",
+  "fail: the artifact clearly violates the criterion. The violation is citable to specific artifact content.",
+  "mixed: the artifact partially satisfies the criterion; some evidence for compliance and some for violation.",
+  "n-a: the criterion does not apply to this artifact under this purpose.",
+]
+
+prompt_template = """You are evaluating ONE criterion against ONE artifact, in service of \
+a named review purpose. The input names: the artifact's content \
+(quoted/excerpted), the review purpose (safety / completeness / scope-fit \
+/ quality / coherence / scope-drift / custom), and the specific criterion \
+under that purpose. Output one verdict.
+
+- **pass**: the artifact clearly satisfies the criterion. The evidence is \
+visible in the artifact text — no inference required.
+- **fail**: the artifact clearly violates the criterion. The violation is \
+citable to specific artifact content.
+- **mixed**: the artifact partially satisfies the criterion; some evidence \
+for compliance and some for violation. Use when the artifact is \
+inconsistent across sections, or when the criterion has multiple sub-\
+conditions and the artifact meets some but not others.
+- **n-a**: the criterion does not apply to this artifact under this \
+purpose. Use when the criterion is genuinely off-shape (e.g. a "no \
+hardcoded secrets" criterion on a prose-only artifact with no code).
+
+Bias toward **mixed** over **fail** when the violation is partial or \
+ambiguous; reserve **fail** for clear violations. Do NOT use **pass** \
+when the criterion is silently absent from the artifact — that's \
+**n-a** if the criterion doesn't apply, or **fail** if it should apply \
+and is missing."""
+
+[[examples]]
+text      = "Purpose: safety. Criterion: \"No hardcoded secrets, keys, or tokens.\"\n\nArtifact (excerpt from a Bash deploy script):\n```\nDB_PASSWORD=\"hunter2\"\npsql -U admin -W \"$DB_PASSWORD\" ...\n```"
+label     = "fail"
+reasoning = "Hardcoded secret string assigned to a shell variable. Direct violation of the safety criterion; no inference needed."
+
+[[examples]]
+text      = "Purpose: completeness. Criterion: \"Every required field of the shape populated (non-empty, non-placeholder).\"\n\nArtifact (excerpt from a closed task):\n```\nslug: refactor-vault-search-pass2\nproblem_statement: \"vault_search pass-2 over-rejects on broad queries\"\nacceptance_criteria: \"select_pass2_or_fallback returns pass-1 with fell_back=true; new test pins the case\"\ncontext_required: \"mcp-servers/crates/inference-router/src/dispatcher.rs\"\nconstraints: \"\"\nhandoff_output: \"Landed at commit 9d8f5b2.\"\n```"
+label     = "pass"
+reasoning = "All five named required fields populated with concrete content; constraints' empty string is acceptable for a task with no externally-imposed constraint."
+
+[[examples]]
+text      = "Purpose: safety. Criterion: \"No hardcoded secrets, keys, or tokens.\"\n\nArtifact (excerpt from a markdown design doc):\n```\n# Authentication design\n\nThe dashboard is local-only; no auth. We do not ship credentials with the binary.\n```"
+label     = "n-a"
+reasoning = "Prose design doc with no code, scripts, or config. The 'no hardcoded secrets' criterion has no surface to apply against."

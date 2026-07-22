@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/EscalationProposed.json",
+  "title": "EscalationProposed payload",
+  "description": "Emitted by the orchestrator-tier escalation contract when a trigger fires and the router proposes handing the next conversational turn from a cheap orchestrator-tier model (DeepSeek V4 Pro, Qwen) to a strong one (Opus 4.7) — or, on the down-edge, records a de-escalation. The proposal is advisory and recorded the instant the trigger fires; the actual model swap takes effect at the next turn boundary (docs/ORCHESTRATOR_ESCALATION.md §4). Entity is the orchestrator_session (slug = session_id), project-scoped when the harness supplies a project and cross-cutting otherwise. Actor is the substrate's system sentinel when emitted over the HTTP /mcp route (actor is transport-inferred, never caller-supplied); the meaningful model identities live in from_model/to_model, and the proposal's reason is recorded on the envelope rationale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trigger",
+    "from_model",
+    "to_model",
+    "session_id",
+    "turn_index",
+    "state_before",
+    "state_after"
+  ],
+  "properties": {
+    "trigger": {
+      "type": "string",
+      "enum": [
+        "retry_exhaustion",
+        "low_confidence",
+        "repeated_tool_error",
+        "parse_failure",
+        "explicit_handoff"
+      ],
+      "description": "Which of the 5 closed trigger kinds fired. See docs/ORCHESTRATOR_ESCALATION.md §2 for the semantics of each."
+    },
+    "from_model": {
+      "type": "string",
+      "description": "Identifier of the cheap orchestrator model proposing escalation (e.g. deepseek-v4-pro, qwen2.5-32b). On a de-escalation edge this is the strong model handing control back. Payload-level, NOT the envelope actor."
+    },
+    "to_model": {
+      "type": "string",
+      "description": "Identifier of the model the next turn is proposed to run on. On an escalate edge this is the strong model (e.g. claude-opus-4-7); on a de-escalation edge it is the cheap model."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "The orchestrator session the proposal belongs to. Also the entity slug, so a reader can fold every EscalationProposed for a session into its escalate/de-escalate arc."
+    },
+    "turn_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Which turn produced the proposal (0-based). Orders the proposals within a session."
+    },
+    "state_before": {
+      "type": "string",
+      "enum": ["cheap", "escalated", "de_escalated"],
+      "description": "Router state at proposal time."
+    },
+    "state_after": {
+      "type": "string",
+      "enum": ["cheap", "escalated", "de_escalated"],
+      "description": "Router state after the transition this event records. An escalate edge is cheap -> escalated; a de-escalation edge is escalated -> de_escalated. The pair carries the edge direction so de-escalation needs no separate event type."
+    },
+    "trigger_detail": {
+      "type": ["string", "null"],
+      "description": "Free-form evidence the detector captured (retries used, observed confidence value, error kind). Human-readable; not parsed by consumers."
+    },
+    "threshold_value": {
+      "type": ["number", "null"],
+      "description": "Snapshot of the threshold_value that fired, so a reader sees the contract's config at decision time without joining the (mutable) escalation_thresholds table. Null on de-escalation edges (no trigger)."
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/SuggestionReopened.json",
+  "title": "SuggestionReopened payload",
+  "description": "Emitted when a previously-resolved suggestion is reopened via suggestion_reopen. Carries a snapshot of the resolution being reversed so the ledger preserves the round-trip history without forcing a reader to walk back through events. The envelope's refs.caused_by_event_id points at the SuggestionResolved being reversed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["previous_resolution"],
+  "properties": {
+    "previous_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "A copy of the SuggestionResolved payload that the reopen is reversing. Same shape as SuggestionResolved.json. Stored inline rather than referenced so the ledger reads top-to-bottom without joins.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["adopted", "deferred", "rejected"]
+        },
+        "commit_sha": { "type": ["string", "null"] },
+        "routed_chain_slug": { "type": ["string", "null"] },
+        "routed_task_slug": { "type": ["string", "null"] },
+        "routed_bug_slug": { "type": ["string", "null"] },
+        "resolution_note": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

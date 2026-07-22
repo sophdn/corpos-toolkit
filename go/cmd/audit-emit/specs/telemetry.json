@@ -1,0 +1,105 @@
+{
+  "actor_id": "claude-opus-4-7-query-telemetry-substrate-TT4",
+  "entity": {
+    "kind": "chain",
+    "slug": "query-telemetry-substrate",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "TelemetryAuditCompleted",
+      "rationale": "Chain query-telemetry-substrate TT4 retrospective — emitting the read-side telemetry audit findings through the write-side events ledger as the self-hosting proof of the cross-substrate seam. All five TT1-success-criteria SQL verifications pass (zero violations); both TT1.5-frozen CHECK constraints (click_kind 4-value, label_kind 5-value) match the spike paste-targets byte-for-byte; three query_* projections rebuild byte-identically (9/75/105 rows); registry namespace test passes; the worked-example ML extraction script reads proj_training_data_for_reranker without joins. Forward-only-capture caveats explicitly documented in the retrospective doc. Per-handler consolidation explicitly handed off to telemetry-substrate-cleanup chain.",
+      "payload": {
+        "audit_doc": "docs/TELEMETRY_SUBSTRATE.md (TT1 design) + docs/TELEMETRY_LABEL_SPIKE.md (TT1.5 enum closures) + chain query-telemetry-substrate completion_condition items (a)–(e).",
+        "summary": "All four chain completion criteria pass plus the TT5 retrospective-audit cleanup. (a) query_interactions + query_resolutions tables landed via migration 037 with the click_kind CHECK matching TT1.5 §4's paste-target and the BEFORE INSERT trigger validating write_event_ids against events.event_id. (b) Three read-side projections (query_volume_by_source, retrieval_success_per_query, training_data_for_reranker) rebuildable via `toolkit-server rebuild-projections --projection=\u003cname\u003e`, idempotent byte-identical. (c) Cross-substrate SQL verifications all return zero violations: write_event_ids FK, span_id sharing, no-empty-trajectory, span_id presence on grounding_events, parent_span_id walkability. (d) The substrate-to-ML bridge works: scripts/extract_reranker_training.py reads proj_training_data_for_reranker and produces (query, positive_pointer_id, negative_pointer_id) triples for cross-encoder fine-tuning (local-ml-roadmap.md §1.1) without joins. (e) THIS event is the (e) deliverable — the closing TelemetryAuditCompleted lands through the write-side substrate, exercising the cross-substrate seam in the act of closing the chain. Self-hosting holds. The handoff to telemetry-substrate-cleanup is mandatory and detailed in the retrospective doc § 'Handoff to telemetry-substrate-cleanup'.",
+        "recommended_next_phase": "Pick up telemetry-substrate-cleanup chain (roadmap position 10, 4 tasks: retire-benchmarks-db, consolidate-per-handler-telemetry-tables, inference-page-v2, cleanup-retrospective) — its T2 specifically consumes the grounding_events columns this chain added (prompt_id, parent_span_id, query_source, user_message_id, query_text). In parallel, start scoping the cross-encoder reranker fine-tune from local-ml-roadmap.md §1.1: the training-data shape is now stable (5-value label_kind enum + label_sources JSON preserving every contributing click_kind), so a pipeline writer can plan against proj_training_data_for_reranker as a frozen contract. The labeled rows accumulate as the grounding-events-processor folds subsequent sessions — re-run extract_reranker_training.py after 30 days of TT2-live traffic for production-scale training data.",
+        "findings": [
+          {
+            "item": "TT1 §3 — query_interactions table landed with TT1.5-frozen click_kind CHECK",
+            "status": "pass",
+            "evidence": "Migration 037 lands query_interactions with CHECK (click_kind IN ('followed','cited','mentioned','resolved-from')) matching TT1.5 §4's paste-target verbatim. Verified via `sqlite3 data/toolkit.db .schema query_interactions`. Triggers: DELETE blocked structurally.",
+            "severity": "low"
+          },
+          {
+            "item": "TT1 §4 — query_resolutions append-only with write_event_ids FK trigger",
+            "status": "pass",
+            "evidence": "Migration 037 lands query_resolutions with UPDATE/DELETE blocked by triggers and BEFORE INSERT trigger query_resolutions_event_id_fk validating every event_id in write_event_ids against events.event_id. telemetry.EmitResolution also does the pre-check in Go to surface ErrUnknownEventID before the round-trip. Verified by TestEmitResolution_WriteEventIDsFKCheck.",
+            "severity": "low"
+          },
+          {
+            "item": "TT1 §5 — four-tier click_kind detection runs in Go processor",
+            "status": "pass",
+            "evidence": "go/cmd/grounding-events-processor/detect.go ships detectFollowed / detectCited / detectMentioned + go/cmd/grounding-events-processor/resolve.go ships detectResolvedFrom, each emitting one query_interactions row per fired tier per TT1 §5.1. Integration tests (a)-(d) in integration_test.go cover the four detectors end-to-end against synthetic JSONL. Slug-form normalization per TT1.5 §7.1 (strip vault/learnings/\u003ccorpus\u003e/ prefix and .md suffix) lands in slug.go.",
+            "severity": "low"
+          },
+          {
+            "item": "TT1.5 §4 — click_kind CHECK constraint matches the spike paste-target",
+            "status": "pass",
+            "evidence": "CHECK (click_kind IN ('followed', 'cited', 'mentioned', 'resolved-from')) at crates/shared-db/migrations/037_telemetry_substrate.sql:81-82. Matches docs/TELEMETRY_LABEL_SPIKE.md §4 byte-for-byte. The original 4-tier proposal needed no revision (TT1.5 CONFIRM).",
+            "severity": "low"
+          },
+          {
+            "item": "TT1.5 §5 — label_kind CHECK enforces the REVISED 5-value enum, not the obsolete 4-value proposal",
+            "status": "pass",
+            "evidence": "CHECK (label_kind IN ('positive', 'weakly_positive', 'negative', 'hard_negative', 'unlabeled')) at crates/shared-db/migrations/038_telemetry_projections.sql:96-97. Matches docs/TELEMETRY_LABEL_SPIKE.md §5 byte-for-byte, INCLUDING the weakly_positive value the spike added to handle mentioned-only pairs that fell through the original positive/negative threshold gap. The original 4-value proposal (clicked/cited/resolved-from/ignored) is OBSOLETE and was never committed to a schema.",
+            "severity": "low"
+          },
+          {
+            "item": "TT1 §6 — three read-side projections rebuild idempotently from raw telemetry",
+            "status": "pass",
+            "evidence": "`toolkit-server rebuild-projections` against data/toolkit.db produces 9 query_volume_by_source rows + 75 retrieval_success_per_query rows + 105 training_data_for_reranker rows; second rebuild produces identical row counts and label_kind distribution. Forward-only-capture caveat: query_interactions is empty (no click_kind detection has fired yet against pre-substrate sessions), so label_kind distribution is currently 84 negative + 21 hard_negative + 0 positive/weakly_positive/unlabeled. This is expected — trajectories accumulate from subsequent sessions onward.",
+            "severity": "low"
+          },
+          {
+            "item": "TT1 §12 — cross-substrate SQL verifications return zero violations",
+            "status": "pass",
+            "evidence": "All five checks: (a) query_resolutions.write_event_ids FK-broken = 0; (b) span_id mismatch to write events = 0; (c) empty trajectory rows = 0; (d) interactions with no parent grounding span = 0; (e) dangling parent_span_ids = 0. Substrate totals at audit time: 75 grounding_events, 0 query_interactions, 0 query_resolutions, 159 events. Zero rows in query_interactions/query_resolutions reflects forward-only capture — pre-substrate sessions don't backfill. The seam is structurally sound; data accumulates as the grounding-events-processor folds new sessions.",
+            "severity": "low"
+          },
+          {
+            "item": "TT1 §2.4 — prompt_id integrity vs transcript promptIds",
+            "status": "partial",
+            "evidence": "0 of 75 grounding_events rows have prompt_id populated; 4 distinct promptIds exist in the recent ~/.claude/projects/-home-sophi-dev-mcp-servers/ JSONL transcripts. Per the chain's forward-only-capture framing (design_decisions item 4), residual pre-substrate sessions are expected to lack prompt_id. The Go grounding-events-processor (commit bea516c) stamps prompt_id on rows from sessions processed after its install, so new rows will fold with prompt_id set. The divergence is residual, not a regression. Re-run this check after 7 days of substrate-live traffic to confirm prompt_id fill-in is healthy.",
+            "severity": "medium"
+          },
+          {
+            "item": "Projection registry namespace test — discoverability + prefix discipline",
+            "status": "pass",
+            "evidence": "go test -tags sqlite_fts5 -run TestRegistry_AllProjections|TestRegistry_NamespacePrefixes ./internal/projections/ both PASS. Six projections registered (chain_status, current_bugs, query_volume_by_source, retrieval_success_per_query, roadmap_view, training_data_for_reranker). Namespace test validates every name starts with a known prefix (query_/retrieval_/training_/injection_/offload_) or is grandfathered. Reserved prefixes injection_*/offload_* accepted preemptively for future chains.",
+            "severity": "low"
+          },
+          {
+            "item": "Substrate-to-ML bridge: worked-example training-data extraction succeeds",
+            "status": "pass",
+            "evidence": "scripts/extract_reranker_training.py reads proj_training_data_for_reranker, prints label_kind distribution + label_sources composition + (query, positive_pointer_id, negative_pointer_id) triples for cross-encoder fine-tuning per local-ml-roadmap.md §1.1. --label-set strict and --label-set recall switches between high-precision (positive vs hard_negative only) and recall-leaning (include weakly_positive + negative) modes. The pipeline reads ONE table with no joins — substrate-to-ML bridge works as designed. Production-scale triples accumulate as click_kind detection fires on subsequent sessions.",
+            "severity": "low"
+          },
+          {
+            "item": "Grounding-events processor port verification (bug 1366)",
+            "status": "pass",
+            "evidence": "benchmarks/src/bin/knowledge_grounding_processor.rs archived under archive/knowledge-grounding-processor-2026-05-17/. Go binary at go/cmd/grounding-events-processor/ ships with main.go + session.go + detect.go + resolve.go + slug.go + sibling _test.go covering 22 cases. Bug 1366 resolved in commit f9dd8f6 with resolution_kind=fixed. Sibling bugs (1367: knowledge_curate + knowledge_seeder Rust ports) routed to the new chain knowledge-rust-residue-cleanup (roadmap position 11) — bug is closed via routing-resolution this session.",
+            "severity": "low"
+          },
+          {
+            "item": "TT5 retrospective-audit cleanup pass",
+            "status": "pass",
+            "evidence": "User-requested Go-conventions + DRY audit at TT4-mid-retrospective surfaced three findings: triplicated projection-rebuild boilerplate, oversized processFile (167 lines), and a hand-rolled itoa in query_test.go. All three landed in commit d9c33c1: rebuildProjection helper added to projections package, processFile split into emitGroundingAndInteractions + emitResolutions, itoa replaced with strconv. Existing tests pass without modification. Audit-then-cleanup pattern worth pinning as a vault learning if it recurs.",
+            "severity": "low"
+          },
+          {
+            "item": "Handoff to telemetry-substrate-cleanup follow-on chain",
+            "status": "deferred",
+            "evidence": "Per-handler tables (vault_search_invocations, vault_search_pass_latencies, kiwix_offload_invocations) are NOT retired by this chain. The grounding_events columns this chain added (prompt_id, parent_span_id, query_source, user_message_id, query_text via migration 037) prepare the table for the consolidation; the actual retirement work — absorbing pass1/pass2_latency_ms + qwen_fell_back columns into grounding_events, stopping the old writers, dropping the old tables — lives in the telemetry-substrate-cleanup chain's T2 (consolidate-per-handler-telemetry-tables). Test fixtures and schema invariants to preserve listed in docs/TELEMETRY_RETROSPECTIVE_2026-05-17.md § 'Handoff to telemetry-substrate-cleanup'.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Forward-only-capture: substrate ships empty of backfilled rows",
+            "status": "partial",
+            "evidence": "Per chain design_decisions item 4, the substrate is forward-only — pre-2026-05-15 query history is NOT retroactively reconstructed. At audit time, query_interactions has zero rows because the click_kind detectors haven't fired against pre-substrate sessions; the existing 75 grounding_events rows pre-date the new shape and lack prompt_id. This is correctly framed in TT1 §1.3 (out-of-scope) but worth flagging in the retrospective so future-Claude doesn't mistake the empty tables for a bug. Re-audit after 7-30 days of substrate-live traffic to confirm forward-fill cadence is healthy.",
+            "severity": "low"
+          }
+        ]
+      }
+    }
+  ]
+}

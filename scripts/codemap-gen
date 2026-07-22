@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# scripts/codemap-gen — regenerate CODEMAP.md at the repo root.
+#
+# Thin wrapper around go/cmd/codemap-gen. The Go binary reads the
+# authoritative discovery sources (action-manifests/, blueprints/,
+# go/internal/*/doc.go, crates/*/src/lib.rs, skills/, scripts/) and emits
+# a deterministic CODEMAP.md.
+#
+# Usage:
+#   scripts/codemap-gen           # write CODEMAP.md at repo root
+#   scripts/codemap-gen --check   # exit 1 if CODEMAP.md is stale
+#   scripts/codemap-gen --stdout  # print to stdout instead of writing
+
+set -euo pipefail
+# Pre-commit hooks run with GIT_DIR / GIT_INDEX_FILE pre-set by git; under
+# those vars `git rev-parse --show-toplevel` collapses to cwd rather than
+# the worktree root, which then derails the downstream `cd $REPO_ROOT/go`.
+# Unset the inherited git-context vars so the rev-parse below behaves the
+# same in hook and standalone invocations. The Go binary's internal
+# repoRoot() call gets the same treatment via env passthrough. Closes bug
+# precommit-codemap-gen-fails-in-worktree-git-dir-env.
+unset GIT_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_WORK_TREE GIT_PREFIX
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT/go"
+exec go run -tags sqlite_fts5 ./cmd/codemap-gen "$@"

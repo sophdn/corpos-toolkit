@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ReferenceResolutionMigrationAuditCompleted.json",
+  "title": "ReferenceResolutionMigrationAuditCompleted payload",
+  "description": "Emitted by chain reference-resolution-migration T12 retrospective to record that the migration's two-fold scope — parse_context discovery substrate (paring of ambient surfaces toward lazy-via-parse_context loading) AND mcp-servers self-containment (repo as canonical for skills/hooks/personas, install script as the disaster-recovery path) — has been verified against the chain's completion criteria. Successor to ReferenceResolutionAuditCompleted: the substrate trilogy shipped the resolver layer; this migration converted the ambient surface to lazy-via-resolver. Findings are keyed to the chain's 13 completion-condition items (a)-(m).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the audit source-doc the findings were keyed against — typically docs/REFERENCE_RESOLUTION_MIGRATION_PLAN.md (T1 baseline) + docs/SELF_CONTAINMENT.md (T2 architecture) + the retrospective at docs/REFERENCE_RESOLUTION_MIGRATION_RETROSPECTIVE_<date>.md + the bootstrap-verification adhoc at process-docs/adhoc/."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the migration outcome — what landed, the token-budget delta, the live first-session observation, what was deferred to T13 (report card)."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the next phase (e.g. 'T13 post-migration report card runs next in a fresh agent session; the parse_context directive-intent extension is a candidate follow-on chain'). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per audit checklist item. Severity uses the audit-convention enum (low / medium / high / critical); use n/a for informational findings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Audit checklist item identifier and short description."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = criterion satisfied; fail = criterion not satisfied (must file follow-on); partial = satisfied with documented gap; deferred = explicitly out of scope for this chain."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence supporting status — SQL query result, test name, commit SHA, doc pointer, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

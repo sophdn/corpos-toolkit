@@ -1,0 +1,3 @@
+surface = "work"
+action = "totally-different-name"
+purpose = "Chunk declares action=totally-different-name but the file is action_mismatch.toml — should be rejected."

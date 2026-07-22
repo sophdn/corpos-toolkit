@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BenchmarkRunFailed.json",
+  "title": "BenchmarkRunFailed payload",
+  "description": "Emitted when a benchmark run fails before producing a score. Captures the error in the typed shape from CONVENTIONS.md §Error Enum Shape so the failure is queryable by kind. Provenance is on the corresponding BenchmarkRunStarted via refs.caused_by_event_id — a failed run is still a recorded run and still replayable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "error_kind", "error_detail"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The run_id from BenchmarkRunStarted."
+    },
+    "error_kind": {
+      "type": "string",
+      "enum": ["NotFound", "InvalidInput", "Unavailable", "Internal"],
+      "description": "Matches the ToolError variant names from CONVENTIONS.md §Error Enum Shape. NotFound: missing scenario/model/fixture. InvalidInput: scenario fixture rejected by validation. Unavailable: model endpoint unreachable, rate-limited, etc. Internal: unexpected runner failure."
+    },
+    "error_detail": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-text detail. The runner's error message verbatim; helps debugging without forcing a join to a separate error-log store."
+    },
+    "wall_clock_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Time spent before the failure; null if the failure happened before timing started."
+    }
+  }
+}

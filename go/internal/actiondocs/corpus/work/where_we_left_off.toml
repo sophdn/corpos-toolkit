@@ -1,0 +1,3 @@
+surface = "work"
+action = "where_we_left_off"
+purpose = "Alias of recent_activity — both names route to the same resume-briefing handler."

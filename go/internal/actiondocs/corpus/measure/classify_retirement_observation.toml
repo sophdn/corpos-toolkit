@@ -1,0 +1,9 @@
+surface = "measure"
+action = "classify_retirement_observation"
+purpose = "Dispatches the retirement-signal rubric via Qwen — classifies a project activity observation by retirement artifact-type; label ∈ {tool-retirement, skill-retirement, workflow-retirement, not-retirement}; writes a benchmark_results row; returns {label, latency_ms, model_name}."
+
+[[params]]
+  name = "observation_text"
+  type = "string"
+  required = true
+  description = "The observation text describing project activity to classify."

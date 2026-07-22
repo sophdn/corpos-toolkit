@@ -1,0 +1,8 @@
+[Unit]
+Description=Prove the newest canonical-ledger backup opens, verifies, and carries the event log
+Documentation=file:%h/dev/corpos-toolkit/scripts/restore-test-canonical-ledger.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/corpos-toolkit/ledger-backup.env
+ExecStart=%h/dev/corpos-toolkit/scripts/restore-test-canonical-ledger.sh

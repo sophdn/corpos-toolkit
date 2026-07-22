@@ -1,0 +1,118 @@
+# Task schema — build-shaped (problem statement + acceptance criteria).
+# This is the common case for implementation, design, and migration tasks.
+# For glyph-pipeline decomposition tasks, use task-decomp.
+#
+# ──────────────────────────────────────────────────────────────────────────
+# TOML layout convention for shape-registry schemas (T3/T4; resolved T17):
+#
+#   1. Top-level scalars first: `supported_ops = [...]` (and any other
+#      root-level scalar that applies to the whole shape).
+#   2. Top-level array-of-tables next: `[[hooks]]` entries.
+#   3. Then `[schema]` (name / prefix / output_dir / filename_pattern).
+#   4. Then `[storage]` (plus `[storage.markdown]` / `[storage.db]` for
+#      dual-stored shapes).
+#
+#      Storage-variant layout is asymmetric because the Rust enum variants
+#      are: Markdown and Db are tuple variants (`Markdown(MarkdownStorage)`,
+#      `Db(DbStorage)`), while Dual is a struct variant with fields. Serde's
+#      tagged-enum form wants tuple-variant fields FLAT under `[storage]`
+#      (e.g. `[storage]` + `target = "markdown"` + `prefix = ...` on siblings)
+#      and struct-variant fields under a NESTED `[storage.markdown]` +
+#      `[storage.db]`. Writing `[storage.markdown]` against a markdown-only
+#      shape yields `missing field 'prefix' at keys: ['storage']` at load
+#      time.
+#   5. Then `[[fields]]` entries.
+#   6. Then `[[sections]]` entries.
+#
+# Why: TOML does not allow returning to root scope after a `[table]` or
+# `[[array-of-tables]]` opens. So `supported_ops` and `[[hooks]]` — which
+# are top-level keys on `SchemaDefinition` — must precede `[schema]`. The
+# layout reads a little backward (metadata-before-identity) but is the
+# only stable form. Authors of new shapes: follow this order. See T17 of
+# chain mcp-migration-cleanup for the decision log.
+# ──────────────────────────────────────────────────────────────────────────
+
+# `task` is DB-only — no markdown file written. Phase 1c ships
+# create+update; delete/read/list land in phase 2.
+#
+# PROJECT-SCOPED. Tasks live under chains, which carry a `project_id`;
+# create calls require a top-level `project` parameter on the work
+# meta-tool (e.g. work(forge, project="seed-packet", schema_name="task",
+# …)). Same constraint applies to chain.toml and bug.toml.
+supported_ops = ["create", "update"]
+
+# Tasks don't hard-delete via forge_delete; status transitions go through
+# task_cancel (and task_complete / task_reopen / task_block / task_unblock).
+# Declaring the soft-cancel action lets HandleForgeDelete surface it in
+# the rejection envelope so callers don't have to re-discover it from the
+# work meta-tool action list.
+[lifecycle]
+soft_delete_action = "task_cancel"
+
+[schema]
+name = "task"
+prefix = "TASK"
+output_dir = "process-docs/tasks"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "tasks"
+key_columns = ["chain_slug", "slug"]
+scope_param = "chain_slug"
+
+[[fields]]
+name = "chain_slug"
+type = "string"
+description = "Parent chain slug — matches the chain_slug parameter used by read_task / get_chain_state / cancel_task. Accepts either a bare slug or the legacy markdown-link form [CHAIN_slug](CHAIN_slug_date.md). Promoted to required (type = \"string\") in T19/T18 — conventions.rs now gates RequiredFieldNotInAnySections by storage, so DB-only shapes can declare required scope fields without synthetic section entries. The DB backend's extract_chain_slug is now redundant with validate_fields but kept as a belt-and-suspenders guard against future dispatch changes."
+foreign_key = { shape = "chain", column = "slug" }
+
+[[fields]]
+name = "status"
+type = "optional_string"
+description = "Task status: open, closed"
+
+[[fields]]
+name = "problem_statement"
+type = "string"
+description = "What is broken, missing, or suboptimal. What outcome this task produces. When naming a dated output filename, leave the date as a `<YYYY-MM-DD>` placeholder — the pickup agent fills it in at write time. Commit a specific date only when it is load-bearing (naming a snapshot or dated dataset) and flag it as such inline. See skill:task-closure-protocol § \"Dating output filenames\"."
+
+[[fields]]
+name = "context_required"
+type = "optional_string_or_list"
+description = "What this task needs loaded to execute: specific files, sections, or queries. Accepts a list of strings (one bullet per reference) or a single string, which the validator coerces to a 1-element list — the natural shape is a list of file/section references, but a single prose paragraph is also accepted. Files over 1000 lines require justification per CLAUDE.md threshold rule. Pre-E8 honor-system; mechanically enforced once E8 lands. \n\nExtraction / module-move / drop tasks (where the work is mechanical): list every internal module the live surface transitively imports inside the source crate, plus every external crate dep used by those modules — not just the public call sites. A public-surface description is the author's natural view (`what does the outside see?`); the executing agent needs the transitive-closure view (`what compiles together?`). Omitting the internal modules forces the agent to re-derive the closure from build errors. For exploratory / refactor tasks where the agent is meant to discover the shape, this expansion does not apply."
+
+[[fields]]
+name = "acceptance_criteria"
+type = "optional_string_or_list"
+description = "Concrete deliverables or verifiable states that define done. Accepts a list of strings (one bullet per criterion) or a single string, which the validator coerces to a 1-element list. Populated at task creation or later via populate_task_content — optional at schema level so skeleton rows and partial populates don't fail."
+
+[[fields]]
+name = "constraints"
+type = "optional_string"
+description = "Hard limits on approach — deps, backward compat, scope exclusions. Pass a single string (paragraph prose); the forge validator rejects a list here. Distinct from `acceptance_criteria` which is list-shaped."
+
+[[fields]]
+name = "handoff_output"
+type = "optional_string"
+description = "What the next task depends on, or what a cold agent needs to pick up this work. Populated at closure time by complete_task — optional at schema level. A future cross-field `requires` rule (T3 §6) may enforce presence when status = 'closed'."
+
+[[sections]]
+heading = "Problem statement"
+fields = ["problem_statement"]
+
+[[sections]]
+heading = "Context required"
+fields = ["context_required"]
+
+[[sections]]
+heading = "Acceptance criteria"
+fields = ["acceptance_criteria"]
+
+[[sections]]
+heading = "Constraints"
+fields = ["constraints"]
+
+[[sections]]
+heading = "Handoff output"
+fields = ["handoff_output"]

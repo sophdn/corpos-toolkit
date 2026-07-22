@@ -1,0 +1,3 @@
+surface = "admin"
+action = "schema_version"
+purpose = "Return the loaded schema registry's version (e.g. count of schemas, source dir, last reload timestamp). Useful for confirming the running binary is reading the schema set you expect."

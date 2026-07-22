@@ -1,0 +1,20 @@
+surface = "ecosystem"
+action = "access_check"
+purpose = "Deterministically answer \"do I have access to X?\" for a host or service. The single source of truth for ecosystem access — same answer every call, no RAG, no correction loop."
+notes = "status='unknown' means the target is NOT learned — never a hallucinated 'no'; learn it first. credential_pointer values are POINTERS to where a secret lives (a path/env name), never the secret. The procedural how-to prose stays soft in the vault; soft_refs points there."
+
+[[params]]
+  name = "target"
+  type = "string"
+  required = true
+  description = "A host slug, service slug, or a host address (e.g. 'example-host', 'gitea', '203.0.113.10')."
+
+[[params]]
+  name = "intent"
+  type = "optional_string"
+  required = false
+  description = "access | locate | describe (default access). Currently advisory; the full summary is returned regardless."
+
+[returns]
+  shape = "AccessSummary"
+  description = "status (yes|no|unknown), access_methods (method/principal/address/credential_pointer), addresses, endpoint (services), soft_refs (vault how-to pointers), and a composed one-line answer."

@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskTransitioned.json",
+  "title": "TaskTransitioned payload",
+  "description": "Emitted when a task moves to a non-terminal status — task_start, task_block, task_unblock, task_reopen. Terminal-state transitions have their own events (TaskCompleted, TaskCancelled) because they carry distinct required payload (commit_sha for completed, reason for cancelled). The from/to pair lets readers reconstruct the lifecycle by folding only TaskTransitioned + the terminal-state events; they never need to walk every action. blocker_slug (existing) names the BLOCKER edge ADDED in this transition; removed_blocker_slug (added 2026-05-20 via T3 of agent-substrate-crud-retirement, §9.1) names the BLOCKER edge REMOVED. Per the §9.1 audit finding, T3 also lifts the L1181 guard so 2nd+ blocker INSERTs emit a (blocked → blocked) self-transition with blocker_slug=<new>; this lets payload-only fold reconstruct proj_task_blockers without joining the CRUD table.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["from_status", "to_status"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "description": "Chain slug disambiguating which chain's task this event targets, so the fold scopes to one task rather than fanning out across same-slug tasks in the project (bug task-lifecycle-event-folds-fan-out-across-duplicate-task-slugs). Optional: pre-fix events omit it and the fold falls back to the legacy slug+project match."
+    },
+    "from_status": {
+      "type": "string",
+      "enum": ["pending", "active", "blocked", "closed", "cancelled"],
+      "description": "Status before the transition. All five values are reachable as from_status because task_reopen sources from closed/cancelled, task_unblock from blocked, task_start from pending, etc."
+    },
+    "to_status": {
+      "type": "string",
+      "enum": ["pending", "active", "blocked"],
+      "description": "Status after the transition. Restricted to the three non-terminal values — closed and cancelled emit TaskCompleted / TaskCancelled instead."
+    },
+    "blocker_slug": {
+      "type": ["string", "null"],
+      "description": "For to_status=\"blocked\" with a specific blocker pinned via task_block(blocker_slug=...): the slug of the blocking task being ADDED. Optional — task_block also accepts being called without a blocker (just marks status=blocked) and in that case this field is null. For non-blocked transitions, always null. Post-T3 (§9.1 guard lift): also populated for the blocked→blocked self-transition case when a 2nd+ blocker is added to an already-blocked task."
+    },
+    "removed_blocker_slug": {
+      "type": ["string", "null"],
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.1 audit finding). For unblock transitions: the slug of the blocker edge being REMOVED. Multi-edge unblock-all emits one TaskTransitioned per removed edge (each with this field populated); single-edge unblock emits one event with this field populated. Null for blocker-adding and non-blocker-edge transitions. Payload-only fold reconstruction reads this to drop the right proj_task_blockers row."
+    }
+  }
+}

@@ -1,0 +1,9 @@
+surface = "knowledge"
+action = "memory_read"
+purpose = "Return the materialized memory digest for a project — the owned memory-read path. Aggregates every user-kind entry (fanned out to all projects) plus the feedback/project/reference entries scoped to the project, as a bullet digest (memory_markdown) plus structured entries. The read side of the memory organ for a session-start context injection; pairs with the record action that writes entries to the vault."
+
+[[params]]
+  name = "project"
+  type = "string"
+  required = true
+  description = "Project slug to scope project/feedback/reference entries to; user-kind entries are always included."

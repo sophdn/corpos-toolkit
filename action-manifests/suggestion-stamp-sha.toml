@@ -1,0 +1,22 @@
+[skill]
+name = "suggestion-stamp-sha"
+version = "1.0.0"
+description = "Stamp the implementing commit SHA on an already-resolved suggestion. Used when adoption resolved at decision time queued the work in a chain, and the implementing commit lands later. Refuses to stamp open suggestions — resolve first, then stamp."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "stamp suggestion sha",
+    "stamp suggestion commit",
+    "backfill suggestion sha",
+    "suggestion commit landed",
+    "suggestion_stamp_sha",
+]
+when_not = [
+    "the suggestion is still open — resolve first via suggestion_resolve (which accepts commit_sha directly)",
+    "the implementing artifact lives outside any git repo — pass sha='unversioned'",
+    "stamping a bug SHA — use bug_stamp_sha (separate entity)",
+]
+
+[instructions]
+path = "action-manifests/instructions/suggestion-stamp-sha.md"

@@ -1,0 +1,18 @@
+surface = "work"
+action = "arc_review_audit"
+purpose = "Read-side audit of ArcCloseFilingReviewed events joined with pending_decisions dispatch state and heuristic user-correction signals from subsequent BugReopened / BugEdited / TaskCancelled / BugResolved / ChainEdited events within a configurable window (default 24h). Feeds chain T9 (threshold + Qwen-prompt tuning) and T10 (ML follow-on corpus exports). Read-only. Heuristic correction join is best-effort; the inline heuristic_correction_note field on the response documents the false-positive / false-negative classes so consumers can triage signals manually before treating any as ground truth."
+
+[[params]]
+  name = "since"
+  type = "optional_string"
+  required = false
+  description = "ISO-8601 lower bound on review ts (default: 7 days ago)."
+
+[[params]]
+  name = "correction_window_hours"
+  type = "integer"
+  required = false
+  description = "Look-ahead window for the heuristic correction-signal scan (default 24)."
+
+[[examples]]
+  call = "{\"since\":\"2026-05-13T00:00:00Z\",\"correction_window_hours\":24}"

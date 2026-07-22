@@ -1,0 +1,26 @@
+[skill]
+name = "bug-resolve"
+version = "1.0.0"
+description = "Resolve a bug with one of four kinds: fixed, wontfix, dup, or routed. Per-kind required fields are enforced — routed needs chain+task pointers; dup needs a target-slug note."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "resolve the bug",
+    "close the bug",
+    "mark bug fixed",
+    "bug wontfix",
+    "bug duplicate",
+    "route the bug",
+    "dup of bug",
+    "bug_resolve",
+]
+when_not = [
+    "the bug should be reopened — use bug_reopen instead",
+    "the resolved_commit_sha needs backfilling — use bug_stamp_resolved_sha instead",
+    "filing a new bug — use forge(bug, …) instead",
+    "the bug is already resolved — bug_resolve rejects repeat-close attempts",
+]
+
+[instructions]
+path = "action-manifests/instructions/bug-resolve.md"

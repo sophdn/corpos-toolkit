@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ParseContextWorkStateSurfaced.json",
+  "title": "ParseContextWorkStateSurfaced payload",
+  "description": "Emitted by the parse_context handler on every call that ran the work-state resolver (chain parse-context-lean-orienting T6). T10's measurement consumes the event for fire-rate (work-state-firing vs other intents), surface mix (which of bugs/tasks/chains land per call), and cache-hit-rate dashboards. The no-surfacings case (counts all zero) still emits so T10 has a fire-rate denominator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent_shape", "bugs_count", "tasks_count", "chains_count", "cache_hit"],
+  "properties": {
+    "intent_shape": {
+      "type": "string",
+      "enum": ["verify", "implement", "fix", "audit", "explain", "summarize", "status", "list", "none"],
+      "description": "The directive intent that fired this surfacing. Always one of the work-state firing set today (verify/implement/fix/audit/status/list); explain/summarize/none never appear here because the resolver short-circuits on those shapes. Kept as the full vocabulary so future expansion doesn't need a schema bump."
+    },
+    "bugs_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of open bug Candidates surfaced this call. Capped at 10 (workStateMaxBugs in resolver source)."
+    },
+    "tasks_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of active task Candidates surfaced this call. Capped at 5."
+    },
+    "chains_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of recent open chain Candidates surfaced this call. Capped at 3, within the 7-day recency window."
+    },
+    "cache_hit": {
+      "type": "boolean",
+      "description": "True when the work-state resolver served the response from its short-5-turns cache instead of re-querying the DB. T10's cache-effectiveness dashboard reads this directly."
+    },
+    "project_id": {
+      "type": "string",
+      "description": "The project the resolver scoped to. Empty means the no-project short-circuit fired (constraint in T6 — no surfacings without a resolved project)."
+    }
+  }
+}

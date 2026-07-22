@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BugEdited.json",
+  "title": "BugEdited payload",
+  "description": "Emitted when a bug's content fields change via forge_edit(bug) — title, problem_statement, acceptance_criteria, constraints, surface, source, etc. Status transitions emit BugResolved / BugReopened instead. SHA stamping emits BugStamped. When an edit touches the triage subset (severity / tags), BugTriaged ALSO emits alongside this event so triage-shape readers can filter by type without parsing updated_fields. updated_fields carries the list of changed field names; updated_values (added 2026-05-20 via T3 of agent-substrate-crud-retirement, §9.4) carries the post-edit values for each changed column so payload-only fold reconstruction can rebuild proj_current_bugs without re-reading the CRUD row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["updated_fields"],
+  "properties": {
+    "updated_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Snake-case names of the bug fields that changed in this edit. At least one entry — a no-op edit must not emit this event."
+    },
+    "updated_values": {
+      "type": ["object", "null"],
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.4 audit finding). Map of changed-column-name → new value. Keys mirror updated_fields exactly; values carry the post-edit content for each column so the projection fold can reconstruct proj_current_bugs from payload alone (T5's contract). Optional for backward compatibility with pre-T3 events; once T5 lands, every new event carries this. Value types follow each column's storage form (string for most; arrays accepted where the column joins a multi-bullet list).",
+      "additionalProperties": true
+    }
+  }
+}

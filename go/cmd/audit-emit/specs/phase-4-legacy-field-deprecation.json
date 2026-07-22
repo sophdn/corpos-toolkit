@@ -1,0 +1,81 @@
+{
+  "actor_id": "claude-opus-4-7-phase-4-legacy-field-deprecation-F4",
+  "entity": {
+    "kind": "chain",
+    "slug": "phase-4-legacy-field-deprecation",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ArchitectureAuditCompleted",
+      "rationale": "Chain phase-4-legacy-field-deprecation F4 retrospective. Three retire-disposition projection columns dropped (proj_current_bugs.resolution_note, proj_current_suggestions.resolution_note, proj_chain_status.design_decisions) via migration 065; every downstream reader updated (fold modules, observe-http, work-surface structs, dashboard panels, EventTimeline per-type-renderer duplicate). The events ledger keeps the payloads intact — the substrate's source of truth never moved; only the projection-side cache + the dashboard prose-duplicate retired. Self-hosting check: this event lands on the substrate that just shed the duplicate.",
+      "payload": {
+        "audit_doc": "docs/PHASE_4_LEGACY_FIELD_DEPRECATION.md (F1 design + per-field disposition matrix at §3, adjacent findings at §5, F4 retrospective at §8)",
+        "summary": "All five completion_condition clauses pass. (a) Every audited field has a documented disposition in §3 of the design doc: bug.resolution_note / suggestion.resolution_note / chain.design_decisions RETIRE; chain.output / chain.completion_condition / task.constraints / task.acceptance_criteria KEEP; task.handoff_output disposition revised at F2 from MIGRATE-TO-EVENT to KEEP (no dashboard prose render exists to retire; the column-overwrite shape collision filed as separate bug). (b) Retired fields are no longer written by any fold module (foldBugReported / foldBugResolved / foldBugReopened / foldSuggestion* / foldChainCreated) and foldChainEdited tolerates ChainEdited events still targeting design_decisions via the isRetiredChainColumn silent-drop. observe-http detail endpoints drop the keys from the JSON shape. The dashboard ChainIndex / BugDetailPanel / SuggestionDetailPanel / EventTimeline per-type-renderer all stop rendering the prose duplicates. (c) Forge schemas + dispatch policies retain the fields as event-payload inputs (the event ledger is the source of truth); the projection-side write path is what retired. F1's doc §4 reasoning held: hard-rejecting at forge time would break chain creation (chain.toml requires design_decisions) since the event payload still needs it. (d) Self-hosting proof: this very ArchitectureAuditCompleted event lands on the substrate that just shed the projection-side duplicate. (e) docs/AGENT_AUDIT_AND_MIGRATION.md §6 Phase 4 marked complete inline; durable artifact at docs/PHASE_4_LEGACY_FIELD_DEPRECATION.md sufficient for any future field-cleanup chain to pattern off.",
+        "recommended_next_phase": "Phase 5 (retrospective on the full §6 staging) per docs/AGENT_AUDIT_AND_MIGRATION.md is the natural follow-on if the user wants a corpus-level read on whether the migration's success criteria (§9) now hold. No new chain proposed by this retrospective.",
+        "findings": [
+          {
+            "item": "completion_condition (a) — per-field disposition matrix landed",
+            "status": "pass",
+            "evidence": "docs/PHASE_4_LEGACY_FIELD_DEPRECATION.md §3 enumerates every audited field × disposition × rationale × EventTimeline equivalent. F1 landed at commit 44474aa.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (b) — retired fields no longer written / surfaced / rendered",
+            "status": "pass",
+            "evidence": "Migration 065 (canonical + Go-embed + testutil mirrors) drops resolution_note from proj_current_bugs + proj_current_suggestions and design_decisions from proj_chain_status. F2 landed at commit 356ea48 updating fold modules + observe-http + work-surface structs + forge/indexsync. F3 landed at commit 99b4e92 deleting dashboard JSX prose-blocks (BugDetailPanel, SuggestionDetailPanel, ChainIndex) + the EventTimeline per-type-renderer 'Decisions' PayloadRow + dormant WorkSearch + API/lib types.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (c) — forge schemas + dispatch policies reflect the retired set",
+            "status": "pass",
+            "evidence": "Decision documented in F1 doc §4 reasoning: forge schemas + bug_resolve / suggestion_resolve / chain forge action params stay as-is because they're event-payload inputs, not projection writes. The forge handler's chain-pointer description in indexsync.go stops sourcing design_decisions (falls back to completion_condition only).",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (d) — self-hosting proof",
+            "status": "pass",
+            "evidence": "This ArchitectureAuditCompleted event lands in the events table via go/cmd/phase-4-legacy-field-deprecation-audit-emit. The substrate is exercised to record its own field-deprecation audit.",
+            "severity": "low"
+          },
+          {
+            "item": "completion_condition (e) — AGENT_AUDIT_AND_MIGRATION.md §6 Phase 4 marked complete",
+            "status": "pass",
+            "evidence": "Inline addendum on docs/AGENT_AUDIT_AND_MIGRATION.md §6 Phase 4 references this F4 commit + the design doc. The cousin chain's §6 Phase 4 (table-level CRUD retirement) already complete; this chain closes the field-level continuation.",
+            "severity": "low"
+          },
+          {
+            "item": "Bake-in gate waiver: original 30-day calendar gate skipped per 2026-05-21 user decision",
+            "status": "partial",
+            "evidence": "Chain design's BAKE-IN GATE required ≥30 days agent-substrate-frontend production stability + operator EventTimeline adoption signals. Gates #1/#2/#3 waived 2026-05-21 (4 days into the bake window) on the basis that the cousin chain agent-substrate-crud-retirement's byte-identical rebuild-from-events validation supersedes the calendar protection. Gate #4 (no dual-write fallback) met as cousin-chain side effect. RISK: dashboard operator-level EventTimeline adoption signal hasn't accumulated; if a retired prose field carried signal the EventTimeline doesn't yet surface, regression discovery is post-retirement. Mitigation: F1 audit verified per-type-renderer + structured drawer surface each retire-candidate's typed equivalent before disposition; F3 visual sign-off (user-driven) is the safety valve for the chain.design_decisions UX shift.",
+            "severity": "medium"
+          },
+          {
+            "item": "Scope discovery: suggestion.resolution_note + EventTimeline per-type-renderer added at F1 time",
+            "status": "partial",
+            "evidence": "Original chain (created 2026-05-17) inventory listed bug.resolution_note + chain.design_decisions + task.handoff_output. The 2026-05-21 sanity check added suggestion.resolution_note (sibling field from agent-suggestion-box's 2026-05-19 close — post-dated chain creation) + apps/dashboard/src/components/shared/EventTimeline/per-type-renderers.tsx as audit surfaces. Documented in the chain design_decisions addendum.",
+            "severity": "low"
+          },
+          {
+            "item": "Disposition revision: task.handoff_output flipped MIGRATE-TO-EVENT → KEEP at F2 start",
+            "status": "partial",
+            "evidence": "F1's matrix had task.handoff_output as MIGRATE-TO-EVENT with a recommended M3 resolution (fix foldTaskCompleted shape collision in-scope). F2's audit revealed no dashboard prose render exists for task.handoff_output (no TaskIndex page exists; only observe-http search surfaces the column). Disposition revised to KEEP; the column-overwrite shape collision (foldTaskCompleted writes closure_summary into the handoff_output column) filed as Finding 1 in F1 doc §5 for separate handling. Out of Phase 4 scope.",
+            "severity": "low"
+          },
+          {
+            "item": "Workflow gap: status_only-blocked tasks unreachable forward via work-tool actions",
+            "status": "partial",
+            "evidence": "Bug `no-path-from-status-only-blocked-task-to-pending` filed during F2 startup: when a chain is created with inline tasks declaring status=blocked (prose-blockers, not structural edges), no work-tool action transitions them to pending/active/closed once the prose blocker clears. task_unblock requires a blocker_slug; task_start errors on blocked→active; task_complete errors on blocked→closed; forge_edit's status field is a silent no-op for non-{open,closed} values. F2/F3 commits landed regardless; the tracker hygiene is downstream of the engineering. Chain close also blocked by this; F4 will need a structural-edge workaround OR the bug fix landing first.",
+            "severity": "medium"
+          },
+          {
+            "item": "Equivalence verification preserved through F2",
+            "status": "pass",
+            "evidence": "scripts/equivalence-harness.sh re-run after F2's migration 065 lands: stage 2b (SQL row-count diff) every projection's row count matches live exactly; stage 4 (Vitest 421/421) passes against rebuilt-DB-backed daemon. The cousin chain's completion_condition (b) doesn't regress under Phase 4.",
+            "severity": "low"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+name        = "refactoring-heuristics"
+description = "Refactoring opportunity detection rubric (not deployed — rejected)"
+is_deployed = false
+output_enum = ["yes", "no", "unclear"]
+
+criteria = [
+  "yes: clear refactoring opportunity present.",
+  "no: no meaningful refactoring opportunity.",
+  "unclear: insufficient context to judge.",
+]
+
+prompt_template = """You classify whether a code snippet presents a clear refactoring \
+opportunity based on well-established heuristics (duplication, \
+long method, feature envy, data clumps, etc.).
+
+- **yes**: clear refactoring opportunity present.
+- **no**: no meaningful refactoring opportunity.
+- **unclear**: insufficient context to judge."""
+
+# No worked examples — rubric rejected before gold corpus was built.

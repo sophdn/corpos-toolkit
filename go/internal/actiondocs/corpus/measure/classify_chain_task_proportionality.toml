@@ -1,0 +1,15 @@
+surface = "measure"
+action = "classify_chain_task_proportionality"
+purpose = "Dispatches the chain-assessment rubric via Qwen — derives team-context from telemetry (closures-per-week + vault-decision-keyword-scan) when no override is supplied, calls the rubric registry, writes a benchmark_results row, and returns {label, latency_ms, model_name, team_context_prose}."
+
+[[params]]
+  name = "task_spec"
+  type = "string"
+  required = true
+  description = "The task specification to assess proportionality against."
+
+[[params]]
+  name = "team_context_override"
+  type = "optional_string"
+  required = false
+  description = "Override the auto-derived team context. When absent, team context is derived from telemetry: closures-per-week + vault-decision-keyword-scan."

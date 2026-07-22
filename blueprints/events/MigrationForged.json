@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/MigrationForged.json",
+  "title": "MigrationForged payload",
+  "description": "Emitted by forge(schema_name='migration', ...) on every successful create — both fresh creates (new NNN minted) and idempotent re-runs (existing slug returned without minting). Records that a SQL migration file landed at the canonical + testutil-mirror paths under the recorded migration_number. Consumers: the dashboard's schema-history view, future trained classifier that flags migration-without-test commits, and the chain-close-completeness audit which joins migration commits with their accompanying acceptance-criteria-status retro section. The idempotent flag lets consumers distinguish fresh authoring from re-runs without inferring from event ordering.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["migration_number", "slug", "file_paths", "sql_length"],
+  "properties": {
+    "migration_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The NNN sequence number assigned to this migration. Allocated as max(filesystem_max, substrate_max)+1 — the highest number across both this checkout's go/internal/db/migrations/ AND every prior MigrationForged in the shared DB — so parallel worktree agents never mint the same number (chain worktree-multi-agent-orchestration-support T3). Strictly greater than every previously-recorded number; the auto-numbering skips gaps (never gap-fill)."
+    },
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The kebab/snake-case migration descriptor (e.g. `add_proj_check_constraints`). Matches the file's stem after the NNN prefix."
+    },
+    "file_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "The two repo-relative paths the migration landed at: [canonical, mirror]. Canonical is go/internal/db/migrations/NNN_<slug>.sql; mirror is go/internal/testutil/migrations/NNN_<slug>.sql. The two files are byte-identical post-write (forge verifies via hash compare before commit)."
+    },
+    "docstring_length": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Length in bytes of the docstring field at create time; 0 when omitted. Lets downstream consumers count migrations that landed without prose context without re-reading the file."
+    },
+    "sql_length": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Length in bytes of the up_sql body at create time. Always >=1 because the schema requires up_sql to be non-empty."
+    },
+    "idempotent": {
+      "type": "boolean",
+      "description": "True when the call was an idempotent re-run (slug already existed; existing row/path returned without minting). False on fresh creates. Optional — older events may omit; treat absent as false."
+    }
+  }
+}

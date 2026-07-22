@@ -1,0 +1,48 @@
+surface = "admin"
+action = "action_describe"
+purpose = "Return the per-action TOML chunk for one (surface, action) lookup. The corpus is go:embed'd into the binary from go/internal/actiondocs/corpus/<surface>/<action>.toml; this getter is how agents read it on demand instead of scanning the surface *Description constants for one piece of prose."
+notes = "Always-registered: this action is part of admin.BuildTable regardless of whether the corpus loaded, so dispatch behavior is consistent. When the corpus is absent, the handler returns the corpus-not-loaded envelope rather than 'action not registered'. Wire shape: success returns the ActionDoc fields at the top level (same JSON keys as the source TOML); error returns an envelope with `error` plus surface/action/registered_surfaces/registered_actions/hint where populated."
+
+[[params]]
+  name = "surface"
+  type = "string"
+  required = true
+  description = "The meta-tool surface: one of {work, measure, knowledge, admin}."
+
+[[params]]
+  name = "action"
+  type = "string"
+  required = true
+  description = "The action name as registered in the surface's BuildTable. Pass action=\"_general\" for surface-wide cross-cutting prose (cross-project defaults, alias conventions that span actions, sentinel values)."
+
+[[errors]]
+  condition = "missing surface"
+  message = "Returns error envelope: action_describe: surface is required."
+
+[[errors]]
+  condition = "missing action"
+  message = "Returns error envelope: action_describe: action is required (with a hint pointing at action=\"_general\")."
+
+[[errors]]
+  condition = "unknown surface"
+  message = "Returns error envelope with error=surface_not_found and registered_surfaces=[...] listing the surfaces this binary has loaded."
+
+[[errors]]
+  condition = "unknown action under known surface"
+  message = "Returns error envelope with error=action_not_found, surface, action, and registered_actions=[...] (excludes _general; the Hint mentions _general separately)."
+
+[[errors]]
+  condition = "corpus not loaded"
+  message = "Returns error envelope explaining --action-docs-dir was not resolved at startup; admin.action_describe is disabled for this binary instance."
+
+[[examples]]
+  description = "Fetch a specific action's chunk."
+  call = "{surface: \"work\", action: \"bug_resolve\"}"
+
+[[examples]]
+  description = "Fetch a surface's cross-cutting prose."
+  call = "{surface: \"work\", action: \"_general\"}"
+
+[[examples]]
+  description = "Cross-surface lookup — admin.action_describe works for every surface's actions, not just admin's."
+  call = "{surface: \"measure\", action: \"classify_bug_severity\"}"

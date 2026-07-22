@@ -1,0 +1,56 @@
+surface = "fs"
+action = "write"
+purpose = "Write content to a file, replacing the whole file (creating it and any missing parent directories). The owned replacement for the harness Write tool."
+notes = "FAMILY PRECONDITION: overwriting an EXISTING file requires a prior full fs.read of it (and no change since) — the read/write/edit family's owned read-state, so the family is self-consistent without any harness read-state. A NEW file needs no prior read. After a successful write the new state is recorded as read, so an immediate follow-up write/edit does not require a re-read. Content is written verbatim UTF-8 with parent directories created. SUBSTRATE UPGRADE (opt-in, default stays a plain write): record mode emits an ArtifactWritten event (intent → event rationale) keyed by the absolute path — the write half of the write->read provenance loop. Emission is fail-open: an event-log error never fails a write that already committed."
+
+[[params]]
+  name = "file_path"
+  type = "string"
+  required = true
+  description = "Absolute or working-directory-relative path to write."
+
+[[params]]
+  name = "content"
+  type = "string"
+  required = true
+  description = "The full new file content, written verbatim (UTF-8). May be the empty string (writes an empty file)."
+
+[[params]]
+  name = "record"
+  type = "bool"
+  required = false
+  description = "OPT-IN provenance mode: emit an ArtifactWritten event for this write so fs.read provenance mode can fold it into the file's mutation history. Default off (no event)."
+
+[[params]]
+  name = "intent"
+  type = "optional_string"
+  required = false
+  description = "Free-text intent recorded as the ArtifactWritten event's rationale (only meaningful with record=true)."
+
+[[param_aliases]]
+  from = "path"
+  to = "file_path"
+
+[[errors]]
+  condition = "file_path missing or empty"
+  message = "fs.write requires file_path"
+
+[[errors]]
+  condition = "the path is a directory"
+  message = "fs.write: <path> is a directory, not a file"
+
+[[errors]]
+  condition = "overwriting an existing file that was not fully read first"
+  message = "fs.write: File has not been read yet. Read it first before writing to it."
+
+[[errors]]
+  condition = "the existing file changed on disk since it was read"
+  message = "fs.write: File has been modified since read, either by the user or by a linter. Read it again before attempting to write it."
+
+[[errors]]
+  condition = "the process lacks permission"
+  message = "fs.write: permission denied: <path>"
+
+[returns]
+  shape = "WriteResult"
+  description = "file_path, created (true when the file did not exist before), bytes_written, line_count, and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactWritten event; omitted on a default write."

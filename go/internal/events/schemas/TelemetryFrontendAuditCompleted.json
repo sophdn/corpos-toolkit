@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TelemetryFrontendAuditCompleted.json",
+  "title": "TelemetryFrontendAuditCompleted payload",
+  "description": "Emitted by the chain query-telemetry-substrate-frontend QF5 retrospective to record that the dashboard surfaces serving the read-side telemetry substrate (per-query trajectory inspector, analytics page over the three query_* projections, training-pair browser) have been verified against the chain's design doc and completion criteria. Self-hosting check parallel to SubstrateFrontendAuditCompleted — the read-side frontend uses the write-side audit ledger to record its own audit outcome, closing the substrate trilogy loop (query-telemetry-substrate → query-telemetry-substrate-frontend → SubstrateFrontendAuditCompleted-style closure). Findings are keyed to docs/TELEMETRY_FRONTEND.md sections. See docs/TELEMETRY_FRONTEND.md and the chain's completion_condition for context.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the design / contract doc the findings are keyed against — typically docs/TELEMETRY_FRONTEND.md plus the chain's completion criteria."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome covering all completion-criterion sub-items (a)–(f)."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the follow-on work (typically: cross-encoder reranker fine-tune from local-ml-roadmap.md §1.1; SSE invalidation for the analytics page once grounding_event_recorded ships; entity-detail integration once agent-substrate-frontend F3 stabilizes). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per design-doc section or completion-criterion item. status uses the same enum as the architecture audit (pass / fail / partial / deferred).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Design-doc section identifier and short description (e.g. \"§3.1 trajectory endpoint\")."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = contract honored end-to-end; fail = gap (must file follow-on); partial = honored with documented gap; deferred = explicitly out of scope per chain non-goals."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence: test names, file paths, screenshots, commit SHA, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+# Canonical Go action: work.task_read (see go/internal/actiondocs/corpus/work/task_read.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "read-task"
+version = "1.0.0"
+description = "Read a task's full content — problem statement, AC, context, constraints, handoff — before starting work or reviewing what's needed."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "what does task",
+    "read the task",
+    "show me the task",
+    "task details",
+    "what are the acceptance criteria",
+    "pull up the task",
+    "what does this task require",
+    "task content",
+    "review the task",
+    "what is the problem statement",
+    "handoff output for",
+    "context required for",
+]
+when_not = [
+    "listing chains or chain status — use chain_status instead",
+    "searching across tasks — use search_task_content instead",
+    "starting or completing a task — use start_task or complete_task instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/read-task.md"

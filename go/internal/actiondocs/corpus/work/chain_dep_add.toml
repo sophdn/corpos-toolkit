@@ -1,0 +1,30 @@
+surface = "work"
+action = "chain_dep_add"
+purpose = "Add a chain-level dependency edge: the dependent chain depends on (must come after) the prerequisite chain. Edges drive roadmap_plan's computed order, so declaring a dependency once is how you shape the roadmap — no manual position-setting. Rejects self-edges, cross-project pairs, unknown chains, and duplicates."
+
+[[params]]
+  name = "dependent_chain"
+  type = "string"
+  required = true
+  description = "Slug of the chain that depends on / comes after the prerequisite. Alias: dependent."
+
+[[params]]
+  name = "prerequisite_chain"
+  type = "string"
+  required = true
+  description = "Slug of the chain that must come first. Aliases: prerequisite, depends_on."
+
+[[params]]
+  name = "reason"
+  type = "optional_string"
+  required = false
+  description = "Why the dependency exists — the human-readable half of the 'why this order' answer (e.g. 'needs the typed core before the HTTP layer')."
+
+[[examples]]
+  call = "{\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\",\"reason\":\"needs the domain types\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

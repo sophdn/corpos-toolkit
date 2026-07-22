@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/GateRunCompleted.json",
+  "title": "GateRunCompleted payload",
+  "description": "Emitted once per completed corpos-gate run when the run is executed through the measure surface's gate_run action. Carries the aggregated verdict (overall_ok + per-check outcomes) plus the parsed coverage / mutation metrics so the fold can persist an EVENT-SOURCED trend row per project: proj_gate_runs (parent, one row per run) + proj_gate_check_results (child, one row per check). This mirrors the benchmark feature (BenchmarkRunCompleted → proj_benchmark_results) and the study-run feature (StudyRunRecorded → proj_study_runs + proj_study_run_scores): the event is the source of truth and the projection is a denormalised read cache the fold rebuilds from the ledger. The verdict is the SAME core the CLI (`corpos-gate run`) produces — internal/gate.Run over the repo's gate.yml — so the persisted trend is faithful to what a developer or CI sees. Cross-cutting entity (entity_kind='gate_run', envelope project_id null); project rides in the payload for the fold to write the namespaced rows. Coverage/mutation nullable metrics use -1 to signal N/A (the check did not run, was skipped, or produced no parseable metric).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "tier", "overall_ok", "duration_ms", "checks"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Project this gate run belongs to. Cross-cutting events carry null project_id in the envelope, so it is mirrored here for the fold to populate proj_gate_runs.project_id / proj_gate_check_results.project_id."
+    },
+    "commit_sha": {
+      "type": "string",
+      "description": "The commit SHA the gate ran against, when known (empty for a dirty / uncommitted working-tree run). Stored verbatim so the trend can be joined back to a specific revision."
+    },
+    "tier": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The gate tier run: 'pre-commit', 'pre-push', or 'ci'. Tiers are a superset (ci ⊃ pre-push ⊃ pre-commit); a higher tier runs more checks, so coverage/mutation may be present only at the tier that enables them."
+    },
+    "overall_ok": {
+      "type": "boolean",
+      "description": "True iff every non-skipped check passed — the run's aggregate verdict. Identical to `corpos-gate run --tier=<tier>` exit-0 for the same repo/commit (same internal/gate.Run core)."
+    },
+    "coverage_pct": {
+      "type": "number",
+      "description": "Aggregate statement-coverage percentage parsed from the coverage check's summary. -1 when the coverage check did not run, was skipped, or produced no parseable total."
+    },
+    "branch_pct": {
+      "type": "number",
+      "description": "Branch-coverage percentage. Always -1 today — Go's cover tool reports statement coverage only; the field is reserved for stacks that emit branch coverage."
+    },
+    "mutation_score": {
+      "type": "number",
+      "description": "Mutation score (0.0–1.0) parsed from the mutation check's report. -1 when the mutation check did not run, was skipped (go-mutesting absent / disabled), or produced no parseable score. Mutation is report-only and never fails the gate."
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total wall-clock time of the gate run in milliseconds — the sum of every executed check's duration."
+    },
+    "checks": {
+      "type": "array",
+      "description": "Per-check outcomes in run order. Persisted into proj_gate_check_results as child rows. One entry per check the plan executed (fail-fast may stop early, so a failed run carries fewer entries than the full plan).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "tier", "ok", "skipped", "duration_ms"],
+        "properties": {
+          "name": { "type": "string", "description": "Check name (e.g. 'format', 'vet', 'lint', 'build', 'test', 'coverage', 'vuln', 'mutation', or a custom name)." },
+          "tier": { "type": "string", "description": "The tier the check is registered at." },
+          "ok": { "type": "boolean", "description": "True if the check passed. A skipped check is also true." },
+          "skipped": { "type": "boolean", "description": "True if the check was skipped (e.g. tool absent, no changed packages)." },
+          "duration_ms": { "type": "integer", "minimum": 0, "description": "Wall-clock time this check took, in milliseconds." },
+          "note": { "type": "string", "description": "Short explanatory text from the check (coverage summary, skip reason, failure snippet). Empty when the check has nothing to add." }
+        }
+      }
+    }
+  }
+}

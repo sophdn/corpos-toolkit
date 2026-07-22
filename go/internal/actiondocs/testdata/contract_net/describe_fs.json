@@ -1,0 +1,604 @@
+{
+  "_general": {
+    "surface": "fs",
+    "action": "_general",
+    "purpose": "Owned filesystem navigation. Read/Grep/Glob/LS reimplemented as toolkit-server actions so the agent reads files, searches text, expands globs, and lists directories through surfaces we own rather than the substrate-blind harness tools. The default of every action is byte-for-byte faithful to its harness counterpart; substrate-native capability layers on as opt-in modes.",
+    "notes": "PARITY FLOOR. The reason to own these tools is NOT to clone them — it is to fit them to our substrate (event log, knowledge_pointers, doc.go intended-use blocks, CODEMAP, projections) which the harness tools are blind to. But parity comes first: each action's DEFAULT output matches the harness tool byte-for-byte, because (a) predictability is itself a feature of an agent tool, and (b) parity is the gate for the deny-list swap — you cannot deny the harness Read/Grep/Glob/LS until the owned versions at least match, or every session regresses below baseline.\n\nOPT-IN UPGRADES. Substrate-native capability is exposed as explicit opt-in params/modes, never as a change to the default: outline/symbol/provenance/oriented reads, knowledge-aware + substrate-ranked grep, convention-aware glob, orientation ls. The common literal call stays predictable and token-cheap; you pay for substrate context only when you ask for it.\n\nDENY-LIST SWAP. Once an action reaches parity and is deployed, the matching harness tool is added to permissions.deny in settings.json so sessions use the owned version exclusively. The swap is the LAST step and depends on the owned binary being live (merged to main + rebuilt), since a denied harness tool with no working replacement leaves the agent with neither.\n\nNON-GOALS. fs does not write, move, or delete files — the agent's Edit/Write and Bash remain the mutation path. It does not own task/bug/vault state (see the work and knowledge surfaces).\n"
+  },
+  "edit": {
+    "surface": "fs",
+    "action": "edit",
+    "purpose": "Replace an exact string in a file. The owned replacement for the harness Edit tool.",
+    "params": [
+      {
+        "name": "file_path",
+        "type": "string",
+        "required": true,
+        "description": "Absolute or working-directory-relative path to edit."
+      },
+      {
+        "name": "old_string",
+        "type": "string",
+        "required": true,
+        "description": "The exact text to replace. Empty string creates a new file (nonexistent path) or fills an empty file from new_string."
+      },
+      {
+        "name": "new_string",
+        "type": "string",
+        "required": true,
+        "description": "The replacement text. Must differ from old_string."
+      },
+      {
+        "name": "replace_all",
+        "type": "bool",
+        "required": false,
+        "description": "Replace every occurrence of old_string (default false → replace the single occurrence; \u003e1 match without this errors)."
+      },
+      {
+        "name": "record",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN provenance mode: emit an ArtifactEdited event for this edit so fs.read provenance mode can fold it into the file's mutation history. Default off (no event)."
+      },
+      {
+        "name": "intent",
+        "type": "optional_string",
+        "required": false,
+        "description": "Free-text intent recorded as the ArtifactEdited event's rationale (only meaningful with record=true)."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "path",
+        "to": "file_path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "file_path missing or empty",
+        "message": "fs.edit requires file_path"
+      },
+      {
+        "condition": "old_string equals new_string",
+        "message": "fs.edit: No changes to make: old_string and new_string are exactly the same."
+      },
+      {
+        "condition": "old_string not present in the file",
+        "message": "fs.edit: String to replace not found in file.\\nString: \u003cold_string\u003e"
+      },
+      {
+        "condition": "old_string occurs more than once and replace_all is false",
+        "message": "fs.edit: Found \u003cn\u003e matches of the string to replace, but replace_all is false. ...\\nString: \u003cold_string\u003e"
+      },
+      {
+        "condition": "editing an existing file that was not fully read first (or changed since read)",
+        "message": "fs.edit: File has not been read yet. Read it first before writing to it. (or: ... modified since read ...)"
+      },
+      {
+        "condition": "non-empty old_string on a nonexistent file",
+        "message": "fs.edit: file does not exist: \u003cpath\u003e"
+      },
+      {
+        "condition": "empty old_string on a non-empty existing file",
+        "message": "fs.edit: Cannot create new file - file already exists."
+      }
+    ],
+    "notes": "CONTRACT: the file is read and CRLF normalized to LF before matching; the result is written with LF endings. old_string must occur exactly once unless replace_all is set. FAMILY PRECONDITION: editing an EXISTING file requires a prior full fs.read (and no change since) via the owned read-state — the same coupling as fs.write, so read/write/edit are self-consistent and can be denied together. SUBSTRATE UPGRADE (opt-in, default stays a plain exact-string replace): record mode emits an ArtifactEdited event (intent → event rationale) keyed by the absolute path — the edit half of the write-\u003eread provenance loop. Emission is fail-open: an event-log error never fails an edit that already committed.",
+    "returns": {
+      "shape": "EditResult",
+      "description": "file_path, created (true when an empty old_string created a new file), replacements (occurrences replaced), and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactEdited event; omitted on a default edit."
+    }
+  },
+  "glob": {
+    "surface": "fs",
+    "action": "glob",
+    "purpose": "Match files by glob pattern (ripgrep file enumeration). The owned replacement for the harness Glob tool; results are sorted newest-first by modification time and capped at 100 files.",
+    "params": [
+      {
+        "name": "pattern",
+        "type": "string",
+        "required": true,
+        "description": "The glob (ripgrep dialect: ** spans directories, */? within a segment, {a,b} groups). e.g. \"**/*.go\", \"src/**/*.ts\"."
+      },
+      {
+        "name": "path",
+        "type": "optional_string",
+        "required": false,
+        "description": "Directory to search in; defaults to the working directory. Results are relative to it."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "file_path",
+        "to": "path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "pattern missing or empty",
+        "message": "fs.glob requires pattern"
+      },
+      {
+        "condition": "the search path does not exist",
+        "message": "fs.glob: path does not exist: \u003cpath\u003e"
+      },
+      {
+        "condition": "the path is not a directory",
+        "message": "fs.glob: \u003cpath\u003e is not a directory"
+      }
+    ],
+    "notes": "CONTRACT (see go/internal/fs/testdata/parity/GREP_GLOB_CONTRACT.md): rides ripgrep's glob dialect (one engine for grep + glob), hidden-aware, excludes version-control metadata dirs, honors .gitignore. A bare *.ext matches at any depth (ripgrep semantics), unlike a shell *.ext — documented, not faithful to a shell glob. Capped at 100 files; truncated flags elision.",
+    "returns": {
+      "shape": "GlobResult",
+      "description": "filenames (relative to the search root, newest-first), num_files, truncated (true when the 100-file cap elided matches), duration_ms."
+    }
+  },
+  "grep": {
+    "surface": "fs",
+    "action": "grep",
+    "purpose": "Search file contents with a regular expression (ripgrep). The owned, substrate-native replacement for the harness Grep tool; the default output is faithful to it. Paths are reported relative to the search root.",
+    "params": [
+      {
+        "name": "pattern",
+        "type": "string",
+        "required": true,
+        "description": "The regular expression to search for. A pattern beginning with '-' is passed explicitly so it is not parsed as a flag."
+      },
+      {
+        "name": "path",
+        "type": "optional_string",
+        "required": false,
+        "description": "File or directory to search; defaults to the working directory. The search root — results are relative to it."
+      },
+      {
+        "name": "glob",
+        "type": "optional_string",
+        "required": false,
+        "description": "Glob filter on filenames (e.g. \"*.go\", \"*.{ts,tsx}\"); whitespace/comma-separated, brace groups preserved."
+      },
+      {
+        "name": "type",
+        "type": "optional_string",
+        "required": false,
+        "description": "ripgrep file type to restrict the search (e.g. go, py, rust, js)."
+      },
+      {
+        "name": "output_mode",
+        "type": "optional_string",
+        "required": false,
+        "description": "content (matching lines, supports context + line numbers), files_with_matches (paths, the default), or count (per-file match counts)."
+      },
+      {
+        "name": "context_before",
+        "type": "integer",
+        "required": false,
+        "description": "Lines of context before each match (content mode only)."
+      },
+      {
+        "name": "context_after",
+        "type": "integer",
+        "required": false,
+        "description": "Lines of context after each match (content mode only)."
+      },
+      {
+        "name": "context",
+        "type": "integer",
+        "required": false,
+        "description": "Lines of context before AND after each match (content mode only); takes precedence over context_before/context_after."
+      },
+      {
+        "name": "show_line_numbers",
+        "type": "bool",
+        "required": false,
+        "description": "Show line numbers (content mode only); default true."
+      },
+      {
+        "name": "case_insensitive",
+        "type": "bool",
+        "required": false,
+        "description": "Case-insensitive search; default false."
+      },
+      {
+        "name": "head_limit",
+        "type": "integer",
+        "required": false,
+        "description": "Cap output to the first N entries (lines/files/counts); default 250. Pass 0 for unlimited."
+      },
+      {
+        "name": "offset",
+        "type": "integer",
+        "required": false,
+        "description": "Skip the first N entries before applying head_limit; default 0."
+      },
+      {
+        "name": "multiline",
+        "type": "bool",
+        "required": false,
+        "description": "Patterns may span lines and '.' matches newlines; default false."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "file_path",
+        "to": "path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "pattern missing or empty",
+        "message": "fs.grep requires pattern"
+      },
+      {
+        "condition": "output_mode is not content/files_with_matches/count",
+        "message": "fs.grep: invalid output_mode \u003cmode\u003e (want content|files_with_matches|count)"
+      },
+      {
+        "condition": "the search path does not exist",
+        "message": "fs.grep: path does not exist: \u003cpath\u003e"
+      },
+      {
+        "condition": "ripgrep is not installed",
+        "message": "fs.grep: ripgrep (rg) not found on PATH"
+      }
+    ],
+    "notes": "CONTRACT (see go/internal/fs/testdata/parity/GREP_GLOB_CONTRACT.md): ripgrep-backed, hidden-aware, version-control metadata dirs excluded, lines clamped to 500 columns. files_with_matches is sorted newest-first by modification time. In content mode the filename is always emitted (path:line:text) so a single-file search stays addressable. head_limit/offset page the result set; applied_limit is reported only when truncation occurred. Harness carve-outs (plugin-cache exclusions, permission-context ignore patterns, the test-only sort hook) are dropped.",
+    "returns": {
+      "shape": "GrepResult",
+      "description": "mode, num_files, filenames (files_with_matches), content (content/count text), num_lines (content), num_matches (count total), and applied_limit/applied_offset paging markers (set only when they took effect)."
+    }
+  },
+  "ls": {
+    "surface": "fs",
+    "action": "ls",
+    "purpose": "List the immediate entries of a directory as structured rows. SELF-DEFINED (the harness has no LS tool — listing there is done via Bash/Glob), so this is a first-principles contract, not a parity match.",
+    "params": [
+      {
+        "name": "path",
+        "type": "optional_string",
+        "required": false,
+        "description": "Directory to list; defaults to the working directory."
+      },
+      {
+        "name": "all",
+        "type": "bool",
+        "required": false,
+        "description": "Include entries whose name begins with '.' (default false)."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "file_path",
+        "to": "path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "the path does not exist",
+        "message": "fs.ls: path does not exist: \u003cpath\u003e"
+      },
+      {
+        "condition": "the path is a file, not a directory",
+        "message": "fs.ls: \u003cpath\u003e is not a directory"
+      }
+    ],
+    "notes": "CONTRACT (see go/internal/fs/testdata/LS_CONTRACT.md): immediate children only (non-recursive), sorted by name (byte order); dotfiles omitted unless all=true. Self-defined — no harness LS counterpart.",
+    "returns": {
+      "shape": "LSResult",
+      "description": "path (the listed directory), entries (rows of {name, type: dir|file|symlink, size in bytes — 0 for dirs}), count."
+    }
+  },
+  "move": {
+    "surface": "fs",
+    "action": "move",
+    "purpose": "Rename or relocate a file or directory in-process (pure Go os.Rename, with a copy-then-remove fallback across filesystems). The owned, substrate-native move primitive — no shell, so it works in the distroless container. Mutating.",
+    "params": [
+      {
+        "name": "source",
+        "type": "string",
+        "required": true,
+        "description": "Path to move FROM. Must exist (file or directory)."
+      },
+      {
+        "name": "dest",
+        "type": "string",
+        "required": true,
+        "description": "Path to move TO. When dest is an existing directory the entry is moved INTO it (final path = dest/basename(source), like mv); otherwise dest is the literal target path and its missing parent directories are created. The final destination must NOT already exist — fs.move refuses to clobber."
+      },
+      {
+        "name": "record",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN provenance mode: emit an ArtifactMoved event for this move so fs.read provenance mode can fold it into the file's mutation history. Default off (no event)."
+      },
+      {
+        "name": "intent",
+        "type": "optional_string",
+        "required": false,
+        "description": "Free-text intent recorded as the ArtifactMoved event's rationale (only meaningful with record=true)."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "src",
+        "to": "source"
+      },
+      {
+        "from": "from",
+        "to": "source"
+      },
+      {
+        "from": "destination",
+        "to": "dest"
+      },
+      {
+        "from": "to",
+        "to": "dest"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "source missing or empty",
+        "message": "fs.move requires source"
+      },
+      {
+        "condition": "dest missing or empty",
+        "message": "fs.move requires dest"
+      },
+      {
+        "condition": "the source path does not exist",
+        "message": "fs.move: source does not exist: \u003csource\u003e"
+      },
+      {
+        "condition": "the final destination already exists",
+        "message": "fs.move: destination already exists: \u003cdest\u003e (remove it first if a replace is intended)"
+      },
+      {
+        "condition": "the process lacks permission on source or destination",
+        "message": "fs.move: permission denied: \u003cpath\u003e"
+      }
+    ],
+    "notes": "CONTRACT: in-process via os.Rename (no shell). A cross-device move (EXDEV) falls back to a recursive copy-then-remove so the move still works when source and dest live on different filesystems (cross_device reports which path ran). fs.move REFUSES to overwrite an existing destination — move is mutating, not destructive; remove the target first (fs.remove) for a deliberate replace. Unlike fs.write/fs.edit, fs.move is NOT coupled to the read-state registry (it relocates bytes without inspecting content), so no prior fs.read is required. SUBSTRATE UPGRADE (opt-in, default stays a plain rename): record mode emits an ArtifactMoved event (intent → event rationale) keyed by the destination absolute path. Emission is fail-open: an event-log error never fails a move that already committed.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required. fs.move is a mutating relocation; the rationale records WHY a path was moved.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ],
+    "returns": {
+      "shape": "MoveResult",
+      "description": "source, dest (the FINAL destination path with any dir-into resolved), is_dir (the moved entry was a directory), cross_device (true when source and dest were on different filesystems so a copy-then-remove ran instead of a plain rename), and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactMoved event; omitted on a default move."
+    }
+  },
+  "read": {
+    "surface": "fs",
+    "action": "read",
+    "purpose": "Read a file (optionally a line range) and return its contents as numbered lines. The owned, substrate-native replacement for the harness Read tool; the default output is byte-for-byte faithful to it (predictability is the parity floor that gates the deny-list swap).",
+    "params": [
+      {
+        "name": "file_path",
+        "type": "string",
+        "required": true,
+        "description": "Absolute or working-directory-relative path to the file to read."
+      },
+      {
+        "name": "offset",
+        "type": "integer",
+        "required": false,
+        "description": "1-based line number to start reading from (default 1). Values \u003c 1 are normalized to 1. Use with limit to page through a large file."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "required": false,
+        "description": "Maximum number of lines to return. Omit (or pass \u003c= 0) to read the WHOLE file, which is then subject to the 256 KB byte cap. A ranged read (limit set) bypasses the byte cap."
+      },
+      {
+        "name": "outline",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN mode: return a go/ast structural summary (top-level signatures + first doc line, struct/interface bodies collapsed) instead of the full file — measurably smaller, for orientation. Go source only. Attaches the `outline` view."
+      },
+      {
+        "name": "symbol",
+        "type": "optional_string",
+        "required": false,
+        "description": "OPT-IN mode: resolve a single named declaration via go/ast and return just its source span (numbered like a normal read). Accepts a top-level name or `Type.Method`. Go source only. Attaches the `symbol` view."
+      },
+      {
+        "name": "provenance",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN mode: attach intent-annotated mutation history for the read range — git blame over the range (commit subjects are the intent) plus matching substrate events (CommitLanded subjects, owned artifact write/edit rationales). Fail-soft for untracked files. Attaches the `provenance` view."
+      },
+      {
+        "name": "oriented",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN mode: attach the file's package intended-use block (from doc.go) and related knowledge_pointers. Attaches the `oriented` view."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "path",
+        "to": "file_path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "file_path missing or empty",
+        "message": "fs.read requires file_path"
+      },
+      {
+        "condition": "the path does not exist",
+        "message": "fs.read: file does not exist: \u003cpath\u003e"
+      },
+      {
+        "condition": "the path is a directory",
+        "message": "fs.read: \u003cpath\u003e is a directory, not a file"
+      },
+      {
+        "condition": "the process lacks read permission",
+        "message": "fs.read: permission denied: \u003cpath\u003e"
+      },
+      {
+        "condition": "a whole-file read (no limit) of a file larger than 256 KB",
+        "message": "fs.read: file content (\u003csize\u003e) exceeds maximum allowed size (256KB). Use offset and limit parameters ..."
+      },
+      {
+        "condition": "outline/symbol mode on a non-Go file",
+        "message": "fs.read: outline mode requires a Go source file (.go): \u003cpath\u003e"
+      },
+      {
+        "condition": "symbol mode with a name that resolves to no declaration",
+        "message": "fs.read: symbol \u003cname\u003e not found in \u003cpath\u003e"
+      }
+    ],
+    "notes": "CONTRACT (see go/internal/fs/testdata/parity/OBSERVED_HARNESS_CONTRACT.md): the content is split on newline (leading UTF-8 BOM stripped, trailing \\r stripped), each part numbered 1-based as `\u003cn\u003e\\t\u003ccontent\u003e` with an UNPADDED line number, joined with newline and NO trailing newline; a file ending in a newline gets a trailing empty numbered line. Whole-file reads over 256 KB throw (byte cap); a ranged read bypasses it. A model-coupled token cap is intentionally NOT part of the contract — this surface is model-agnostic and the byte cap is the only size guard. Streams line by line. SUBSTRATE UPGRADES (opt-in, default stays byte-parity): outline (go/ast signatures), symbol (go/ast declaration resolution), provenance (git blame + substrate events), oriented (doc.go intended-use + knowledge_pointers). Each is an explicit opt-in param; a mode read is a partial/derived view and does NOT record full read-state, so it never satisfies the fs.write/fs.edit precondition. No mode changes the default byte output.",
+    "returns": {
+      "shape": "ReadResult",
+      "description": "content (the numbered-line text; empty when no lines are selected), file_path, start_line (the 1-based offset), line_count (lines returned), total_lines (lines in the file), and warning (a system-reminder, set verbatim when content is empty: empty file / offset past EOF). An OPT-IN mode additionally attaches exactly one of outline / symbol / provenance / oriented; all are omitted on a default read."
+    }
+  },
+  "remove": {
+    "surface": "fs",
+    "action": "remove",
+    "purpose": "Delete a file, or a directory only when an explicit recursive flag is set (pure Go os.Remove / os.RemoveAll). The owned, substrate-native delete primitive — no shell, so it works in the distroless container. Destructive.",
+    "params": [
+      {
+        "name": "file_path",
+        "type": "string",
+        "required": true,
+        "description": "Absolute or working-directory-relative path to remove (file or directory)."
+      },
+      {
+        "name": "recursive",
+        "type": "bool",
+        "required": false,
+        "description": "Required to delete a NON-EMPTY directory (os.RemoveAll). Without it, a non-empty directory is refused and nothing is deleted; a regular file or an empty directory removes without it. Default false."
+      },
+      {
+        "name": "record",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN provenance mode: emit an ArtifactRemoved event for this deletion so fs.read provenance mode can record it in the file's history. Default off (no event)."
+      },
+      {
+        "name": "intent",
+        "type": "optional_string",
+        "required": false,
+        "description": "Free-text intent recorded as the ArtifactRemoved event's rationale (only meaningful with record=true)."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "path",
+        "to": "file_path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "file_path missing or empty",
+        "message": "fs.remove requires file_path"
+      },
+      {
+        "condition": "the path does not exist",
+        "message": "fs.remove: path does not exist: \u003cpath\u003e"
+      },
+      {
+        "condition": "a non-empty directory without recursive=true",
+        "message": "fs.remove: \u003cpath\u003e is a non-empty directory; pass recursive=true to delete it and its contents"
+      },
+      {
+        "condition": "the target is a protected filesystem root (/, /home, /etc, …)",
+        "message": "fs.remove: refusing to remove a protected filesystem root: \u003cpath\u003e"
+      },
+      {
+        "condition": "the process lacks permission",
+        "message": "fs.remove: permission denied: \u003cpath\u003e"
+      }
+    ],
+    "notes": "CONTRACT: in-process via os.Remove (file / empty dir) or os.RemoveAll (non-empty dir, recursive=true only). A NON-EMPTY directory without the explicit recursive flag is refused and nothing is deleted — the guard against a single call wiping a tree. A small closed set of obviously dangerous absolute targets (filesystem roots like /, /home, /etc) is refused outright as a backstop; real confinement is the process's filesystem permissions (and, in deployment, the container's mount set). fs.remove is DESTRUCTIVE: rationale-gated for agent actors at the dispatch boundary and risk-classified ClassDestructive in the corpos gate. There is no read-state precondition (you remove a path, not its content). SUBSTRATE UPGRADE (opt-in, default stays a plain delete): record mode emits an ArtifactRemoved event (intent → event rationale) keyed by the removed absolute path. Emission is fail-open: an event-log error never fails a remove that already committed.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required. fs.remove is destructive; the rationale records WHY a path was deleted.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ],
+    "returns": {
+      "shape": "RemoveResult",
+      "description": "file_path, was_dir (the removed entry was a directory), and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactRemoved event; omitted on a default remove."
+    }
+  },
+  "write": {
+    "surface": "fs",
+    "action": "write",
+    "purpose": "Write content to a file, replacing the whole file (creating it and any missing parent directories). The owned replacement for the harness Write tool.",
+    "params": [
+      {
+        "name": "file_path",
+        "type": "string",
+        "required": true,
+        "description": "Absolute or working-directory-relative path to write."
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "required": true,
+        "description": "The full new file content, written verbatim (UTF-8). May be the empty string (writes an empty file)."
+      },
+      {
+        "name": "record",
+        "type": "bool",
+        "required": false,
+        "description": "OPT-IN provenance mode: emit an ArtifactWritten event for this write so fs.read provenance mode can fold it into the file's mutation history. Default off (no event)."
+      },
+      {
+        "name": "intent",
+        "type": "optional_string",
+        "required": false,
+        "description": "Free-text intent recorded as the ArtifactWritten event's rationale (only meaningful with record=true)."
+      }
+    ],
+    "param_aliases": [
+      {
+        "from": "path",
+        "to": "file_path"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "file_path missing or empty",
+        "message": "fs.write requires file_path"
+      },
+      {
+        "condition": "the path is a directory",
+        "message": "fs.write: \u003cpath\u003e is a directory, not a file"
+      },
+      {
+        "condition": "overwriting an existing file that was not fully read first",
+        "message": "fs.write: File has not been read yet. Read it first before writing to it."
+      },
+      {
+        "condition": "the existing file changed on disk since it was read",
+        "message": "fs.write: File has been modified since read, either by the user or by a linter. Read it again before attempting to write it."
+      },
+      {
+        "condition": "the process lacks permission",
+        "message": "fs.write: permission denied: \u003cpath\u003e"
+      }
+    ],
+    "notes": "FAMILY PRECONDITION: overwriting an EXISTING file requires a prior full fs.read of it (and no change since) — the read/write/edit family's owned read-state, so the family is self-consistent without any harness read-state. A NEW file needs no prior read. After a successful write the new state is recorded as read, so an immediate follow-up write/edit does not require a re-read. Content is written verbatim UTF-8 with parent directories created. SUBSTRATE UPGRADE (opt-in, default stays a plain write): record mode emits an ArtifactWritten event (intent → event rationale) keyed by the absolute path — the write half of the write-\u003eread provenance loop. Emission is fail-open: an event-log error never fails a write that already committed.",
+    "returns": {
+      "shape": "WriteResult",
+      "description": "file_path, created (true when the file did not exist before), bytes_written, line_count, and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactWritten event; omitted on a default write."
+    }
+  }
+}

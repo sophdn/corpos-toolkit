@@ -1,0 +1,479 @@
+{
+  "actions": {
+    "admin": {
+      "_general": {
+        "action": "_general",
+        "notes": "apply_recipe and step_probe are deferred stubs in the current Go server: callers receive a structured deferred-stub envelope identifying the action rather than a real execution. The full port lands when a concrete need (host re-setup) drives it.\n\nENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). Mutating actions on this surface require a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / \u003c6-char rationales with `error: \"rationale_required\"`. Actions on this surface that require rationale: project_register, host_register, host_remove, schema_reload. Read-only actions (server_health, server_version, action_describe, host_list, project_list, vault_search_metrics, schema_version) do NOT require rationale.\n",
+        "purpose": "Server administration: project/host CRUD, server health, schema reload, server version, vault retrieval metrics, and the remote-execution surface.",
+        "surface": "admin"
+      },
+      "action_describe": {
+        "action": "action_describe",
+        "errors": [
+          {
+            "condition": "missing surface",
+            "message": "Returns error envelope: action_describe: surface is required."
+          },
+          {
+            "condition": "missing action",
+            "message": "Returns error envelope: action_describe: action is required (with a hint pointing at action=\"_general\")."
+          },
+          {
+            "condition": "unknown surface",
+            "message": "Returns error envelope with error=surface_not_found and registered_surfaces=[...] listing the surfaces this binary has loaded."
+          },
+          {
+            "condition": "unknown action under known surface",
+            "message": "Returns error envelope with error=action_not_found, surface, action, and registered_actions=[...] (excludes _general; the Hint mentions _general separately)."
+          },
+          {
+            "condition": "corpus not loaded",
+            "message": "Returns error envelope explaining --action-docs-dir was not resolved at startup; admin.action_describe is disabled for this binary instance."
+          }
+        ],
+        "examples": [
+          {
+            "call": "{surface: \"work\", action: \"bug_resolve\"}",
+            "description": "Fetch a specific action's chunk."
+          },
+          {
+            "call": "{surface: \"work\", action: \"_general\"}",
+            "description": "Fetch a surface's cross-cutting prose."
+          },
+          {
+            "call": "{surface: \"measure\", action: \"classify_bug_severity\"}",
+            "description": "Cross-surface lookup — admin.action_describe works for every surface's actions, not just admin's."
+          }
+        ],
+        "notes": "Always-registered: this action is part of admin.BuildTable regardless of whether the corpus loaded, so dispatch behavior is consistent. When the corpus is absent, the handler returns the corpus-not-loaded envelope rather than 'action not registered'. Wire shape: success returns the ActionDoc fields at the top level (same JSON keys as the source TOML); error returns an envelope with `error` plus surface/action/registered_surfaces/registered_actions/hint where populated.",
+        "params": [
+          {
+            "description": "The meta-tool surface: one of {work, measure, knowledge, admin}.",
+            "name": "surface",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The action name as registered in the surface's BuildTable. Pass action=\"_general\" for surface-wide cross-cutting prose (cross-project defaults, alias conventions that span actions, sentinel values).",
+            "name": "action",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "purpose": "Return the per-action TOML chunk for one (surface, action) lookup. The corpus is go:embed'd into the binary from go/internal/actiondocs/corpus/\u003csurface\u003e/\u003caction\u003e.toml; this getter is how agents read it on demand instead of scanning the surface *Description constants for one piece of prose.",
+        "surface": "admin"
+      },
+      "apply_recipe": {
+        "action": "apply_recipe",
+        "notes": "Deferred stub: the full port lands when a concrete need (host re-setup) drives it. Until then, calls return the deferred envelope unchanged.",
+        "purpose": "Apply a setup-recipe to a host (deferred stub in the current Go server). Callers receive a structured deferred-stub envelope identifying the action rather than a real execution.",
+        "surface": "admin"
+      },
+      "escalation_propose": {
+        "action": "escalation_propose",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+            "required": true
+          }
+        ],
+        "params": [
+          {
+            "description": "Which of the 5 closed trigger kinds fired (retry_exhaustion / low_confidence / repeated_tool_error / parse_failure / explicit_handoff). Required.",
+            "name": "trigger",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Identifier of the model proposing the handoff — the cheap orchestrator model on an escalate edge (e.g. deepseek-v4-pro), the strong model on a de-escalation edge. Required.",
+            "name": "from_model",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Identifier of the model the next turn is proposed to run on — the strong model on an escalate edge (e.g. claude-opus-4-7), the cheap model on a de-escalation edge. Required.",
+            "name": "to_model",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The orchestrator session the proposal belongs to (also the event entity slug). Required.",
+            "name": "session_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Which turn produced the proposal (0-based). Optional; defaults to 0.",
+            "name": "turn_index",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "Router state at proposal time: cheap, escalated, or de_escalated. Required.",
+            "name": "state_before",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Router state after the recorded transition: cheap, escalated, or de_escalated. An escalate edge is cheap-\u003eescalated; a de-escalation edge is escalated-\u003ede_escalated. Required.",
+            "name": "state_after",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Free-form evidence the detector captured (retries used, observed confidence, error kind). Optional; human-readable, not parsed.",
+            "name": "trigger_detail",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "Snapshot of the threshold_value (a JSON number) that fired, recorded on the event's threshold_value field so a reader sees the config at decision time. Named distinctly from threshold_set's required threshold_value param. Optional; omit on de-escalation edges.",
+            "name": "fired_threshold",
+            "required": false,
+            "type": "object"
+          },
+          {
+            "description": "Project to scope the event entity to. Optional — omit for a cross-cutting (project-agnostic) escalation event, as a harness-agnostic library would.",
+            "name": "project_id",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "Why the contract proposed this transition — recorded as the event's envelope rationale so the 'why' lands even for the system-actor HTTP path. Optional but recommended.",
+            "name": "reason",
+            "required": false,
+            "type": "optional_string"
+          }
+        ],
+        "purpose": "Emit one EscalationProposed event through the write-side ledger — the orchestrator-tier escalation contract's observable escalation/de-escalation signal. The reason is recorded as the event rationale. Entity is the orchestrator_session (slug=session_id), project-scoped when project_id is supplied. See docs/ORCHESTRATOR_ESCALATION.md §3.",
+        "surface": "admin"
+      },
+      "escalation_threshold_list": {
+        "action": "escalation_threshold_list",
+        "params": [
+          {
+            "description": "Project whose overrides to overlay on the global defaults. Optional — omit (or '') to read the global-default config alone.",
+            "name": "project_id",
+            "required": false,
+            "type": "optional_string"
+          }
+        ],
+        "purpose": "Read the EFFECTIVE per-trigger escalation threshold config for a project: the global-default rows (project_id='') overlaid by any project-specific override for the same trigger_kind. With no project_id, returns the global defaults alone. See docs/ORCHESTRATOR_ESCALATION.md §6.",
+        "surface": "admin"
+      },
+      "escalation_threshold_set": {
+        "action": "escalation_threshold_set",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+            "required": true
+          }
+        ],
+        "params": [
+          {
+            "description": "Project the row belongs to. Optional — omit (or '') to write a GLOBAL-DEFAULT row applied to every project lacking an override.",
+            "name": "project_id",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "One of the 5 closed trigger kinds: retry_exhaustion, low_confidence, repeated_tool_error, parse_failure, explicit_handoff. Required; an unknown kind is rejected (also enforced by the DB CHECK constraint).",
+            "name": "trigger_kind",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "The trigger's threshold (a JSON number). Semantics per trigger: a count for retry_exhaustion/repeated_tool_error/parse_failure/explicit_handoff; a confidence floor in [0,1] for low_confidence. Required.",
+            "name": "threshold_value",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "description": "Whether the trigger is active. A disabled trigger never fires regardless of signals. Optional — preserves the existing value (or defaults true for a new row).",
+            "name": "enabled",
+            "required": false,
+            "type": "bool"
+          },
+          {
+            "description": "Hysteresis K: the router stays escalated until K consecutive clean turns elapse before returning to the cheap tier. Must be \u003e= 1. Optional — preserves the existing value (or defaults 2 for a new row).",
+            "name": "de_escalation_turns",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "purpose": "Upsert one (project_id, trigger_kind) escalation threshold row. Omitted enabled / de_escalation_turns preserve the existing row's values (read-then-upsert); a brand-new row defaults to enabled=true, de_escalation_turns=2. See docs/ORCHESTRATOR_ESCALATION.md §6.",
+        "surface": "admin"
+      },
+      "health": {
+        "action": "health",
+        "purpose": "Alias for server_health — returns toolkit server liveness, DB connectivity, registered surfaces. See server_health for the canonical chunk.",
+        "surface": "admin"
+      },
+      "host_list": {
+        "action": "host_list",
+        "params": [
+          {
+            "description": "When true, include hosts that have been retired (host_remove sets retired_at). Defaults to false (active hosts only).",
+            "name": "include_retired",
+            "required": false,
+            "type": "bool"
+          }
+        ],
+        "purpose": "List the registered remote hosts available to remote_exec. By default only active (non-retired) hosts are returned.",
+        "surface": "admin"
+      },
+      "host_register": {
+        "action": "host_register",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+            "required": true
+          }
+        ],
+        "params": [
+          {
+            "description": "Host slug (the identifier remote_exec's 'host' param references). Required.",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Network address / hostname to SSH to (stored as the host's addr). Required.",
+            "name": "hostname",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "SSH login user. Required.",
+            "name": "ssh_user",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "SSH port. Defaults to 22 when omitted or 0.",
+            "name": "ssh_port",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "description": "Path to the SSH private key (stored as ssh_key_path; NULL when omitted, falling back to the agent's default key resolution).",
+            "name": "ssh_key",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "Free-form notes about the host.",
+            "name": "description",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "Whether the host grants passwordless sudo to ssh_user. Defaults to false.",
+            "name": "passwordless_sudo",
+            "required": false,
+            "type": "bool"
+          }
+        ],
+        "purpose": "Register a remote host the server can dispatch remote_exec calls to. Idempotent upsert on id (the host slug).",
+        "surface": "admin"
+      },
+      "host_remove": {
+        "action": "host_remove",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+            "required": true
+          }
+        ],
+        "params": [
+          {
+            "description": "Host slug to retire. Required — the handler rejects a missing id and returns host_not_found when no matching active host exists.",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "purpose": "Remove a registered remote host (soft-retire: sets retired_at, never DELETEs). Companion to host_register; subsequent remote_exec calls targeting the removed host fail with an unknown-host envelope.",
+        "surface": "admin"
+      },
+      "project_list": {
+        "action": "project_list",
+        "purpose": "List every registered project. Use this when you need to discover what projects exist or confirm a project_id before scoping a write action against it.",
+        "surface": "admin"
+      },
+      "project_register": {
+        "action": "project_register",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+            "required": true
+          }
+        ],
+        "params": [
+          {
+            "description": "Project id (the kebab-case slug other actions pass as the 'project' parameter, e.g. 'mcp-servers'). Required — the handler rejects a missing id.",
+            "name": "id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Human-readable project name. Required — the handler rejects a missing name.",
+            "name": "name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Filesystem path of the project root, used by the CWD-based project resolver. Optional.",
+            "name": "path",
+            "required": false,
+            "type": "optional_string"
+          }
+        ],
+        "purpose": "Register a new project with the toolkit. Creates the project_id row that other actions (forge_*, chain_*, task_*, bug_*) scope against via the 'project' parameter. Idempotent upsert on id.",
+        "surface": "admin"
+      },
+      "remote_exec": {
+        "action": "remote_exec",
+        "params": [
+          {
+            "description": "Host slug to run the command on (must be registered via host_register). Required — the handler rejects a missing host. An unregistered slug returns a host_not_registered envelope.",
+            "name": "host",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Shell command to execute on the remote host. Required.",
+            "name": "cmd",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Transport to use. Defaults to 'system_ssh' (the only supported backend in the Go server; any other value returns a transport_not_implemented envelope).",
+            "name": "transport_backend",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "Project to attribute the remote_ops audit row to. Defaults to 'mcp-servers' (the project housing the admin meta-tool).",
+            "name": "project_id",
+            "required": false,
+            "type": "optional_string"
+          }
+        ],
+        "purpose": "Dispatch a shell command to one of the registered remote hosts (see host_register / host_list). Returns the command's stdout/stderr/exit status (stdout/stderr capped in the response; full output persisted in the remote_ops audit row).",
+        "surface": "admin"
+      },
+      "schema_reload": {
+        "action": "schema_reload",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+            "required": true
+          }
+        ],
+        "purpose": "Re-scan the bundled blueprints/forge-schemas dir + BLUEPRINTS_PROJECT_DIR (if set) and atomically replace the in-memory registry — use after adding or editing schemas on disk to avoid restarting the server.",
+        "surface": "admin"
+      },
+      "schema_version": {
+        "action": "schema_version",
+        "purpose": "Return the loaded schema registry's version (e.g. count of schemas, source dir, last reload timestamp). Useful for confirming the running binary is reading the schema set you expect.",
+        "surface": "admin"
+      },
+      "server_health": {
+        "action": "server_health",
+        "notes": "The health action name is registered as an alias for the same handler — admin.action_describe('admin', 'health') resolves to the alias chunk; the canonical name is server_health.",
+        "purpose": "Return the toolkit server's health status — liveness, DB connectivity, registered surfaces. Accepts the alias 'health' (see admin.health for the alias chunk).",
+        "surface": "admin"
+      },
+      "server_version": {
+        "action": "server_version",
+        "purpose": "Report the running binary's build-time git SHA + timestamp + package version, so an agent can compare against 'git rev-parse HEAD' to detect deploy lag (running binary older than HEAD = restart the daemon before exercising new dispatch code).",
+        "surface": "admin"
+      },
+      "step_probe": {
+        "action": "step_probe",
+        "notes": "Deferred stub: the full port lands when a concrete need (host re-setup) drives it. Until then, calls return the deferred envelope unchanged.",
+        "purpose": "Probe whether one recipe-step would apply against a host (deferred stub in the current Go server). Callers receive a structured deferred-stub envelope identifying the action rather than a real probe result.",
+        "surface": "admin"
+      },
+      "vault_integrity_sweep": {
+        "action": "vault_integrity_sweep",
+        "envelope_requirements": [
+          {
+            "applies_to_actor_kinds": [
+              "agent"
+            ],
+            "field": "rationale",
+            "reason": "Mutating admin action — the events ledger needs to know *why* the sweep ran (scheduled hygiene, post-incident cleanup, follow-up after a manual file deletion).",
+            "required": true
+          }
+        ],
+        "errors": [
+          {
+            "condition": "vault root unresolvable",
+            "message": "error: 'vault root not found' — TOOLKIT_VAULT_ROOT, FORGE_MARKDOWN_ROOT, and $HOME/.claude/vault all failed to resolve."
+          }
+        ],
+        "notes": "Chain forge-vault-note-schema-rework T5 shipped this action as the ongoing-prevention engine for orphan vault pointers. The one-shot cleanup that zeroed the existing orphan count landed in chain vault-hygiene-extract-and-migrate T9 (2026-05-20); from that point forward, future orphans (file deleted without retiring its pointer row — hand-edits, dev churn, scope-change re-forges that race) get caught by this sweep.\n\nUse the read-only dry-run sibling admin.vault_orphan_list to inspect what the sweep would retire before committing. Both actions share the same scan path in internal/knowledge/pointers.ListVaultOrphans; only this one drives RetireOrphan over the returned slice.\n\nThe startup hook lives in admin.RunStartupVaultIntegritySweep (fire-and-forget goroutine wired from main.go) so the sweep also runs once on every server boot. The hook never blocks bootstrap — a slow filesystem or missing vault root logs at warn level and the server proceeds normally.\n\nOrphansRetired may be \u003c OrphansFound when a concurrent caller has already retired a row between scan and write (ErrNotFound is treated as a benign race and skipped silently).\n",
+        "purpose": "Walk every active source_type='vault' knowledge_pointer, stat() its source_ref under the resolved vault root, and state-transition any pointer whose file is missing to status='orphaned' (FTS5 inverted-index entry removed at the same time). Never DELETEs — the row is preserved with its audit columns intact so post-hoc forensics can see created_at / usage_count / last_used_at for retired pointers. Returns the counts (total / files_present / orphans_found / orphans_retired) plus the orphan list.",
+        "surface": "admin"
+      },
+      "vault_orphan_list": {
+        "action": "vault_orphan_list",
+        "notes": "Chain forge-vault-note-schema-rework T5 shipped this action as the dry-run inspection surface for the integrity-sweep machinery. The companion mutator is admin.vault_integrity_sweep — that one state-transitions orphans to status='orphaned'. The two actions share the same scan path in internal/knowledge/pointers.ListVaultOrphans; the read-only branch never writes.\n\nVault root resolution follows internal/knowledge/vault.ResolveRoot precedence: TOOLKIT_VAULT_ROOT override → FORGE_MARKDOWN_ROOT/vault → $HOME/.claude/vault. The resolved root is returned in the response so callers can confirm which directory the sweep walked.\n\nThe response shape (vault_root / total_pointers / files_present / orphans_found / orphans) mirrors admin.vault_integrity_sweep minus orphans_retired. Dashboards can render both responses with the same code.\n",
+        "purpose": "Read-only dry-run that returns every active vault knowledge_pointer whose source_ref file is missing on disk. Use to inspect what vault_integrity_sweep would retire without mutating any state. Walks source_type='vault' AND status='active' pointers, stat()s each path under the resolved vault root, partitions into files-present vs. orphans-found, and returns the orphan list alongside the totals.",
+        "surface": "admin"
+      },
+      "vault_search_metrics": {
+        "action": "vault_search_metrics",
+        "params": [
+          {
+            "description": "Lower-bound timestamp; when supplied, aggregates over every vault_search call after this point.",
+            "name": "since",
+            "required": false,
+            "type": "optional_string"
+          },
+          {
+            "description": "Aggregate over the most recent N invocations. Defaults to 50.",
+            "name": "recent_n",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "purpose": "Return aggregate stats — total_calls, p50/p95 latency, mean results-count, recent queries — over the most recent N vault_search invocations (or all calls since 'since'); used to evaluate the stage-2 trigger conditions in the agent-vault-read-discipline chain.",
+        "surface": "admin"
+      }
+    }
+  },
+  "corpus_path": "embedded",
+  "count": 21,
+  "parse_errors": [],
+  "surfaces": [
+    "admin"
+  ],
+  "write_actions": {}
+}

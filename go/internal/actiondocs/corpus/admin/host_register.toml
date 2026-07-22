@@ -1,0 +1,51 @@
+surface = "admin"
+action = "host_register"
+purpose = "Register a remote host the server can dispatch remote_exec calls to. Idempotent upsert on id (the host slug)."
+
+[[params]]
+  name = "id"
+  type = "string"
+  required = true
+  description = "Host slug (the identifier remote_exec's 'host' param references). Required."
+
+[[params]]
+  name = "hostname"
+  type = "string"
+  required = true
+  description = "Network address / hostname to SSH to (stored as the host's addr). Required."
+
+[[params]]
+  name = "ssh_user"
+  type = "string"
+  required = true
+  description = "SSH login user. Required."
+
+[[params]]
+  name = "ssh_port"
+  type = "integer"
+  required = false
+  description = "SSH port. Defaults to 22 when omitted or 0."
+
+[[params]]
+  name = "ssh_key"
+  type = "optional_string"
+  required = false
+  description = "Path to the SSH private key (stored as ssh_key_path; NULL when omitted, falling back to the agent's default key resolution)."
+
+[[params]]
+  name = "description"
+  type = "optional_string"
+  required = false
+  description = "Free-form notes about the host."
+
+[[params]]
+  name = "passwordless_sudo"
+  type = "bool"
+  required = false
+  description = "Whether the host grants passwordless sudo to ssh_user. Defaults to false."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

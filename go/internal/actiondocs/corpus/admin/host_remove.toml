@@ -1,0 +1,15 @@
+surface = "admin"
+action = "host_remove"
+purpose = "Remove a registered remote host (soft-retire: sets retired_at, never DELETEs). Companion to host_register; subsequent remote_exec calls targeting the removed host fail with an unknown-host envelope."
+
+[[params]]
+  name = "id"
+  type = "string"
+  required = true
+  description = "Host slug to retire. Required — the handler rejects a missing id and returns host_not_found when no matching active host exists."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

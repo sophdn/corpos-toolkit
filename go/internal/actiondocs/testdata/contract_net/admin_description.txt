@@ -1,0 +1,5 @@
+Server administration: project/host CRUD, server health, schema reload, server version, vault retrieval metrics, vault pointer-integrity sweeps, the remote-execution surface, and the orchestrator-tier escalation contract (per-trigger threshold config + EscalationProposed emit).
+
+Actions (alphabetical): action_describe, apply_recipe, escalation_propose, escalation_threshold_list, escalation_threshold_set, health, host_list, host_register, host_remove, project_list, project_register, remote_exec, schema_reload, schema_version, server_health, server_version, step_probe, vault_integrity_sweep, vault_orphan_list, vault_search_metrics.
+
+For per-action details (params, aliases, errors, examples, notes), call admin.action_describe(surface="admin", action="<name>"). For surface-wide conventions (apply_recipe/step_probe deferred-stub status), call admin.action_describe(surface="admin", action="_general").

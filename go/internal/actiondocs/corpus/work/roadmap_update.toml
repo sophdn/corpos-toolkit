@@ -1,0 +1,31 @@
+surface = "work"
+action = "roadmap_update"
+purpose = "PATCH one roadmap entry at the given (project, position). Only fields explicitly supplied are changed; everything else is preserved. Fixes the silent-clobber footgun in roadmap_set where omitted fields got cleared. To change which ref a position points at, supply ref_kind AND ref_slug together; supplying only one returns an error."
+notes = "Fixes the silent-clobber footgun documented in bug roadmap-set-clobbers-notes-on-partial-item-submission."
+
+[[params]]
+  name = "position"
+  type = "integer"
+  required = true
+  description = "1-indexed per-project position identifying the row to update."
+
+[[params]]
+  name = "note"
+  type = "optional_string"
+  required = false
+  description = "New note. Empty string clears the existing note. Absent (nil) leaves the note unchanged."
+
+[[params]]
+  name = "ref_kind"
+  type = "optional_string"
+  required = false
+  description = "New ref_kind (chain or task). Must be supplied together with ref_slug."
+
+[[params]]
+  name = "ref_slug"
+  type = "optional_string"
+  required = false
+  description = "New ref_slug. Must be supplied together with ref_kind."
+
+[[examples]]
+  call = "{\"position\":10,\"note\":\"Updated note text\"}"

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# .git-hooks/post-merge — run the post-commit advisor after a merge/pull.
+#
+# git fires the `post-commit` hook for `git commit`, but NOT for the merge
+# commit a `git merge` / `git pull` creates. Without this hook, a merge that
+# lands new Go code on main (the primary way a chain branch reaches main)
+# rebuilds + redeploys nothing — go/bin/toolkit-server and the :3000 daemon
+# stay on the pre-merge build until someone runs `make -C go build` by hand.
+# Closes bug git-merge-to-main-skips-post-commit-advisor-deploy.
+#
+# git passes one positional arg to post-merge (1 if squash, else 0). That is
+# NOT a commit range, so we must not forward it. We pass an explicit
+# ORIG_HEAD..HEAD range instead: git sets ORIG_HEAD to the pre-merge tip, so
+# this captures the full merged-in change set for both --no-ff merges (where
+# ORIG_HEAD is the first parent) and fast-forward merges/pulls (where it spans
+# every fast-forwarded commit). The advisor then applies its usual
+# blast-radius gating (docs-only → no rebuild; Go change → rebuild + restart)
+# and its linked-worktree :3000 skip.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+ADVISOR="$REPO_ROOT/scripts/post-commit-restart-advisor.sh"
+[[ -x "$ADVISOR" ]] || exit 0
+
+range="HEAD~1..HEAD"
+if git rev-parse --verify -q ORIG_HEAD >/dev/null 2>&1; then
+    range="ORIG_HEAD..HEAD"
+fi
+
+exec "$ADVISOR" "$range"

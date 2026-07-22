@@ -1,0 +1,27 @@
+surface = "admin"
+action = "project_register"
+purpose = "Register a new project with the toolkit. Creates the project_id row that other actions (forge_*, chain_*, task_*, bug_*) scope against via the 'project' parameter. Idempotent upsert on id."
+
+[[params]]
+  name = "id"
+  type = "string"
+  required = true
+  description = "Project id (the kebab-case slug other actions pass as the 'project' parameter, e.g. 'mcp-servers'). Required — the handler rejects a missing id."
+
+[[params]]
+  name = "name"
+  type = "string"
+  required = true
+  description = "Human-readable project name. Required — the handler rejects a missing name."
+
+[[params]]
+  name = "path"
+  type = "optional_string"
+  required = false
+  description = "Filesystem path of the project root, used by the CWD-based project resolver. Optional."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

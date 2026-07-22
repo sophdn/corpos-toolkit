@@ -1,0 +1,163 @@
+{
+  "actor_id": "claude-opus-4-7-agent-first-substrate-T8",
+  "entity": {
+    "kind": "chain",
+    "slug": "agent-first-substrate",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ArchitectureAuditCompleted",
+      "rationale": "Chain agent-first-substrate T8 retrospective — emitting the architecture audit findings through the new substrate as the self-hosting proof. All five §9 success criteria pass (a–e); §4 checklist verified end-to-end with SQL evidence; recommends Phase 4 (frontend cutover, legacy CRUD retirement) as the next chain.",
+      "payload": {
+        "audit_doc": "AGENT_AUDIT_AND_MIGRATION.md (§4 checklist, §9 success criteria, §10 output format) — 2026-05-15 web-Claude framing under ~/Downloads/",
+        "summary": "All five §9 success criteria pass. The events table is the source of truth with append-only enforcement (T2); rationale is required at the dispatch boundary for agent actors (T3); three projections (current_bugs, chain_status, roadmap_view) rebuild byte-identical to incremental fold (T4); structured logs share span_id with events end-to-end (T5); benchmark provenance is a typed eight-field bundle on every benchmark_results row via FK with a working replay path (T6); every go/internal package self-documents via doc.go's four-field intended-use block enforced by precommit lint (T7). Two HIGH gaps and three MEDIUM/LOW gaps closed as one coherent feature suite. Substrate is self-hosting — this event itself is the proof.",
+        "recommended_next_phase": "Phase 4 — frontend cutover, legacy CRUD-table retirement. The dashboard's read paths are ready to switch to proj_* tables; the bug/task/chain CRUD tables can then be retired in favour of event-folded projections.",
+        "findings": [
+          {
+            "item": "§4.1 — events table existence and append-only enforcement",
+            "status": "pass",
+            "evidence": "Migration 032 lands the table with BEFORE UPDATE / BEFORE DELETE triggers (RAISE ABORT). Test TestEvents_AppendOnly_UPDATE and TestEvents_AppendOnly_DELETE confirm rollback at the DB level. Live verification: SELECT count(*) FROM events = 62; zero attempted updates / deletes survive the triggers.",
+            "severity": "low"
+          },
+          {
+            "item": "§4.2 — rationale required at dispatch boundary for agent actors",
+            "status": "pass",
+            "evidence": "dispatch-policy.toml enumerates 18 mutating actions with requires_rationale=true. Dispatch layer rejects empty / whitespace-only / boilerplate / \u003c6-char rationales for agent actors before the handler runs. Live SQL: 8 agent events in production, 8 carry non-empty rationale (verification (a)).",
+            "severity": "low"
+          },
+          {
+            "item": "§4.3 — projections rebuildable from events alone",
+            "status": "pass",
+            "evidence": "`toolkit-server rebuild-projections` drives full rebuild + incremental catch-up. Live verification (c): dump 977 rows across three projections, rebuild from empty, dump again, diff = zero bytes.",
+            "severity": "low"
+          },
+          {
+            "item": "§4.4 — logs and events share span identity (span_id)",
+            "status": "pass",
+            "evidence": "Migration 033 + internal/obs span tree; dispatcher opens a root span at request entry; handlers emit slog entries and events under the same ctx; every events row carries a NOT NULL span_id. The SSE /events/spans stream renders the tree live.",
+            "severity": "low"
+          },
+          {
+            "item": "§4.5 — benchmark provenance as typed first-class payload",
+            "status": "pass",
+            "evidence": "blueprints/events/BenchmarkProvenance + benchmark_provenance table; benchmark_results.provenance_id FK with BEFORE INSERT trigger rejecting NULL post-cutover; benchmark_replay action exists; round-trip identical verified at unit-test level (TestHandleBenchmarkReplay_RoundTripIdentical). Live exercise on production data not yet run — see partial finding below.",
+            "severity": "low"
+          },
+          {
+            "item": "§4.5 — benchmark provenance exercised on real benchmark data",
+            "status": "partial",
+            "evidence": "712 benchmark_results rows exist; zero carry a provenance_id because all pre-date T6's cutover. The substrate works (unit tests confirm) but no real benchmark has been re-run through the provenance path yet. Recommend filing a follow-on task to run one provenance-bearing benchmark and verify replay round-trips on real data.",
+            "severity": "medium"
+          },
+          {
+            "item": "§4.6 — Go discoverability matches Rust ## Intended use convention",
+            "status": "pass",
+            "evidence": "17/17 go/internal packages ship doc.go with the four-field block (Workflow served / Invocation pattern / Success shape / Non-goals). codemap-gen --lint enforces presence at precommit time. scripts/codemap-gen emits a deterministic CODEMAP.md from action manifests + forge schemas + doc.go + Rust intended-use + skills + scripts. README.md points at CODEMAP.md as the discovery entry point.",
+            "severity": "low"
+          },
+          {
+            "item": "Cross-chain seam — sibling query-telemetry-substrate FK linkage",
+            "status": "deferred",
+            "evidence": "Sibling chain query-telemetry-substrate has not started (0 of 5 tasks closed). The cross-substrate seam check (query_resolutions.write_event_ids ↔ events.event_id) defers to that chain's own retrospective. Per the T8 branching rule case (c), this is documented in docs/SUBSTRATE_RETROSPECTIVE_2026-05-17.md; the seam contract lives in the shared event_id format pinned by migration 032 — sibling can proceed without further coordination.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ConventionAuditCompleted",
+      "rationale": "Chain agent-first-substrate T8 retrospective — emitting the convention audit findings through the new substrate. Twelve axes verified against the agent-facing conventions enumerated in AGENT_AUDIT_CONVENTIONS.md §14 framing; each finding records the agent_impact and human_cost the convention audit always weighs.",
+      "payload": {
+        "audit_doc": "AGENT_AUDIT_CONVENTIONS.md (§14 audit report format) — 2026-05-15 web-Claude framing under ~/Downloads/",
+        "summary": "All twelve agent-facing convention axes are now honored or honored-with-documented-partial. The two HIGH-impact gaps the audit named — rationale optional, no event log — close cleanly. The three MEDIUM gaps (flat logs, missing provenance, Go discoverability) close with structural fixes that compose. Agent impact is uniformly positive: agents now have a typed event ledger they can read back, rationale that's a forcing function rather than a polite suggestion, projection tables they can query without re-folding, and a CODEMAP they can use for discovery. Human cost is modest: schemas + payload structs + catalog entries are the four-step rite to add a new event type, deliberately not single-source-derived because each step is a checkpoint where a human reads the others.",
+        "findings": [
+          {
+            "axis": "events as source of truth",
+            "status": "honored",
+            "evidence": "events table is append-only (triggers raise ABORT), every mutation dual-writes (CRUD then event) inside one tx, projections fold from events alone.",
+            "agent_impact": "Agents can reconstruct full project history by reading events. Rationale + actor + span_id on every row makes the trajectory legible.",
+            "human_cost": "Schemas are closed — adding a new event type requires a 4-step PR (JSON Schema + Go struct + catalog row + handler wiring). Friction is deliberate."
+          },
+          {
+            "axis": "rationale at dispatch boundary",
+            "status": "honored",
+            "evidence": "dispatch-policy.toml lists 18 mutating actions with requires_rationale=true. Empty / boilerplate / \u003c6-char rationales are rejected before the handler runs.",
+            "agent_impact": "Agents cannot skip the rationale field on mutating calls. Forcing function rather than convention.",
+            "human_cost": "Portal / CLI callers pass through with empty rationale — humans are not subject to the same enforcement."
+          },
+          {
+            "axis": "projections (read/write separation)",
+            "status": "honored",
+            "evidence": "Three projections (current_bugs, chain_status, roadmap_view) rebuildable via toolkit-server rebuild-projections; byte-identical to incremental fold.",
+            "agent_impact": "Read path is rebuildable from events alone — agents can confirm the read-side state matches the event log without re-folding by hand.",
+            "human_cost": "Dual-write phase means the schema currently carries both CRUD tables and projection tables. Phase 4 retires the CRUD side."
+          },
+          {
+            "axis": "structured observability with span_id",
+            "status": "honored",
+            "evidence": "internal/obs Spans + slog; dispatcher mints span at request entry; events carry span_id; /events/spans SSE renders the tree.",
+            "agent_impact": "Agents trace any multi-step operation by span_id across logs and events.",
+            "human_cost": "Span discipline is a runtime contract — handlers that forget to thread ctx see broken trees; lint is not yet structural."
+          },
+          {
+            "axis": "benchmark provenance as typed payload",
+            "status": "honored",
+            "evidence": "benchmark_provenance table + BenchmarkProvenance sub-shape with eight required fields; replay action exists with round-trip identicality verified at unit-test level.",
+            "agent_impact": "Agents can request a replay of any provenance-bearing row and assert byte-identical output.",
+            "human_cost": "Provenance requires every benchmark to pin model_id, model_version, prompt_template_hash, corpus_hash, retriever_version, retriever_config_hash, seed, env_hash. Pre-cutover rows are exempt; post-cutover NULL provenance_id is rejected by trigger."
+          },
+          {
+            "axis": "Go package discoverability — four-field intended-use block",
+            "status": "honored",
+            "evidence": "All 17 go/internal packages ship doc.go with the four-field block; codemap-gen --lint enforces presence at precommit time; CODEMAP.md is auto-generated.",
+            "agent_impact": "Agents reading any internal package see what it's for in three lines without first reading the code.",
+            "human_cost": "Package authors must write the four fields — content quality is on the author; lint enforces structure, not prose quality."
+          },
+          {
+            "axis": "closed event types — new types require a PR",
+            "status": "honored",
+            "evidence": "Event Catalog (docs/EVENT_CATALOG.md) enumerates 22 registered types. Emit rejects unknown types with ErrInvalidInput. This very event (ArchitectureAuditCompleted / ConventionAuditCompleted) was added through the four-step rite during T8.",
+            "agent_impact": "Agents cannot invent event types. Surface stays governable.",
+            "human_cost": "Adding an audit type took adding two JSON schemas + two Go structs + a registry test extension. Deliberate."
+          },
+          {
+            "axis": "actor inference from transport",
+            "status": "honored",
+            "evidence": "Dispatch infers actor.kind from the transport: stdio MCP → agent; portal HTTP → human; CLI → system. Each row's actor_kind is consulted by the requires_rationale gate.",
+            "agent_impact": "Agents always file as agent. The portal cannot impersonate an agent.",
+            "human_cost": "Portal callers don't carry rationale enforcement — that's by design but worth knowing when reading the events log."
+          },
+          {
+            "axis": "schema/payload mirroring discipline (Rust ↔ Go ↔ embed)",
+            "status": "honored",
+            "evidence": "blueprints/events/ is canonical; scripts/sync-event-schemas.sh mirrors into go/internal/events/schemas/ for embed; precommit re-syncs and re-stages. Same discipline as migrations — Go embed rejects symlinks so the mirror is a real copy.",
+            "agent_impact": "Agents updating a schema or migration trust the precommit to keep mirrors aligned.",
+            "human_cost": "Two mirrors per change, but the sync is automatic — drift is caught before commit."
+          },
+          {
+            "axis": "post-commit advisor preserves in-flight stdio sessions",
+            "status": "honored",
+            "evidence": "post-commit-restart-advisor.sh deliberately leaves stdio MCP processes alive after a binary rebuild so the live session doesn't drop in-flight tool calls; the HTTP daemon and new sessions pick up the new binary immediately. Documented in CLAUDE.md.",
+            "agent_impact": "Agents in a live session don't see their tool calls vanish mid-flight on a routine commit. /mcp reconnect is the explicit way to pick up the new binary.",
+            "human_cost": "The user must remember `/mcp reconnect` when verifying their own fix from the same session. The advisor's output is explicit but easy to miss."
+          },
+          {
+            "axis": "discovery-as-code (CODEMAP + action manifests)",
+            "status": "honored",
+            "evidence": "CODEMAP.md is regenerated each precommit from action-manifests, forge schemas, doc.go blocks, lib.rs intended-use, skills, and scripts. README.md points at it as the discovery entry point.",
+            "agent_impact": "Agents have a single page that lists every action, every schema, every package, every script — generated from the source-of-truth shapes, not curated.",
+            "human_cost": "Adding a new action or package surfaces in CODEMAP automatically; no manual doc edits."
+          },
+          {
+            "axis": "cross-chain seams — write-side / read-side substrate split",
+            "status": "partial",
+            "evidence": "agent-first-substrate ships the write-side; query-telemetry-substrate (sibling) ships the read-side telemetry, which is not yet started. The seam contract (events.event_id targetable by query_resolutions.write_event_ids JSON FK) is pinned by migration 032's UUIDv7 format and documented; no code coupling required.",
+            "agent_impact": "Agents using the write-side now will be able to query trajectory data once the sibling lands. Until then, the read side is grounding_events-only.",
+            "human_cost": "Two chains rather than one — but the seam is shallow (just the event_id FK target) and either chain can ship without blocking the other."
+          }
+        ]
+      }
+    }
+  ]
+}

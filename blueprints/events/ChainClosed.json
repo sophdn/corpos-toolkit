@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ChainClosed.json",
+  "title": "ChainClosed payload",
+  "description": "Emitted when a chain closes via chain_close. Per-task TaskCompleted events should all have already landed before this fires; the chain handler verifies this and refuses to close a chain with open tasks. Closure summary is the load-bearing 'what did we ship' record but is optional in the schema — the current chain_close handler accepts a nil summary for legacy callers; the schema captures whatever the handler supplies without retrofitting the historical permissive behavior.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "closure_summary": {
+      "type": ["string", "null"],
+      "description": "What this chain shipped, in narrative form. The audit-trail of intent across the whole chain — distinct from per-task closure_summary which records each task's ship-state. The dashboard's chain-detail panel surfaces this as the headline. Null when the caller chain_closed without supplying a summary."
+    }
+  }
+}

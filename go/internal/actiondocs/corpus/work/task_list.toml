@@ -1,0 +1,56 @@
+surface = "work"
+action = "task_list"
+purpose = "List tasks across chains (the cross-cutting open-task verb). With NO params, returns every task (bounded by the default limit of 50); cross-project when no project is set, project-scoped when one is. Use `status:\"open\"` for the non-terminal set (pending+active+blocked). For a single chain's tasks in position order, or a title/slug substring search, use task_search instead."
+
+[[params]]
+  name = "status"
+  type = "optional_string"
+  required = false
+  description = "Filter by task status. `open` is a convenience alias for the non-terminal set (NOT closed/cancelled — i.e. pending+active+blocked); pending / active / blocked / closed / cancelled match exactly. Omit for all statuses. Alias: state."
+
+[[params]]
+  name = "since"
+  type = "optional_string"
+  required = false
+  description = "ISO timestamp; only tasks created at or after this time (t.created_at >=)."
+
+[[params]]
+  name = "verbose"
+  type = "bool"
+  required = false
+  description = "Accepted for shape parity with bug_list/suggestion_list; currently a no-op (task_list has one compact projection)."
+
+[[params]]
+  name = "all"
+  type = "bool"
+  required = false
+  description = "Legacy no-op, accepted for shape parity."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Max rows (default 50)."
+
+[[params]]
+  name = "offset"
+  type = "integer"
+  required = false
+  description = "Row offset for pagination."
+
+[[params]]
+  name = "chain"
+  type = "optional_string"
+  required = false
+  description = "Optional chain slug to narrow the list to one chain. Alias: chain_slug."
+
+[[param_aliases]]
+  from = "state"
+  to = "status"
+
+[[param_aliases]]
+  from = "chain_slug"
+  to = "chain"
+
+[[examples]]
+  call = "{\"status\":\"open\"}"

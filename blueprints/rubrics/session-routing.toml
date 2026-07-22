@@ -1,0 +1,55 @@
+name        = "session-routing"
+description = "Session routing dispatch trigger classifier"
+is_deployed = true
+output_enum = [
+  "context-handoff",
+  "execute-document",
+  "retirement-dispatch",
+  "chain-execution",
+  "tool-suggest",
+  "no-trigger",
+]
+
+criteria = [
+  "context-handoff: input wants short in-context edits OR explicitly asks for a handoff document.",
+  "execute-document: input wants to create a task / chain / pitch document or to execute an existing one.",
+  "retirement-dispatch: input contains 'retire X' / 'remove skill Y' phrasing. Dispatch: load retirement-safety skill FIRST.",
+  "chain-execution: input asks to 'continue / pick up / execute' a named chain.",
+  "tool-suggest: input asks 'what tool / document fits this?' — discovery-shaped, not dispatch-shaped.",
+  "no-trigger: input is conversational, off-shape, or genuinely doesn't match any trigger.",
+]
+
+prompt_template = """You classify ONE user input by its session-routing dispatch trigger.
+
+- **context-handoff**: input wants short in-context edits OR explicitly \
+asks for a handoff document.
+- **execute-document**: input wants to create a task / chain / pitch \
+document or to execute an existing one.
+- **retirement-dispatch**: input contains "retire X" / "remove skill Y" \
+phrasing. Dispatch: load `retirement-safety` skill FIRST.
+- **chain-execution**: input asks to "continue / pick up / execute" a \
+named chain.
+- **tool-suggest**: input asks "what tool / document fits this?" \
+— discovery-shaped, not dispatch-shaped.
+- **no-trigger**: input is conversational, off-shape, or genuinely \
+doesn't match any trigger."""
+
+[[examples]]
+text      = "User input: \"please continue qwen-offload-catalog-execution chain\""
+label     = "chain-execution"
+reasoning = "Names specific chain slug + verb 'continue'."
+
+[[examples]]
+text      = "User input: \"let's retire the lens-corpus-construction skill since the domain went dormant\""
+label     = "retirement-dispatch"
+reasoning = "'Retire' verb + names skill explicitly."
+
+[[examples]]
+text      = "User input: \"what tool would I use to file a bug?\""
+label     = "tool-suggest"
+reasoning = "Discovery-shaped question."
+
+[[examples]]
+text      = "User input: \"be the synthesist for this thread please\""
+label     = "no-trigger"
+reasoning = "Names no chain, skill, or document and asks for no edit or handoff — conversational. (Role invocation was a dispatch trigger until the role system was retired 2026-07-22; there is no longer anything to dispatch to.)"

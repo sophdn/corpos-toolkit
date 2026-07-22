@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskHandoff.json",
+  "title": "TaskHandoff payload",
+  "description": "Emitted once per work.lifecycle_step call. The composite event that records a chain-task handoff seam (close T_n + start T_n+1) as one affordance-level fact, in addition to the per-op TaskCompleted + TaskStarted events that the underlying work.batch dispatch produces. Listeners that subscribe to TaskHandoff get the single-edge view; listeners that subscribe to TaskCompleted / TaskStarted continue to receive their per-op events unchanged (the T1 design audit's Decision 2 tightening — composite IN ADDITION TO per-op, not in lieu of). The envelope's entity is the closing task (the chain's perspective: the seam belongs to the task that just finished); the started task lives in payload.started. Both ops MUST belong to the same chain — work.lifecycle_step rejects cross-chain handoffs at the validation gate, so this payload's chain_slug is unambiguous.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["chain_slug", "closed", "started"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The chain both ops belong to. Denormalized from both tasks; work.lifecycle_step enforces the same-chain invariant before dispatching the batch."
+    },
+    "closed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_slug", "rationale"],
+      "description": "The task that closed in this seam. Mirrors task_complete's params + the cascade event id.",
+      "properties": {
+        "task_slug": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The slug of the task that closed."
+        },
+        "commit_sha": {
+          "type": ["string", "null"],
+          "description": "The closing commit SHA, or the literal sentinel 'unversioned' for tasks whose artifacts live outside any git repo (matches mcp__toolkit-server__work convention). Optional because the underlying task_complete handler accepts close-without-SHA; lifecycle_step does not tighten that gate."
+        },
+        "handoff_output": {
+          "type": ["string", "null"],
+          "description": "Verbatim handoff field from the closing task. Distinct from rationale — handoff_output is operational color (what artifacts the next task consumes); rationale is the closing 'why this counts as done'."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Per-op rationale supplied to lifecycle_step (close_rationale). Required — every batch sub-op requires per-op rationale, and lifecycle_step inherits that gate."
+        },
+        "event_id": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "The cascade TaskCompleted event's id. Present when the underlying work.batch outer tx committed."
+        }
+      }
+    },
+    "started": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_slug", "rationale"],
+      "description": "The task that started in this seam. Mirrors task_start's params + the cascade event id.",
+      "properties": {
+        "task_slug": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The slug of the task that started."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Per-op rationale supplied to lifecycle_step (next_rationale). Required."
+        },
+        "event_id": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "The cascade TaskTransitioned (pending→active) event's id. Present when the underlying work.batch outer tx committed."
+        }
+      }
+    }
+  }
+}

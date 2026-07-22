@@ -1,0 +1,123 @@
+{
+  "actor_id": "claude-opus-4-7-reference-resolution-substrate-frontend-RF4",
+  "entity": {
+    "kind": "chain",
+    "slug": "reference-resolution-substrate-frontend",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ReferenceResolutionFrontendAuditCompleted",
+      "rationale": "Chain reference-resolution-substrate-frontend RF4 retrospective — emitting the reference-resolution-frontend audit findings through the events ledger this chain's sibling substrate (agent-substrate-frontend) made readable. Self-hosting check: the Context Pull Inspector records its own audit outcome through the audit ledger surface; closes the substrate-trilogy-frontend loop (agent-substrate-frontend + query-telemetry-substrate-frontend + this chain), three chains, three closing events, three audit surfaces.",
+      "payload": {
+        "audit_doc": "docs/REFERENCE_RESOLUTION_FRONTEND.md (§1–§14 design doc) plus chain reference-resolution-substrate-frontend completion_condition items (a)–(e), with the closing addendum in docs/REFERENCE_RESOLUTION_FRONTEND_RETROSPECTIVE_2026-05-19.md.",
+        "summary": "All five chain completion criteria pass with two documented partials surfaced post-ship. (a) Context Pull Inspector at /context-pulls renders the agent's reference-resolution behavior: filter bar across the four orthogonal axes (query_source / shape / confidence_tier / source_type — no bare source/kind), stats banner with zero-fill across closed enums, daily trend strip, cursor-paginated row table with shape/tier/recommendation/ML chips, and a route-addressable per-resolution drawer (?event=\u003cid\u003e) that surfaces detection / resolver / candidates / outcome / interactions / linked_resolutions plus a cross-link (NOT embed) to QueryTrajectoryView. (b) Detail drawer covers every shape category via \u003cShapeBadge\u003e color-keyed to category groups (slug / filesystem / knowledge / friction / extension); the candidate list renders position + source_ref + source_type even when title/score/debug_notes are absent (forward-fill caveat). (c) Entity-detail badge integration lands as \u003cReferencesResolvedSuffix\u003e in components/shared/EventTimeline/, conditionally rendered for BugResolved / TaskCompleted / ChainClosed; calls /context-pulls/by-entity/{kind}/{slug}?project=\u0026outcome_kind=resolved and renders absent on network error or empty (graceful fallback when project_id absent on the event row). (d) \u003cMlConfidenceCell /\u003e renders `—` for null (T7 not yet shipped) and a 0..1 colorscaled value when populated; both shapes covered by tests. (e) This event row is the (e) deliverable — ReferenceResolutionFrontendAuditCompleted lands through the events ledger via the same dual-write tx the meta-tool handlers use, closing the substrate-trilogy-frontend loop.",
+        "recommended_next_phase": "Four follow-ons in priority order: (1) Fix bug `refresolve-emits-empty-project-id-on-grounding-events` — deps.Project is empty in stdio HandlerDeps, breaking the knowledge_pointers JOIN for source_type lookup on every new emit. Medium severity. (2) Wire the transcript-reader for detection.source_message_excerpt — the harness_reminder_relevance.go scanner already has resolveTranscript machinery to crib from; small follow-on tracked in bug `context-pulls-detail-missing-source-message-excerpt-and-candidate-detail`. (3) Per-candidate detail sub-table (option b of the same bug) so the drawer can render candidate title/score/debug_notes; matters more after T7 ML scoring ships and ml_confidence_score lands per-candidate. (4) T7 cross-encoder per-candidate scoring landing on reference_resolution_emits.ml_confidence_score — the side-table column is nullable; the inspector forward-compats without code change.",
+        "findings": [
+          {
+            "item": "§2 four-axis disambiguation (query_source / shape / confidence_tier / source_type)",
+            "status": "pass",
+            "evidence": "All four axes named explicitly in the TS contract (lib/contextPulls.ts CONTEXT_PULL_QUERY_SOURCES + CONTEXT_PULL_SHAPES + CONFIDENCE_TIERS + CONTEXT_PULL_SEGMENTS) and the Go contract (context_pulls.go contextPullsQuerySources + contextPullsConfidenceTiers + contextPullsStatsSegments). Filter param names match exact column names — NO bare 'source' or 'kind'. \u003cShapeBadge\u003e and \u003cConfidenceTierBadge\u003e dispatch on their respective axis only; the filter bar groups axes visually under exact-name legends. Tests pin filter narrowing across all four axes.",
+            "severity": "low"
+          },
+          {
+            "item": "§3 endpoint catalog — 5 endpoints + side-table amendment",
+            "status": "pass",
+            "evidence": "RF2 (commit 6537800 + retro fix 818804e): /context-pulls (list, filterable, cursor-paginated), /context-pulls/{id} (drawer detail, 404 on non-reference_resolution scoping), /context-pulls/by-entity/{kind}/{slug} (prompt_id-join surface), /context-pulls/stats (banner), /context-pulls/stats/timeseries (trend bars). Migration 042 lands reference_resolution_emits side-table indexed by grounding_event_id (PK + FK); refresolve.emitGroundingEvents writes the side-table row in the same tx as the grounding_events INSERT. 17 Go tests pin filter combinations, pagination, ML-score null vs populated, prompt_id-based entity join, scoping 404, empty-state.",
+            "severity": "low"
+          },
+          {
+            "item": "§3.2 drawer detail envelope — full per-resolution surface",
+            "status": "partial",
+            "evidence": "Drawer renders grounding_event / detection / resolver / outcome / interactions / linked_resolutions / trajectory_deep_link. TWO forward-fill caveat fields return null pending substrate follow-up: (i) detection.source_message_excerpt — bug `context-pulls-detail-missing-source-message-excerpt-and-candidate-detail` part (1); (ii) candidates[].title / score / debug_notes — same bug part (2). The drawer renders absent state cleanly for both; the inspector still answers the operator's primary question ('what did the agent detect, was it resolved, what got cited').",
+            "severity": "medium"
+          },
+          {
+            "item": "§3.6 substrate-side amendment — reference_resolution_emits side-table",
+            "status": "pass",
+            "evidence": "Migration 042 synced to crates/shared-db/migrations/ + go/internal/db/migrations/ + go/internal/testutil/migrations/. Side-table schema closed by RF2 (shape, confidence_score, detection_method, start_pos, end_pos, confidence_tier, presentation_recommendation, presented_as, resolver_name, retrieval_cost_ms, ml_confidence_score NULLABLE). T7's ML scorer just UPDATEs ml_confidence_score post-hoc; no schema churn. db.InsertReferenceResolutionEmitTx helper provides typed-payload-+-Tx insert parity with InsertGroundingEventTx.",
+            "severity": "low"
+          },
+          {
+            "item": "§6 reuse-vs-extend boundary — cross-link vs embed, EventTimeline extension",
+            "status": "pass",
+            "evidence": "trajectory_deep_link cross-links to QueryTrajectoryView via /telemetry/trajectories/\u003cid\u003e URL (NOT embed — design §6.1's posture). EventTimeline gets \u003cReferencesResolvedSuffix\u003e as a separate component (per-type-renderers.tsx stays pure — no fetches); rendered conditionally for BugResolved / TaskCompleted / ChainClosed via eventTypeAdmitsReferencesResolvedSuffix. The suffix is the design §6.3 'sibling block' — QF3's predicted 'preceded by N queries' co-tenant never shipped, so this chain pioneered the suffix pattern. File is structured for future jointly-owned extension.",
+            "severity": "low"
+          },
+          {
+            "item": "§7 component contracts — page + drawer + atomic badges",
+            "status": "pass",
+            "evidence": "apps/dashboard/src/pages/ContextPulls/ ships \u003cContextPullInspector\u003e, \u003cResolutionDetailDrawer\u003e, \u003cDetectionContextBlock\u003e, \u003cCandidateList\u003e, \u003cConfidenceTierBadge\u003e, \u003cShapeBadge\u003e, \u003cPresentedAsBlock\u003e, \u003cRecommendationChip\u003e, \u003cMlConfidenceCell\u003e, \u003cHarnessReminderPanel\u003e. \u003cPresentedAsBlock\u003e includes the copy-affordance specified in the design (so operators paste the substrate's exact wording into a bug filing without re-typing).",
+            "severity": "low"
+          },
+          {
+            "item": "§9 entity-detail integration via prompt_id join",
+            "status": "pass",
+            "evidence": "/context-pulls/by-entity/{kind}/{slug}?project= joins through query_resolutions.prompt_id (TT1 §2 three-layer hierarchy: prompt_id is the trajectory unit, NOT span_id). 200-with-empty when entity has no resolving prompts (matched_prompt_ids=[]). \u003cReferencesResolvedSuffix\u003e calls the endpoint with outcome_kind=resolved limit=5 and shows count toggle + expanded inline list + 'See all references in this prompt' deep-link. Absent-tolerant for events with null project_id.",
+            "severity": "low"
+          },
+          {
+            "item": "§10 fallback matrix — every seam degrades gracefully",
+            "status": "pass",
+            "evidence": "Drawer source_message_excerpt null → 'transcript-reader not yet wired' copy. Drawer candidate detail nil → position + source_ref + source_type only; no absent-state noise. Network error on by-entity → suffix block renders absent silently (best-effort). No prompt_id on row → suffix block skips. Side-table row missing (pre-amendment orphan) → row renders with null badges; page banner explains the state. ml_confidence_score null → MlConfidenceCell renders `—`.",
+            "severity": "low"
+          },
+          {
+            "item": "§11 T7 ML-score forward-compat",
+            "status": "pass",
+            "evidence": "ml_confidence_score column nullable on the side-table (NOT DEFAULT 0.0). MlConfidenceCell renders absent state for null and 0..1 colorscale for populated. Tests pin both shapes. Future T7 chain UPDATEs the column post-hoc; the inspector forward-compats without code change.",
+            "severity": "low"
+          },
+          {
+            "item": "Three-empty-state taxonomy plus the fourth pre-amendment shape",
+            "status": "pass",
+            "evidence": "Per vault learning 2026-05-18_forward-fill-caveat-ui-pattern.md: (i) genuinely empty 'No reference resolutions recorded yet'; (ii) filter narrows to zero 'No reference resolutions match the current filters'; (iii) substrate empty (total=0) 'reference-resolution-substrate T5 landed in migration 040, 2026-05-18'. RF3 surfaced a FOURTH shape via user live-verify (e65cf8f): rows exist but predate the side-table amendment — total\u003e0 but by_shape is empty. New copy names the recovery instruction (/mcp reconnect for stdio sessions to pick up the post-RF2 binary).",
+            "severity": "low"
+          },
+          {
+            "item": "Live-verify surfaced two retro-batch defects (caught post-ship)",
+            "status": "partial",
+            "evidence": "RF3 was tests-pass-but-not-browser-smoked at close time. User opened the live page and surfaced: (i) slice-pointer regression in scanContextPullRows — storing *contextPullRow into a map across slice appends invalidated pointers when the slice grew; nearly every first_candidate mutation landed in dead memory. Fixed at e65cf8f with regression test seeding 50 rows. (ii) refresolve emits with project_id='' — knowledge_pointers JOIN can't find source_type. Filed as bug `refresolve-emits-empty-project-id-on-grounding-events`. Process change: future UI-heavy task closes should live-verify before claiming completion (captured in retro).",
+            "severity": "medium"
+          },
+          {
+            "item": "Bug 1443 follow-on — harness-reminder fire-rate panel",
+            "status": "pass",
+            "evidence": "\u003cHarnessReminderPanel\u003e renders only when state.querySource admits a non-reference_resolution value (per RF1 §3.1 'admit any value' override). Trip verified by absent-when-default and present-when-admitted tests. Plots daily fire rate so the operator can watch whether the upstream over-fire heuristic gets fixed (rate → 0) or worsens (sustained rise). Mid-stream fires are invisible from the hook side and out of scope per the bug's acceptance note.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion criterion (e) — closing event lands through the substrate",
+            "status": "pass",
+            "evidence": "This very event row is the (e) deliverable. ReferenceResolutionFrontendAuditCompleted is registered in blueprints/events/, EVENT_CATALOG.md, go/internal/events/payloads.go, the schemas embed dir, and the dashboard's per-type-renderers.tsx auditCompleted map; the emit binary (go/cmd/reference-resolution-frontend-audit-emit/) runs through events.Emit using the same dual-write tx the meta-tool handlers use. Self-hosting check satisfied; closes the substrate-trilogy-frontend loop.",
+            "severity": "low"
+          },
+          {
+            "item": "Cross-chain coordination — substrate trilogy frontend reaches full coverage",
+            "status": "pass",
+            "evidence": "agent-substrate-frontend (SubstrateFrontendAuditCompleted, F5) + query-telemetry-substrate-frontend (TelemetryFrontendAuditCompleted, QF5) + reference-resolution-substrate-frontend (this event, RF4). Three chains, three closing events, three audit surfaces (/audit, /telemetry, /context-pulls). The dashboard serves write-side ledger + read-side analytics + reference-resolution behavior under matching framing; the substrate is human-readable end-to-end.",
+            "severity": "low"
+          },
+          {
+            "item": "Mutating UI / labeling editor — explicit non-goal",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1 row 3. Same posture as QF5's training-pair browser deferral; follows from observed need once an ML pipeline author works with the corpus and identifies which resolutions actually need human correction. The Context Pull Inspector is read-only validation.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Detector-tuning UI — explicit non-goal",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1 row 1 (detector rules are code-level; the dashboard is read-only). A future detector-tuning chain belongs in the substrate, not the frontend.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Harness-reminder interception outcomes panel — explicit non-goal",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1 row 4 (that's hook-side behavior). RF3 ships a small fire-rate panel from bug 1443 follow-on, which is the design's recognized exception; a richer per-fire-kind breakdown belongs in a future hook-observability chain.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    }
+  ]
+}

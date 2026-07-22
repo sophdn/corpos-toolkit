@@ -1,0 +1,116 @@
+# toolkit-server container image — the BACKEND only (MCP stdio + HTTP API on
+# :3000). The dashboard is a separate Vite/React app over this API (chain 282);
+# nothing here serves a frontend — observehttp/router.go registers JSON/SSE/MCP
+# routes only.
+#
+# Built as a CGo-free static binary on distroless/static, mirroring corpos:
+#   - SQLite is modernc.org/sqlite (pure Go) — no libc.
+#   - the ml organ's onnxruntime_go (cgo) is excluded under CGO_ENABLED=0 via
+#     //go:build cgo (internal/ml/runtime_{cgo,nocgo}.go); ml actions fail closed
+#     with ErrMLUnavailableNoCGO. In-process inference is a NON-goal for this
+#     container — it moves to the onnx-serve sidecar (terminal topology).
+# distroless/static carries CA certs + tzdata + a nonroot user, no shell/pkg-mgr.
+#
+# Bases pinned by DIGEST (same as corpos, unifying the stack). Refresh with:
+#   scripts/build-toolkit-image.sh --refresh-bases
+#
+# Build context is the REPO ROOT (the Go module is at go/, config at blueprints/
+# + action-manifests/). Build via scripts/build-toolkit-image.sh, which injects
+# GIT_SHA/BUILT_AT_UNIX so /version + admin.server_version report the real SHA.
+#
+#   builder : docker.io/library/golang:1.26.4
+#   runtime : gcr.io/distroless/static-debian12:nonroot
+
+# --- builder ---------------------------------------------------------------
+FROM docker.io/library/golang:1.26.4@sha256:68cb6d68bed024785b69195b89af7ac7a444f27791435f98647edff595aa0479 AS build
+
+# Injected by the build script (git rev-parse + date). Default to the same
+# "unversioned"/"0" sentinels main.go uses when git is absent.
+ARG GIT_SHA=unversioned
+ARG BUILT_AT_UNIX=0
+
+WORKDIR /src/go
+
+# Module graph first so `go mod download` caches independently of source edits.
+COPY go/go.mod go/go.sum ./
+RUN go mod download
+
+# Then the Go source (.containerignore keeps everything else out of context).
+COPY go/ ./
+
+# Static, stripped, reproducible. CGO_ENABLED=0 is the invariant that drops the
+# onnxruntime_go cgo binding (via build tags) and yields a libc-free static
+# binary for distroless/static. -tags sqlite_fts5 is inert under modernc (kept
+# for parity with the Makefile build). -ldflags -X injects the same build stamps
+# the Makefile does so /version is meaningful in the container.
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -tags sqlite_fts5 -trimpath \
+    -ldflags "-w -s -X main.gitSHA=${GIT_SHA} -X main.builtAtUnix=${BUILT_AT_UNIX}" \
+    -o /out/toolkit-server ./cmd/toolkit-server
+
+# Pre-create the DB mount point owned by the runtime's nonroot uid (65532), so a
+# rootless-podman volume mounted at /data is writable (the binary auto-migrates
+# on Open and must be able to create/write toolkit.db).
+RUN mkdir -p /data && chown 65532:65532 /data
+
+# --- busybox (shell + coreutils for sys.exec) ------------------------------
+# distroless/static ships NO shell and NO coreutils, so sys.exec (the owned,
+# gated counterpart to the harness Bash tool) fails at start with
+# "fork/exec /bin/sh: no such file or directory" on EVERY call (bug
+# sys-exec-nonfunctional-in-deployed-container-no-bin-sh). Graft one static
+# busybox: it supplies /bin/sh + the coreutils applets sys.exec allowlists
+# (ls/cat/head/tail/wc/grep/find/echo/pwd/test/sort/uniq/sed/awk/cut/tr/mkdir/
+# stat/file/du/df). The SECURITY BOUNDARY is the exec allowlist + required
+# rationale — sh/bash/zsh/env/eval/exec are NOT allowlisted command heads — not
+# the absence of a shell, so adding one does not widen what an actor can run.
+# Heavy toolchains (git/go/make/podman) stay deliberately absent: that work runs
+# host-side via corpos, not in the server image.
+FROM docker.io/library/busybox:musl AS busybox
+
+# --- runtime ---------------------------------------------------------------
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:b669b9df05a88a085fefed6520c6d2268aabacf3008b149ddf877e752ae89400
+
+LABEL org.opencontainers.image.title="toolkit-server" \
+      org.opencontainers.image.description="toolkit-server — the agent-OS substrate backend (work/knowledge/fs/measure/admin/ml) over MCP stdio + HTTP. Backend only; the dashboard is a separate app." \
+      org.opencontainers.image.source="https://github.com/sophdn/corpos-toolkit"
+
+# busybox binary + its applet symlinks (/bin/sh, /bin/cat, …). The image PATH
+# already includes /bin and sys.exec's buildEnv preserves it, so the allowlisted
+# coreutils resolve; busybox is world-executable so the nonroot uid can run it.
+COPY --from=busybox /bin /bin
+
+COPY --from=build /out/toolkit-server /usr/local/bin/toolkit-server
+
+# Disk-read config the binary needs at runtime (everything else — migrations,
+# event schemas, the action-docs corpus — is go:embed'd into the binary).
+# forge-schemas + rubrics are baked as versioned config (image-lags-HEAD covers
+# them); dispatch-policy.toml gates rationale enforcement.
+COPY blueprints/forge-schemas /opt/toolkit/forge-schemas
+COPY blueprints/rubrics /opt/toolkit/rubrics
+COPY action-manifests/dispatch-policy.toml /opt/toolkit/action-manifests/dispatch-policy.toml
+
+# Writable DB mount point (nonroot-owned, from the builder).
+COPY --from=build --chown=65532:65532 /data /data
+
+# distroless :nonroot already defaults to uid 65532; make it explicit so the
+# non-root guarantee survives a base-image change.
+USER nonroot:nonroot
+
+# HTTP observe surface (publish to an alt host port, e.g. -p 3001:3000, per the
+# chain's DB strategy (c): container on its own port + volume, native :3000 stays
+# canonical until validated).
+EXPOSE 3000
+
+ENTRYPOINT ["/usr/local/bin/toolkit-server"]
+
+# Default args = the HTTP-only deployment (no stdio: no claude attached in a
+# container). DB on the mounted volume; config at the baked paths. Override at
+# run time (Quadlet/podman run) as needed; `... <image> version` prints the
+# build SHA (the version subcommand runs before flag parsing).
+CMD ["--db", "/data/toolkit.db", \
+     "--default-project", "seed-packet", \
+     "--blueprints-dir", "/opt/toolkit/forge-schemas", \
+     "--rubrics-dir", "/opt/toolkit/rubrics", \
+     "--dispatch-policy", "/opt/toolkit/action-manifests/dispatch-policy.toml", \
+     "--http-port", "3000", \
+     "--http-only"]

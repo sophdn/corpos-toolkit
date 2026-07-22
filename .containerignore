@@ -1,0 +1,42 @@
+# Build context for deploy/toolkit-server/Containerfile (context = repo root).
+# The image needs ONLY: go/ (module + source), blueprints/{forge-schemas,rubrics},
+# and action-manifests/dispatch-policy.toml. Everything else is VCS state, the
+# 158M live DB, the dashboard's 167M node_modules, the archived Rust workspace,
+# docs, or other surfaces not built into the backend binary — keep them out so
+# the context stays small and the build reproducible.
+
+# VCS + the live ledger (NEVER in an image)
+.git
+.gitignore
+data/
+
+# Frontend, archived Rust, docs, and non-backend surfaces — not build inputs
+apps/
+archive/
+clients/
+docs/
+process-docs/
+skills/
+memory/
+measure/
+hooks/
+scripts/
+test-results/
+tt15_spike/
+
+# Event schemas are go:embed'd into the binary (events/validator.go) — the
+# on-disk copy is not a runtime input.
+blueprints/events/
+
+# Build / test artifacts
+go/bin/
+**/node_modules
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Packaging files themselves
+deploy/
+.containerignore
+.dockerignore

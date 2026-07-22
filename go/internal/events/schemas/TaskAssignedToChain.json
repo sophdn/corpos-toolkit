@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskAssignedToChain.json",
+  "title": "TaskAssignedToChain payload",
+  "description": "Emitted when a task moves between chains, or when its position within a chain changes. For initial assignment (the assignment that happens at create time), TaskCreated carries the same data — TaskAssignedToChain is for re-assignment after creation. Captures both from/to chain and from/to position so the ledger shows the move without needing the prior row state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["to_chain_slug"],
+  "properties": {
+    "from_chain_slug": {
+      "type": ["string", "null"],
+      "description": "Chain the task is moving from. null is invalid for re-assignment (the task always had a chain — see TaskCreated.chain_slug); the field is nullable to leave room for a future 'orphan to chain' adoption flow if one is ever defined."
+    },
+    "to_chain_slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Chain the task is moving to. Required."
+    },
+    "from_position": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Position before the move."
+    },
+    "to_position": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Position after the move."
+    }
+  }
+}

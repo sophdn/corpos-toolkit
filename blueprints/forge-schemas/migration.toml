@@ -1,0 +1,48 @@
+# Migration schema — author a SQLite schema migration with auto-numbering
+# and canonical/testutil-mirror dual-write in one tx.
+#
+# The pre-forge workflow was: `ls go/internal/db/migrations/` to discover
+# the next NNN, write the `.sql` file by hand, lean on the pre-commit
+# gate to mirror canonical → testutil. Three classes of foot-gun:
+#   - Off-by-one or gap-skip on the next migration number.
+#   - Forgetting the canonical-vs-mirror sync (only catches at gate time;
+#     stale-mirror smoke runs can leak through if the gate is bypassed).
+#   - Editing the mirror directly under the wrong belief it's canonical.
+#
+# forge(migration) owns the numbering + dual-write so all three classes
+# collapse to "supply slug + up_sql". The schema is markdown-target only
+# for the storage classification — the on-disk file is plain SQL, not
+# markdown. The create handler in go/internal/forge/create.go branches
+# on schema.Meta.Name == "migration" to bypass the renderMarkdown
+# frontmatter shape and use renderMigrationSQL instead. T5 acceptance.
+#
+# Application is NOT triggered by forge — the migration runner in
+# go/internal/db/migrate.go applies pending migrations on db.Open(),
+# preserving crash-restart safety. forge(migration) only creates files.
+# An EXPLAIN-against-in-memory parse check catches syntax errors at
+# forge time so authoring failures surface immediately rather than at
+# next boot.
+
+supported_ops = ["create"]
+
+[schema]
+name = "migration"
+prefix = ""
+output_dir = "go/internal/db/migrations"
+filename_pattern = "{migration_number}_{slug}.sql"
+
+[storage]
+target = "markdown"
+prefix = ""
+output_dir = "go/internal/db/migrations"
+filename_pattern = "{migration_number}_{slug}.sql"
+
+[[fields]]
+name = "up_sql"
+type = "string"
+description = "The SQL body that the migration runner applies. Required. Authored as raw SQL — DDL/DML statements separated by semicolons, line and block comments preserved verbatim. The Go runner's statement splitter (go/internal/db/migrate.go) handles `;` inside comments, single-quoted strings, and BEGIN…END trigger bodies. forge(migration) runs an EXPLAIN against an in-memory SQLite DB at forge time to catch unparseable SQL before the file lands."
+
+[[fields]]
+name = "docstring"
+type = "optional_string"
+description = "Optional prose docstring prepended as a `-- ` comment block above the SQL body. Predecessor migrations (e.g. 066_proj_check_constraints.sql) author the docstring inline; forge(migration) supports either shape — supply docstring here for the auto-prepended block, or embed `-- ` comments directly in up_sql. The two approaches are equivalent on disk; the schema split makes the prose discoverable as a structured field for downstream substrate queries."

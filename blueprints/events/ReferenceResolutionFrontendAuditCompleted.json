@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ReferenceResolutionFrontendAuditCompleted.json",
+  "title": "ReferenceResolutionFrontendAuditCompleted payload",
+  "description": "Emitted by the chain reference-resolution-substrate-frontend RF4 retrospective to record that the dashboard surface serving the reference-resolution substrate (Context Pull Inspector at /context-pulls — list + drawer + entity-detail integration via the EventTimeline `N references resolved in this prompt` suffix block) has been verified against the chain's design doc and completion criteria. Self-hosting check parallel to TelemetryFrontendAuditCompleted and SubstrateFrontendAuditCompleted — the dashboard surface that surfaces reference-resolution outcomes records its own audit outcome through the events ledger that agent-substrate-frontend's audit ledger renders. Closes the substrate-trilogy-frontend loop end-to-end. Findings are keyed to docs/REFERENCE_RESOLUTION_FRONTEND.md sections. See docs/REFERENCE_RESOLUTION_FRONTEND.md and the chain's completion_condition for context.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the design / contract doc the findings are keyed against — typically docs/REFERENCE_RESOLUTION_FRONTEND.md plus the chain's completion criteria."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome covering all completion-criterion sub-items (a)-(e)."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the follow-on work (typically: T7 cross-encoder per-candidate scoring landing on reference_resolution_emits.ml_confidence_score; transcript-reader for detection.source_message_excerpt; per-candidate detail sub-table; project_id propagation fix). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per design-doc section or completion-criterion item. status uses the same enum as the architecture audit (pass / fail / partial / deferred).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Design-doc section identifier and short description (e.g. \"§3.1 list endpoint\")."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = contract honored end-to-end; fail = gap (must file follow-on); partial = honored with documented gap; deferred = explicitly out of scope per chain non-goals."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence: test names, file paths, commit SHA, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

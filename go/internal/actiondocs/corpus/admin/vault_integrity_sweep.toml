@@ -1,0 +1,14 @@
+surface = "admin"
+action = "vault_integrity_sweep"
+purpose = "Walk every active source_type='vault' knowledge_pointer, stat() its source_ref under the resolved vault root, and state-transition any pointer whose file is missing to status='orphaned' (FTS5 inverted-index entry removed at the same time). Never DELETEs — the row is preserved with its audit columns intact so post-hoc forensics can see created_at / usage_count / last_used_at for retired pointers. Returns the counts (total / files_present / orphans_found / orphans_retired) plus the orphan list."
+notes = "Chain forge-vault-note-schema-rework T5 shipped this action as the ongoing-prevention engine for orphan vault pointers. The one-shot cleanup that zeroed the existing orphan count landed in chain vault-hygiene-extract-and-migrate T9 (2026-05-20); from that point forward, future orphans (file deleted without retiring its pointer row — hand-edits, dev churn, scope-change re-forges that race) get caught by this sweep.\n\nUse the read-only dry-run sibling admin.vault_orphan_list to inspect what the sweep would retire before committing. Both actions share the same scan path in internal/knowledge/pointers.ListVaultOrphans; only this one drives RetireOrphan over the returned slice.\n\nThe startup hook lives in admin.RunStartupVaultIntegritySweep (fire-and-forget goroutine wired from main.go) so the sweep also runs once on every server boot. The hook never blocks bootstrap — a slow filesystem or missing vault root logs at warn level and the server proceeds normally.\n\nOrphansRetired may be < OrphansFound when a concurrent caller has already retired a row between scan and write (ErrNotFound is treated as a benign race and skipped silently).\n"
+
+[[errors]]
+  condition = "vault root unresolvable"
+  message = "error: 'vault root not found' — TOOLKIT_VAULT_ROOT, FORGE_MARKDOWN_ROOT, and $HOME/.claude/vault all failed to resolve."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Mutating admin action — the events ledger needs to know *why* the sweep ran (scheduled hygiene, post-incident cleanup, follow-up after a manual file deletion)."
+  applies_to_actor_kinds = ["agent"]

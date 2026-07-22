@@ -1,0 +1,92 @@
+# Trained model schema — deployable ML artifact tracked across the
+# ml-training Python project and the mcp-servers Go serving subsystem.
+#
+# One row per (task, version) pair. The row's lifecycle drives the
+# go/internal/ml/ registry: only rows in status='ab_testing' or
+# 'promoted' are loadable for live traffic. status='training' /
+# 'evaluating' / 'retired' are gated states (see ml-capability-substrate
+# T1 design doc §4.2 for the state machine).
+#
+# Status transitions are surfaced via dedicated MCP actions
+# (trained_model_promote / trained_model_retire), not forge_edit, so
+# the A/B promotion gate and audit-trail expectations land in those
+# handlers' validation paths. Same pattern as chain_close / task_cancel /
+# bug_resolve relative to forge_edit.
+#
+# PROJECT-SCOPED. Every trained_model row carries a project_id; create
+# calls require a top-level `project` parameter on the work meta-tool.
+# Same constraint applies to chain.toml, task.toml, and bug.toml.
+#
+# Layout convention: see task.toml for the shape-registry ordering rules.
+
+supported_ops = ["create", "update"]
+
+# Soft-delete surfaces as trained_model_retire (status flip), not
+# forge_delete. Mirrors chain_close / task_cancel / bug_resolve.
+[lifecycle]
+soft_delete_action = "trained_model_retire"
+
+[schema]
+name = "trained_model"
+prefix = "TRAINED_MODEL"
+output_dir = "process-docs/trained-models"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "trained_models"
+key_columns = ["slug"]
+
+[[fields]]
+name = "task"
+type = "string"
+description = "What the model does (one short sentence). The task name is also the directory under ml-training/models/<task>/<version>/ holding the artifact. Convention: lowercase-kebab (e.g. 'source-router', 'curation-classifier', 'cross-encoder-reranker'). The trained_model_list action filters by task."
+
+[[fields]]
+name = "version"
+type = "string"
+description = "Semver-shape version identifier (e.g. 'v1', 'v1.1', 'v2'). Increments are author-controlled per-task. Combined with task, identifies the artifact directory under ml-training/models/<task>/<version>/."
+
+[[fields]]
+name = "training_dataset_signature"
+type = "string"
+description = "Projection-snapshot identifier captured at training time. Format: '<projection_name>@<ISO-timestamp>;rows=<N>' (e.g. 'proj_training_data_for_reranker@2026-05-20T18:42:11Z;rows=2841'). Used for drift detection and reproducibility — when the underlying data shifts, the signature changes and downstream telemetry surfaces the divergence."
+
+[[fields]]
+name = "eval_metrics"
+type = "string"
+description = "JSON object with held-out scores keyed by metric name. Always includes 'baseline_score' for the metric the A/B promotion gate compares on. Example: '{\"macro_f1\": 0.71, \"baseline_qwen_rubric_score\": 0.58, \"held_out_size\": 568}'."
+
+[[fields]]
+name = "status"
+type = "optional_string"
+description = "Lifecycle state. Accepted values: training | evaluating | ab_testing | promoted | retired. Default 'training' when omitted at forge time. Transitions are validated downstream — trained_model_promote enforces ab_testing→promoted (with promotion-gate evidence unless force=true); trained_model_retire allows any→retired. Status enum enforced by the SQL CHECK constraint in migration 043 AND the action-handler validator."
+
+[[fields]]
+name = "artifact_path"
+type = "string"
+description = "Relative path under the ML_MODELS_ROOT env var, identifying the ONNX artifact for this row. Convention: '<task>/<version>/model.onnx' (e.g. 'source-router/v1/model.onnx'). Combined with ML_MODELS_ROOT to form the absolute path the Go serving subsystem loads. Sibling files (manifest.toml, eval_report.json) live alongside under the same directory and are discovered by convention."
+
+[[sections]]
+heading = "Task"
+fields = ["task"]
+
+[[sections]]
+heading = "Version"
+fields = ["version"]
+
+[[sections]]
+heading = "Training dataset signature"
+fields = ["training_dataset_signature"]
+
+[[sections]]
+heading = "Eval metrics"
+fields = ["eval_metrics"]
+
+[[sections]]
+heading = "Status"
+fields = ["status"]
+
+[[sections]]
+heading = "Artifact path"
+fields = ["artifact_path"]

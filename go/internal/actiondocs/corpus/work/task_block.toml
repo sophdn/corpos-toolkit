@@ -1,0 +1,62 @@
+surface = "work"
+action = "task_block"
+purpose = "Add a blocker to a task: the blocked task waits until the blocker resolves. Cross-chain blockers work by passing blocker_chain_slug alongside blocker_slug."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Blocked task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Blocked task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug of the blocked task."
+
+[[params]]
+  name = "blocker_id"
+  type = "integer"
+  required = false
+  description = "Blocker task id (preferred)."
+
+[[params]]
+  name = "blocker_slug"
+  type = "optional_string"
+  required = false
+  description = "Blocker task slug. Pair with blocker_chain_slug for cross-chain blockers."
+
+[[params]]
+  name = "blocker_chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug of the blocker task. Required when blocker lives in a different chain than the blocked task."
+
+[[params]]
+  name = "reason"
+  type = "optional_string"
+  required = false
+  description = "Free-form note explaining why the blocker applies."
+
+[[param_aliases]]
+  from = "task_id"
+  to = "id"
+
+[[param_aliases]]
+  from = "task_slug"
+  to = "slug"
+
+[[examples]]
+  call = "{\"slug\":\"telemetry-cleanup\",\"chain_slug\":\"telemetry-substrate-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\",\"reason\":\"deferred until foundation closes\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

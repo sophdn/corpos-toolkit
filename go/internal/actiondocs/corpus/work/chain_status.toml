@@ -1,0 +1,20 @@
+surface = "work"
+action = "chain_status"
+purpose = "List all open chains with their task counts (no slug), or one chain's summary by slug. Open chains only — a closed or unknown slug returns chain_not_found. Use chain_state for full per-chain detail, or chain_find to search by name pattern."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug. Omit to list ALL open chains; pass a slug to return just that chain's summary (the chain must be open — a closed or unknown slug returns chain_not_found)."
+
+[[param_aliases]]
+  from = "chain"
+  to = "slug"
+
+[[param_aliases]]
+  from = "chain_slug"
+  to = "slug"
+
+[[examples]]
+  call = "{\"slug\":\"agent-first-substrate\"}"

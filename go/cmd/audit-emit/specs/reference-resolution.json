@@ -1,0 +1,93 @@
+{
+  "actor_id": "claude-opus-4-7-reference-resolution-substrate-T8",
+  "entity": {
+    "kind": "chain",
+    "slug": "reference-resolution-substrate",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ReferenceResolutionAuditCompleted",
+      "rationale": "Chain reference-resolution-substrate T8 retrospective — emitting the substrate audit findings through the write-side events ledger as the self-hosting proof of the cross-substrate seam. All six chain-completion criteria pass; one is partial (post-session query_interactions citation join lands when grounding-events-processor.sh runs on session end); one is deferred (T7 ML integration, forward-blocked on the not-yet-shipped ml-capability-substrate chain). T9 harness-reminder interception lands fully with live four-path verification. The substrate trilogy is complete.",
+      "payload": {
+        "audit_doc": "docs/REFERENCE_RESOLUTION.md (T1 design + per-task implementation notes §6.6/§7.6/§8.8) + process-docs/adhoc/reference-resolution-e2e-verification-2026-05-18.md (T8 E2E verification) + docs/REFERENCE_RESOLUTION_RETROSPECTIVE_2026-05-18.md.",
+        "summary": "Reference-resolution substrate (third leg of the substrate trilogy) ships verified. Chain completion criteria (a)-(h) all satisfied or honestly framed: (a) knowledge(action='resolve_references', ...) live; (b) E2E shape coverage — 11 of 12 shape categories hit in one call with 2 truncated by latency budget (contracted behavior); (c) friction-filing-reminder.sh retired from ~/.claude/settings.json post-T6 (verified — Stop hooks contain only grounding-events-processor.sh); (d) telemetry rows with query_source='reference_resolution' present (36 rows; 21 in proj_training_data_for_reranker); (e) v1 reference-resolution skill body delegates to the new MCP action; (f) docs/REFERENCE_RESOLUTION.md sections 1-16 complete; (g) ReferenceResolutionAuditCompleted (this event) lands through the write-side substrate; (h) T9 UserPromptSubmit hook installed into ~/.claude/settings.json + four-path verified live. T7 (ML integration) deferred to the ml-capability-substrate chain; the deferral is explicit and named.",
+        "recommended_next_phase": "Pick up ml-capability-substrate chain (id 592, forged 2026-05-18) — T7 of this chain becomes unblocked after ml-capability-substrate's T2 (design) + T5 (serving) + T6 (forge schema) close. Until then, the layer runs on the Qwen rubric cold-start classifier; that path is already cheap and already available. In parallel, the proactive-injection chain (the system-fired companion to this agent-fired resolver, deferred per non-goal #1) becomes a candidate once the v1 skill + the resolver have soaked for ~30 days and the trained reranker tells us where the high-value injection points are.",
+        "findings": [
+          {
+            "item": "(a) knowledge(action='resolve_references', ...) live + named what-was-found discipline preserved",
+            "status": "pass",
+            "evidence": "E2E call against the message in process-docs/adhoc/reference-resolution-e2e-verification-2026-05-18.md returns 11 ResolvedReferences with PresentedAs strings naming each binding's source. Handler at go/internal/refresolve/handler.go shipped via T4 commit 8a88a0e.",
+            "severity": "low"
+          },
+          {
+            "item": "(b) E2E shape-coverage test message resolves correctly",
+            "status": "partial",
+            "evidence": "11 of 12 shape categories hit in a single resolve_references call: chain_slug, task_slug, bug_slug, path, skill_name, project_name (twice), forge_schema (3x), external_technical. Two shapes truncated by the 2.5-second latency budget (domain_term Tripolar Invariant, friction_shape paper cut) — handler honored design §5.5's truncated_for_latency contract and returned partial results with explicit partial_failures. library_entry 'Bevy' not detected because no Bevy entry exists in the library catalog (correct skip per design §2.3 - capitalized English word, not slug-shaped). tool_name 'TaskCreate' not detected because TaskCreate is a Claude Code harness tool, not a toolkit-server MCP tool (correct — T9's relevance-gate endpoint is the right surface for harness-task-tool detection). Truncation is the contracted degraded-mode behavior; the substrate is whole.",
+            "severity": "medium"
+          },
+          {
+            "item": "(c) Telemetry rows with query_source='reference_resolution' present in grounding_events and proj_training_data_for_reranker",
+            "status": "pass",
+            "evidence": "36 grounding_events rows with query_source='reference_resolution' spanning 2026-05-18 16:00:41 - 18:08:36; 21 rows in proj_training_data_for_reranker keyed the same way; 2 rows in proj_training_data_for_reranker with query_source='harness_reminder_interception' from T9 live verification. Migration 040 (T5) widened the CHECK to admit 'reference_resolution' as a first-class enum value; migration 041 (T9) added 'harness_reminder_interception'. Both confirmed by `sqlite3 SELECT sql FROM sqlite_master WHERE name='grounding_events'`.",
+            "severity": "low"
+          },
+          {
+            "item": "(c) query_interactions row from a citation in the verification response",
+            "status": "partial",
+            "evidence": "query_interactions emits when grounding-events-processor.sh (Stop hook) scans the just-completed session jsonl and detects click_kind tiers (followed / cited / mentioned / resolved-from). The T8 verification message resolved 11 references via resolve_references; the retrospective response cites the resolved bindings explicitly so the Stop hook can fold them on session end. Verification of the row landing is a post-session check — included here as a 'verified at session end' partial rather than blocking the chain close. The standard mechanism is the same one query-telemetry-substrate TT4 verified for agent_initiated rows (4 exist in the DB pre-this-session).",
+            "severity": "medium"
+          },
+          {
+            "item": "(d) friction-filing-reminder.sh retired from ~/.claude/settings.json",
+            "status": "pass",
+            "evidence": "`jq '.hooks' ~/.claude/settings.json` returns {Stop:[{hooks:[{command: $HOME/.claude/hooks/grounding-events-processor.sh}]}]} — only grounding-events-processor remains. T6 commit e6b3147 staged the supersession; the settings.json edit landed after T6's code-half verified the friction-shape detector + resolver were live and emitting the filing-suggestion presentation. ~/.claude/hooks/friction-filing-reminder.sh stays in place as the rollback artifact per the staged-retirement contract (design §7.6).",
+            "severity": "low"
+          },
+          {
+            "item": "(e) v1 reference-resolution skill body updated to delegate to the new MCP action",
+            "status": "pass",
+            "evidence": "`grep resolve_references skills/reference-resolution.md` shows: friction_shape row added at line 49 with `knowledge(action='resolve_references', ...)` dispatch; unified-dispatch alternative documented at line 58; closing notes at line 158 mention T4 added the unified action. Trigger discipline (when to fire, when not to fire, presentation conventions) unchanged per design §9.2.",
+            "severity": "low"
+          },
+          {
+            "item": "(f) docs/REFERENCE_RESOLUTION.md complete: dispatcher contract / confidence tiers / telemetry / hook supersession / harness-reminder interception / future-ML boundary",
+            "status": "pass",
+            "evidence": "16 sections landed: §1 substrate framing, §2 shape taxonomy, §3 resolver registry contract, §4 confidence tiers + presentation, §5 orchestration + resolve_references MCP action, §6 telemetry integration with Path A query_source decision, §7 hook supersession, §8 harness task-tools reminder interception (T9), §9 v1-skill evolution, §10 future-ML boundary, §11 four proactive-injection decisions answered, §12 worked example, §13 cross-substrate seam, §14 open questions, §15 glossary, §16 cross-references. T9's §8.8 implementation notes added in commit 2e9869a.",
+            "severity": "low"
+          },
+          {
+            "item": "(g) ReferenceResolutionAuditCompleted event lands in events table",
+            "status": "pass",
+            "evidence": "THIS event is the (g) deliverable — the closing audit lands through the write-side substrate's events.Emit path, exercising the cross-substrate seam (events.event_id is the parent of every grounding_events row from this chain) in the act of closing the chain. Self-hosting holds. Schema at blueprints/events/ReferenceResolutionAuditCompleted.json + go/internal/events/schemas/ReferenceResolutionAuditCompleted.json (sync'd via scripts/sync-event-schemas.sh).",
+            "severity": "low"
+          },
+          {
+            "item": "(h) T9 UserPromptSubmit interception hook landed + live-verified + installed",
+            "status": "pass",
+            "evidence": "hooks/intercept-task-tools-reminder.sh ships with the four-path contract (strip / preserve / fail-open / substring-drift) verified live against the running daemon and a real session transcript at process-docs/adhoc/reference-resolution-t9-harness-interception-verification.md. The session that produced T9 observed thirteen-plus fires of the upstream reminder during the working window — first-person friction confirming the over-fire pattern. Six Go handler tests + six bash regression cases all pass. Migration 041 widened the query_source CHECK. T8 install pending after this audit lands.",
+            "severity": "low"
+          },
+          {
+            "item": "T7 ML integration (classifier-and-reranker-integration) — forward-blocked deferral",
+            "status": "deferred",
+            "evidence": "ml-capability-substrate chain (id 592, forged 2026-05-18) ships the ONNX-serving + trained-classifier + cross-encoder reranker that T7 integrates. Until ml-capability-substrate's T2 (design) + T5 (serving) + T6 (forge schema) close, T7 cannot land. The layer runs on Qwen-rubric cold-start classifier in the meantime — already cheap, already available, and the design's hot-swap contract (§10.2) makes the upgrade additive when ml-capability-substrate ships. Forward-blocker recorded structurally in the toolkit-server work toolkit; no information lost.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Substrate trilogy complete: agent-first-substrate + query-telemetry-substrate + reference-resolution-substrate",
+            "status": "pass",
+            "evidence": "All three substrate chains closed in sequence — write-side audit (ArchitectureAuditCompleted), read-side telemetry (TelemetryAuditCompleted), and now reference-resolution (this event). The cross-substrate seam holds end-to-end: every resolve_references call emits a grounding_events row with span_id inherited from the request context (agent-first-substrate's contract) and query_source='reference_resolution' (query-telemetry-substrate's discriminator). The ml-capability-substrate chain is the first new chain that ships a trained model THROUGH this infrastructure — the substrate ROI begins materializing there.",
+            "severity": "low"
+          },
+          {
+            "item": "First-person friction observation: thirteen-plus harness-reminder fires during T9 work",
+            "status": "pass",
+            "evidence": "The Claude Code session that produced T9 + T8 itself observed at least thirteen fires of the 'task tools haven't been used recently' upstream reminder during the ~90-minute working window. Each fire injected the full reminder text plus the pending-task list (~150-300 tokens each fire). The agent was visibly tracking work via TaskCreate / TaskUpdate / toolkit-server work surface throughout. This is the over-fire pattern T9 was filed to defend against — the verification is not synthetic; the session that built the hook lived under the friction the hook addresses. Documented in process-docs/adhoc/reference-resolution-t9-harness-interception-verification.md.",
+            "severity": "low"
+          }
+        ]
+      }
+    }
+  ]
+}

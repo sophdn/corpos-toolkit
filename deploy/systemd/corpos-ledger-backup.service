@@ -1,0 +1,13 @@
+[Unit]
+Description=Back up the canonical toolkit ledger and ship it off-box
+Documentation=file:%h/dev/corpos-toolkit/scripts/backup-canonical-ledger.sh
+
+[Service]
+Type=oneshot
+# No leading '-': a missing config FAILS the unit. Silently falling back to
+# local-only copies would be the exact comforting lie this exists to end.
+EnvironmentFile=%h/.config/corpos-toolkit/ledger-backup.env
+# User unit, not system: the ship step uses this user's ssh key and the ledger
+# is this user's file. Needs `loginctl enable-linger` so it runs when logged out
+# (already enabled on this box).
+ExecStart=%h/dev/corpos-toolkit/scripts/backup-canonical-ledger.sh

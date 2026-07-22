@@ -1,0 +1,15 @@
+surface = "knowledge"
+action = "library_retire"
+purpose = "Mark a library entry retired — removes it from library_list_active enumerations while preserving the row for history. Inverse of library_add for stale entries."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "The library entry's slug."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

@@ -1,0 +1,17 @@
+surface = "work"
+action = "event_schema"
+purpose = "Discover the record(events[]) event-type enum + per-type payload schemas. With NO params, returns the closed set of event type names record accepts. With `type=<T>`, returns T's payload JSON Schema (required fields, properties, descriptions) from the embedded catalog. This is the discovery entry point for constructing record calls — use it instead of reading blueprints/events/*.json. Read-only."
+notes = "No-arg call lists every registered event type; a typed call returns that type's payload schema. Pair with `record`: event_schema(no arg) to find the type, event_schema(type=T) for its payload shape, then record(events=[{type:T, payload:{…}, entity_slug:…}]). entity_kind is inferred from the type by record for well-known types."
+
+[[params]]
+  name = "type"
+  type = "optional_string"
+  required = false
+  description = "Event type to describe (e.g. BugResolved). Omit to list the full registered enum. Aliases: event_type, kind."
+
+[[examples]]
+  call = "{\"type\":\"BugResolved\"}"
+
+[returns]
+  shape = "EventSchemaResult"
+  description = "Either {types:[…]} (no arg) or {type, schema:<JSON Schema>} (typed). On an unknown type, {error} with a hint to list."

@@ -1,0 +1,22 @@
+name        = "test-rubric"
+description = "A rubric used only in tests"
+is_deployed = true
+output_enum = ["yes", "no", "unclear"]
+
+criteria = [
+  "yes: the thing is true.",
+  "no: the thing is false.",
+  "unclear: insufficient evidence.",
+]
+
+prompt_template = """Classify the input as yes, no, or unclear."""
+
+[[examples]]
+text      = "Example A text"
+label     = "yes"
+reasoning = "Because A."
+
+[[examples]]
+text      = "Example B text"
+label     = "no"
+reasoning = "Because B."

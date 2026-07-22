@@ -1,0 +1,64 @@
+# gate.yml — corpos-gate declarative config for THIS repo (corpos-toolkit).
+#
+# Consumed by cmd/corpos-gate (internal/gate). ADDITIVE for now: the
+# authoritative gate is still scripts/precommit.sh; this config drives the
+# new orchestrator in parallel until the cutover task retires the old path.
+#
+# Tier model: a strict superset — ci ⊃ pre-push ⊃ pre-commit.
+# `run --tier=pre-commit` runs only the fast pre-commit checks;
+# `run --tier=pre-push` adds the slow checks; `run --tier=ci` adds the
+# slowest (ci-only) checks like mutation. No ci check ever runs on
+# pre-commit.
+stack: go
+
+units:
+  - dir: go
+    tags: sqlite_fts5
+
+checks:
+  format:   { enabled: true,  tier: pre-commit }
+  vet:      { enabled: true,  tier: pre-commit }
+  lint:     { enabled: true,  tier: pre-commit }
+  build:    { enabled: true,  tier: pre-commit }
+  # test is DISABLED because `coverage` runs `go test -coverprofile ./...` —
+  # the same suite. Enabling both would double-run the ~5-min suite at
+  # pre-push. coverage subsumes test here (mirrors scripts/precommit.sh's
+  # cover-floor stage, which replaced the standalone `make -C go test`).
+  # Enable test only for a repo that runs tests WITHOUT a coverage floor.
+  test:     { enabled: false, tier: pre-push }
+  coverage: { enabled: true,  tier: pre-push, floor: 66, scope: "./..." }
+  vuln:     { enabled: true,  tier: pre-push }
+  # mutation is report-only (drives go-mutesting via scripts/go-mutesting-exec.sh;
+  # NEVER fails the gate). Tiered `ci` — the slowest tier — because it re-runs the
+  # suite per mutant (minutes per file), far too slow for pre-commit OR pre-push.
+  # Kept disabled: run it on-demand (`make -C go mutest`), enable briefly, or wire
+  # `corpos-gate run --tier=ci` into a CI job.
+  mutation: { enabled: false, tier: ci }
+
+# Custom escape-hatch guards: existing, separately-invokable read-only
+# scripts already run inline by scripts/precommit.sh. Wired here as
+# pre-commit custom checks to prove the stack-agnostic escape hatch. This
+# is a representative subset (3 of ~15 inline guards), not a full port.
+custom:
+  - name: quadlet-directives
+    cmd: "bash scripts/validate-quadlet-units.sh"
+    tier: pre-commit
+  - name: cmd-gitignore-parity
+    cmd: "bash scripts/test-cmd-gitignore-parity.sh"
+    tier: pre-commit
+  - name: runtime-affecting-paths-parity
+    cmd: "bash scripts/test-runtime-affecting-paths-parity.sh"
+    tier: pre-commit
+  # pii-scan: block secrets (private keys / provider tokens) and project PII
+  # (.pii-denylist) from entering the repo; scans staged-added lines only, waive
+  # a false positive with an inline `pii-allow` marker. Fast -> pre-commit.
+  - name: pii-scan
+    cmd: "bash scripts/pii-scan.sh"
+    tier: pre-commit
+  # skills-embed-drift: canonical toolkit-owned skills (skills/) must match
+  # corpos's embed mirror (internal/skills/library/) after pii-allow stripping.
+  # Read-only; DEV-MACHINE scope — loudly skips when no sibling corpos checkout
+  # is present (CI / container). See scripts/sync-skills-to-corpos.sh.
+  - name: skills-embed-drift
+    cmd: "bash scripts/check-skills-embed-drift.sh"
+    tier: pre-commit

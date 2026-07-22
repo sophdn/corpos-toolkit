@@ -1,0 +1,9 @@
+surface = "admin"
+action = "escalation_threshold_list"
+purpose = "Read the EFFECTIVE per-trigger escalation threshold config for a project: the global-default rows (project_id='') overlaid by any project-specific override for the same trigger_kind. With no project_id, returns the global defaults alone. See docs/ORCHESTRATOR_ESCALATION.md §6."
+
+[[params]]
+  name = "project_id"
+  type = "optional_string"
+  required = false
+  description = "Project whose overrides to overlay on the global defaults. Optional — omit (or '') to read the global-default config alone."

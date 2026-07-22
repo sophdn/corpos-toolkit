@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArtifactEdited.json",
+  "title": "ArtifactEdited payload",
+  "description": "Emitted (OPT-IN) when fs.edit commits an exact-string replacement in record mode. Carries the file path + replacement count so fs.read provenance mode can fold per-edit intent into a file's mutation history without re-reading the working tree. The default fs.edit does NOT emit — this is the edit half of the write->read provenance loop. The artifact's entity reference lives in the envelope (entity_kind=artifact, entity_slug=absolute path); the edit intent is carried in the event rationale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["file_path", "replacements", "created"],
+  "properties": {
+    "file_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute path of the file edited. Matched verbatim by fs.read provenance mode (json_extract(payload,'$.file_path'))."
+    },
+    "replacements": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of occurrences replaced (1 for a single replace, the match count for replace_all, 1 for an empty-old_string create/fill)."
+    },
+    "created": {
+      "type": "boolean",
+      "description": "True when an empty old_string created a new file from new_string."
+    }
+  }
+}

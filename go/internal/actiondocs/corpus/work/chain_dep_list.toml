@@ -1,0 +1,12 @@
+surface = "work"
+action = "chain_dep_list"
+purpose = "List a chain's dependency edges: its prerequisites (what it depends on) and its dependents (what depends on it), each with the edge's reason. Read-only."
+
+[[params]]
+  name = "chain"
+  type = "string"
+  required = true
+  description = "Chain slug to list edges for. Alias: chain_slug."
+
+[[examples]]
+  call = "{\"chain\":\"http-api\"}"

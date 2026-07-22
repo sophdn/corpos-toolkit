@@ -1,0 +1,13 @@
+# Quadlet network unit — the shared rootless network for container-to-container
+# MCP (corpos <-> toolkit-server). netavark + aardvark give DNS-by-name, so
+# corpos reaches the backend at http://toolkit-server:3000 (container port).
+#
+# Install: copy to ~/.config/containers/systemd/ (see deploy/quadlet/README.md
+# or scripts/install-quadlet-units.sh), then `systemctl --user daemon-reload`.
+# Quadlet generates corpos-network.service; the .container units pull it in via
+# Network=corpos.network.
+[Unit]
+Description=corpos-net — shared rootless network for corpos <-> toolkit-server c2c MCP
+
+[Network]
+NetworkName=corpos-net

@@ -1,0 +1,15 @@
+surface = "admin"
+action = "vault_search_metrics"
+purpose = "Return aggregate stats — total_calls, p50/p95 latency, mean results-count, recent queries — over the most recent N vault_search invocations (or all calls since 'since'); used to evaluate the stage-2 trigger conditions in the agent-vault-read-discipline chain."
+
+[[params]]
+  name = "since"
+  type = "optional_string"
+  required = false
+  description = "Lower-bound timestamp; when supplied, aggregates over every vault_search call after this point."
+
+[[params]]
+  name = "recent_n"
+  type = "integer"
+  required = false
+  description = "Aggregate over the most recent N invocations. Defaults to 50."

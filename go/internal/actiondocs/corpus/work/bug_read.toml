@@ -1,0 +1,19 @@
+surface = "work"
+action = "bug_read"
+purpose = "Return a single bug's full content. Identify by id or slug."
+notes = "Numeric id is accepted in place of the slug; the dispatcher resolves either to the same row."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Bug id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+
+[[examples]]
+  call = "{\"id\":1333}"

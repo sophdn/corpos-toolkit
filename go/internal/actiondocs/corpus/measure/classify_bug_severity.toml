@@ -1,0 +1,10 @@
+surface = "measure"
+action = "classify_bug_severity"
+purpose = "Dispatches the bug-severity rubric via Qwen — classifies a filed bug report along the two-axis observer-impact × blast-radius matrix from skill:bug-filing-discipline; label ∈ {low, medium, high, unclear}; writes a benchmark_results row; returns {label, latency_ms, model_name}."
+notes = "Severity is two-axis (observer-impact × blast-radius) per skill:bug-filing-discipline. unclear = either axis is insufficiently determined; use as a signal to surface the bug for human review rather than auto-routing it."
+
+[[params]]
+  name = "bug_report"
+  type = "string"
+  required = true
+  description = "The filed bug report to classify."

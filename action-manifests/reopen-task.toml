@@ -1,0 +1,31 @@
+# Canonical Go action: work.task_reopen (see go/internal/actiondocs/corpus/work/task_reopen.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "reopen-task"
+version = "1.0.0"
+description = "Rescind a task closure — flip closed back to active and annotate the handoff_output with a [REOPENED YYYY-MM-DD: <reason>] marker so the prior context is preserved."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "reopen the task",
+    "reopen this task",
+    "rescind closure",
+    "undo close_task",
+    "task closed in error",
+    "needs more work",
+    "missed acceptance criteria",
+    "wrongly closed",
+    "reopen_task",
+]
+when_not = [
+    "task was cancelled — cancellation is intentionally irreversible; re-create the task or use a fresh slug instead",
+    "task is currently active or pending — there is nothing to rescind",
+    "the task is genuinely done and the closure stands — leave it closed",
+    "moving a task between chains — use move_task instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/reopen-task.md"

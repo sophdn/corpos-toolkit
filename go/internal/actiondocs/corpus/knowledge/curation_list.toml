@@ -1,0 +1,21 @@
+surface = "knowledge"
+action = "curation_list"
+purpose = "List pending curation_candidates for the project (compact projection)."
+
+[[params]]
+  name = "origin"
+  type = "optional_string"
+  required = false
+  description = "Filter by candidate origin."
+
+[[params]]
+  name = "scored"
+  type = "bool"
+  required = false
+  description = "Filter by whether the candidate has been scored."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Result limit. Defaults to 50."

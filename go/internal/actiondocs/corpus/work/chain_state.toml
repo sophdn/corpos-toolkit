@@ -1,0 +1,30 @@
+surface = "work"
+action = "chain_state"
+purpose = "Return a chain's full state including all tasks (verbose). Identify by `slug` (or its aliases `chain` / `chain_slug`) OR by the numeric `id` (or `chain_id`) — the id form lets a chain_find → chain_state pivot skip the slug round-trip."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug. Required unless an id form (id / chain_id) is supplied."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Chain id — the numeric PK chain_find surfaces. Resolves the chain directly; use instead of slug. A slug accidentally passed here (or in chain_id) is tolerated — routed to the slug resolver instead of erroring."
+
+[[param_aliases]]
+  from = "chain"
+  to = "slug"
+
+[[param_aliases]]
+  from = "chain_slug"
+  to = "slug"
+
+[[param_aliases]]
+  from = "chain_id"
+  to = "id"
+
+[[examples]]
+  call = "{\"slug\":\"agent-first-substrate\"}"

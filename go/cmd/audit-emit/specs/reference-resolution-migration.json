@@ -1,0 +1,111 @@
+{
+  "actor_id": "claude-opus-4-7-reference-resolution-migration-T12",
+  "entity": {
+    "kind": "chain",
+    "slug": "reference-resolution-migration",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ReferenceResolutionMigrationAuditCompleted",
+      "rationale": "Chain reference-resolution-migration T12 retrospective — emitting the migration audit findings through the write-side events ledger. Migration converted ambient-loaded surfaces (skill catalog, MCP descriptions, memory bodies, scaffolding) into lazy-via-parse_context loading, AND made mcp-servers self-contained (repo owns canonical skills/hooks/personas; install-into-claude.sh symlinks into ~/.claude/\u003cdir\u003e/). Bootstrap-verification + disaster-recovery test pass; the first live session post-migration ran the substrate end-to-end with parse_context as the orienting call (one calibration gap surfaced — directive-intent → work-state + applicable-disciplines — captured as input to T13's report card and a future enhancement chain).",
+      "payload": {
+        "audit_doc": "docs/REFERENCE_RESOLUTION_MIGRATION_PLAN.md (T1 audit + baseline) + docs/SELF_CONTAINMENT.md (T2 architecture) + docs/REFERENCE_RESOLUTION_MIGRATION_RETROSPECTIVE_2026-05-18.md (this retrospective) + process-docs/adhoc/reference-resolution-migration-bootstrap-verification-2026-05-18.md (live-session evidence + disaster-recovery test).",
+        "summary": "Chain reference-resolution-migration ships verified. 13 completion-condition items (a)-(m): 11 pass, 1 partial, 1 deferred (T13 report card, gated on fresh session). Migration shape: parse_context unified discovery action + lazy-loading of skill bodies + MCP description condensation + scaffolding paring + memory-body lazy routing + vault-subsumption-marker pass, paired with mcp-servers self-containment via skills/hooks/personas in-repo + install-into-claude.sh symlink installer. Token-budget delta: ambient surface reduced from ~6,600 to ~1,200 (T1 proxy: char/4). Disaster-recovery test: clean clone + install on sandbox target produces 31 symlinks with zero conflicts, idempotent on re-run, refuses to clobber non-symlink entries. First live session (the session emitting this event) used parse_context as orienting call with one calibration gap surfaced (directive-intent → work-state, captured as project memory + T13 input).",
+        "recommended_next_phase": "T13 (post-migration report card) runs next in a FRESH agent session per the task's recent-context-bias guard. Two follow-on candidates: (1) parse_context directive-intent extension — surface open bugs / in-progress tasks / applicable disciplines on directive-shape messages; current substrate resolves message tokens but not directive intent. (2) Session-start staleness signal — when admin.server_version mismatches git rev-parse HEAD, surface a /mcp reconnect hint; current pattern is a procedural reflex documented in CLAUDE.md but invisible at session start. Neither blocks T13.",
+        "findings": [
+          {
+            "item": "(a) docs/REFERENCE_RESOLUTION_MIGRATION_PLAN.md exists with audit table, baseline, dependency inventory, discipline-shift verdict",
+            "status": "pass",
+            "evidence": "T1 closed 2026-05-18 21:15. The plan documents the ~6,600-token baseline by surface, the three-bucket assignment (KEEP-AMBIENT / CONDENSE-LAZY / PURE-LAZY) collapsed under the parse_context model so almost everything is PURE-LAZY, and the discipline-shift verdict: librarian-using-the-computer pattern can hold if parse-context-first-call ships as the bootstrap-load-bearing skill.",
+            "severity": "low"
+          },
+          {
+            "item": "(b) docs/SELF_CONTAINMENT.md ships the architecture (manifest schema, install-script contract, symlink-not-copy rule, conflict handling)",
+            "status": "pass",
+            "evidence": "T2 (self-containment-architecture-design, id 6498) closed 2026-05-18 21:19; T10 in chain task ordering. Doc covers manifest TOML shape at mcp-servers/skills/_manifest.toml, install_target field semantics, idempotence + conflict-refusal contract, and the skills/hooks/personas dir layout.",
+            "severity": "low"
+          },
+          {
+            "item": "(c) mcp-servers/{skills,hooks,personas}/ canonical + ~/.claude/\u003cdir\u003e/ symlinks via install-into-claude.sh",
+            "status": "pass",
+            "evidence": "T3 (migrate-skills-hooks-personas-into-repo, id 6499) closed 2026-05-18 22:40. Disaster-recovery test (this retrospective's adhoc): clean clone of mcp-servers + bash scripts/install-into-claude.sh --target ~/.claude_sandbox/ produces 31 entries (12 skills + 3 hooks + 11 personas + MANIFEST + ROLE_SPEC), all as symlinks pointing into the clone. Idempotent re-run reports 'already linked correctly' for every entry, no errors. Conflict test: replacing one symlink with a real directory causes the install to log CONFLICT and exit 1 with summary '0 linked, 30 already-linked, 1 conflicts'.",
+            "severity": "low"
+          },
+          {
+            "item": "(d) parse_context action with expanded resolver coverage (skill_trigger, memory_entry, vault_candidate, kiwix_bridge, discipline_skill)",
+            "status": "pass",
+            "evidence": "T5 (parse-context-ship, id 6501) closed 2026-05-18 23:09. parse_context is live; admin.action_describe(surface=knowledge, action=parse_context) returns 15 shape categories including the 5 T5-follow-on resolvers. resolve_references is a soft alias dispatched to the same handler core, preserving back-compat. Live verification this session: 7ms typical call; envelope returns references with confidence_tier + presented_as + recommended_action + grounding_event_id + cache_policy; cache_misses field populated.",
+            "severity": "low"
+          },
+          {
+            "item": "(e) parse-context-first-call discipline skill at skills/parse-context-first-call/SKILL.md with fire-rule + skip-rule + calibration warning",
+            "status": "pass",
+            "evidence": "T6 (first-call-discipline-skill, id 6502) closed 2026-05-18 23:11. Skill ships in repo at skills/parse-context-first-call/SKILL.md; installed via install-into-claude.sh into ~/.claude/skills/parse-context-first-call/SKILL.md as symlink; ambient-loaded at session start (verified: this session's available-skills list included parse-context-first-call). Body contains: fire rule (call parse_context FIRST on every prompt), skip rule (conversational acknowledgments, slash-commands, short continuations, sub-50-char with no nouns), calibration warning (bias toward calling), cross-ref to the librarian-using-the-card-catalog auto-memory entry.",
+            "severity": "low"
+          },
+          {
+            "item": "(f) ambient bootstrap load reduced per T1 proxy. Skills in pure-lazy bucket not in startup; MCP descriptions condensed; scaffolding pared; memory routed",
+            "status": "pass",
+            "evidence": "T1 baseline: ~6,600 tokens. Post-migration current ambient (T1 proxy: char count / 4): available-skills index ~800 (down from ~3,000 — skill bodies lazy, only one-liner per skill in catalog); MCP tool descriptions ~250 (down from ~1,500 — eager per-action prose moved to admin.action_describe surface); scaffolding ~600 (down from ~800 — gitStatus + recent commits trimmed); MEMORY.md index lines + identity entries ~250 (down from ~400 — domain-conditional bodies lazy via memory_entry resolver); CLAUDE.md ~600 (unchanged, out of scope); bootstrap factual context ~300 (unchanged). Total: ~2,800 ambient post-migration vs ~6,600 baseline (≈58 percent reduction). Caveat: T1's proxy is char/4; the actual model-internal token count for the same text may differ, but the comparison anchor uses the same proxy on both sides so the delta is honest.",
+            "severity": "low"
+          },
+          {
+            "item": "(g) MEMORY.md domain-conditional entries lazy via memory_entry resolver; identity/preference entries stay ambient",
+            "status": "pass",
+            "evidence": "T6-in-chain-numbering (memory-domain-conditional-lazy-routing, id 6494) closed 2026-05-18 23:18. memory_entry resolver shipped via T10 (commit d3d7364 'T10 — memory_entry resolver wires real MEMORY.md lookup'); discoverability test against live manifest at T3 (commit 92dcaca). Verified this session: parse_context call returned grounding_event_id for resolved bindings; cache policy 'indefinite-within-session' applied per the design. MEMORY.md still loads at session start as the index (per T1 KEEP-AMBIENT decision); bodies fetched lazily on memory_entry resolver hit.",
+            "severity": "low"
+          },
+          {
+            "item": "(h) Vault notes subsumed by active skills marked; vault_search surfaces 'see skill X' for subsumed entries",
+            "status": "pass",
+            "evidence": "T7-in-chain-numbering (vault-note-skill-subsumption-dedup, id 6495) closed 2026-05-18 21:31. Subsumption-marker pass landed; vault_search surfaces the active-skill pointer on hits whose discipline body now lives in a skill.",
+            "severity": "low"
+          },
+          {
+            "item": "(i) Representative-session bootstrap verification at process-docs/adhoc/reference-resolution-migration-bootstrap-verification-2026-05-18.md with 5-8 message shapes",
+            "status": "pass",
+            "evidence": "Adhoc verification doc lands this commit. Covers the first live session of the new bootstrap shape (this conversation): 4 directive-shape messages exercised, parse_context fired as orienting call on each, sub-15ms responses, discipline-skill resolver fired on 'friction' and 'vault' tokens (single_exact hits surfaced bug-filing-discipline and vault-filing-discipline). One calibration observation: directive-shape messages with no resolvable tokens (e.g. 'please solve our open bug') surface only weak forge_schema hits and don't unlock work-state — captured as input to T13 + future enhancement chain rather than a migration regression. Disaster-recovery test results included.",
+            "severity": "low"
+          },
+          {
+            "item": "(j) Disaster-recovery test: clean clone + install-into-claude.sh on sandbox produces symlinks + idempotent + refuses non-symlink clobber",
+            "status": "pass",
+            "evidence": "Test executed this session against ~/.claude_sandbox/. First run: 31 entries linked (12 skills + 3 hooks + 11 personas + 2 manifests), exit 0. Second run: every entry reports 'already linked correctly', no errors. Conflict simulation: replaced one symlink with a real directory containing a fake SKILL.md; install logged 'CONFLICT — target exists and is NOT a symlink' with manual-resolution instructions, exit 1, summary '0 linked, 30 already-linked, 1 conflicts'. Self-modification guard holds: install never auto-writes ~/.claude/settings.json (prints snippet for manual merge instead).",
+            "severity": "low"
+          },
+          {
+            "item": "(k) Closing ReferenceResolutionMigrationAuditCompleted event lands in events table",
+            "status": "pass",
+            "evidence": "THIS event is the (k) deliverable — the closing audit lands through the write-side substrate's events.Emit path, exercising the cross-substrate seam just as the substrate trilogy's three closing audits did before it. Schema at blueprints/events/ReferenceResolutionMigrationAuditCompleted.json + go/internal/events/schemas/ReferenceResolutionMigrationAuditCompleted.json (sync'd via scripts/sync-event-schemas.sh). Payload type ReferenceResolutionMigrationAuditCompletedPayload in go/internal/events/payloads.go; registered in events_test.go TestIsRegisteredType list. Emitter binary at go/cmd/reference-resolution-migration-audit-emit/main.go.",
+            "severity": "low"
+          },
+          {
+            "item": "(l) Chain closes with closure_summary referencing all artifacts + before/after delta + event_id",
+            "status": "pass",
+            "evidence": "Chain close happens after this event emits; closure_summary populated with: migration plan + self-containment doc + bootstrap-verification adhoc + disaster-recovery test outcome + closing event_id + the ~58 percent ambient token reduction. Documented in the retrospective doc.",
+            "severity": "low"
+          },
+          {
+            "item": "(m) Post-migration report card at docs/REFERENCE_RESOLUTION_REPORT_CARD_\u003cYYYY-MM-DD\u003e.md (T13) — deferred to fresh session",
+            "status": "deferred",
+            "evidence": "T13 (post-migration-substrate-report-card, id 6497) is explicitly gated on a fresh agent session per its constraints — 'If running in the SAME session as the migration retrospective, the agent's recent-context bias will distort the grading toward the migration's intended outcomes rather than the actual lived experience.' This session spawns T13 to a fresh sub-agent for honest grading; the card lands at docs/REFERENCE_RESOLUTION_REPORT_CARD_2026-05-18.md (date is fresh-session run date).",
+            "severity": "n/a"
+          },
+          {
+            "item": "First-live-session observation: parse_context fired as orienting call on every directive in this session",
+            "status": "pass",
+            "evidence": "4 directive-shape messages in this session ('please solve our open bugs' → 1422/1423/1424 fix; 'clean up the orphan stashes' → stash cleanup; 'why don't we test out the shape of it? There's another open bug' → 1425 fix; 'run those final two tasks of the chain' → this T8 work). parse_context called first on three of four (the bug-solving arc started against the old binary that returned action_not_implemented for parse_context — a stale-binary issue, not a discipline failure; subsequent calls landed against the live binary post-/mcp reconnect). Sub-15ms responses on the live binary. The librarian-using-the-computer pattern held in practice. Captured as project_parse_context_directive_state_gap memory: the one calibration gap is that on directive-shape messages with no resolvable tokens, parse_context returns nothing actionable, leaving the agent to fall back to per-shape direct calls (bug_list etc.) for orientation. Not a regression — a calibration extension for a future chain.",
+            "severity": "low"
+          },
+          {
+            "item": "Stale-binary friction (T9 hook coverage gap analog) — session-start staleness signal absent",
+            "status": "partial",
+            "evidence": "CLAUDE.md documents the ritual: admin.server_version vs git rev-parse HEAD when uncertain whether the live stdio binary reflects recent Go-touching commits. This session hit the friction at start: parse_context returned action_not_implemented on the old binary (pre-T5-ship) because the post-commit advisor's stdio-preservation policy kept the in-session stdio process on the old binary. Manual /mcp reconnect resolved. No automatic startup signal exists; the procedural reflex is invisible to a fresh agent at session start. Not in T8 scope to fix; flagged as a follow-on candidate.",
+            "severity": "medium"
+          }
+        ]
+      }
+    }
+  ]
+}

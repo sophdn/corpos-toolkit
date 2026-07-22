@@ -1,0 +1,33 @@
+surface = "measure"
+action = "gate_trend"
+purpose = "Read the corpos-gate trend for a project from proj_gate_runs — the coverage / mutation / verdict time series recorded by gate_run, most-recent runs first (ran_at DESC). Each point carries ran_at, commit_sha, tier, overall_ok, coverage_pct, and mutation_score."
+
+[[params]]
+  name = "project"
+  type = "string"
+  required = true
+  description = "Project whose gate trend to read. Falls back to the dispatch envelope's project."
+
+[[params]]
+  name = "metric"
+  type = "optional_string"
+  required = false
+  description = "Optional filter: 'coverage' returns only runs with a coverage metric, 'mutation' only runs with a mutation score, 'verdict' the full series (default when omitted). Any other value is a param error."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Cap the number of runs returned (most recent first). No limit when omitted or <= 0."
+
+[[examples]]
+  description = "Read the last 20 gate runs for a project"
+  call = "{\"action\":\"gate_trend\",\"project\":\"corpos-toolkit\",\"params\":{\"limit\":20}}"
+
+[[examples]]
+  description = "Read only runs that carry a coverage metric"
+  call = "{\"action\":\"gate_trend\",\"project\":\"corpos-toolkit\",\"params\":{\"metric\":\"coverage\"}}"
+
+[returns]
+  shape = "GateTrendResult"
+  description = "Carries project, metric (echo), and points[] — each {ran_at, commit_sha, tier, overall_ok, coverage_pct, mutation_score} ordered most-recent first. On param error: error names the missing/invalid param."

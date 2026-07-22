@@ -1,0 +1,3 @@
+surface = "admin"
+action = "health"
+purpose = "Alias for server_health — returns toolkit server liveness, DB connectivity, registered surfaces. See server_health for the canonical chunk."

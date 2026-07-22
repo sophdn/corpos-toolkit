@@ -1,0 +1,11 @@
+surface = "sys"
+action = "_general"
+purpose = "Owned system surface. Read-only introspection of live host state (processes, listening ports, systemd-user units, containers) — the owned, substrate-native counterpart to the harness Bash tool's introspection half. Returns structured rows rather than raw shell text."
+
+notes = """
+READ-ONLY / UNGATED. Observation cannot mutate host state, so every action on this surface — ps / ports / units / containers — is READ-ONLY and UNGATED: any actor may call them without a rationale. (The gated `exec` action was RETIRED from this surface in corpos-substrate-topology T6 — host command execution is host-loop work owned by the agent loop natively, not the shared substrate.)
+
+STRUCTURED ROWS, NOT SHELL TEXT. Each action returns typed rows (e.g. a port row carries proto/state/local_addr/local_port/pid/process), parsed from the host tool's output (/proc, ss, systemctl, podman/docker) by a pure parser. A model reconstructs an inventory by joining these rows rather than scraping raw text, and the parsers are unit-tested against captured real output.
+
+FAIL-SOFT. sys.containers probes podman and docker independently and contributes rows from whichever is present (an absent runtime is simply omitted). sys.ports / sys.units require their one tool (ss / systemctl) and error if it is missing.
+"""

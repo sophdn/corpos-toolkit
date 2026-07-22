@@ -1,0 +1,12 @@
+surface = "work"
+action = "forge_schema"
+purpose = "Return a schema's full field list AND per-supported-op call envelopes (which params go at top level vs inside `fields` for create / update / delete)."
+
+[[params]]
+  name = "schema_name"
+  type = "string"
+  required = true
+  description = "Schema to describe. Alias: name."
+
+[[examples]]
+  call = "{\"schema_name\":\"task\"}"

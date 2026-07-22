@@ -1,0 +1,33 @@
+# Canonical Go action: work.task_complete (see go/internal/actiondocs/corpus/work/task_complete.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "complete-task"
+version = "1.0.0"
+description = "Close a task — flip status from active to closed and record a handoff_output that downstream consumers can read."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "complete the task",
+    "close the task",
+    "close this task",
+    "finish the task",
+    "mark task closed",
+    "wrap up the task",
+    "task done",
+    "task complete",
+    "i'm done with",
+    "complete_task",
+    "handoff output",
+]
+when_not = [
+    "starting a task — use start_task instead",
+    "task is incomplete or blocked — leave active or use block_task",
+    "rolling back a closure — use reopen_task instead",
+    "cancelling a task that no longer applies — use cancel_task instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/complete-task.md"

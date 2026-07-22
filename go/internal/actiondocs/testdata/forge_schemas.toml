@@ -1,0 +1,5 @@
+surface = "work"
+action = "forge_schemas"
+purpose = "List every registered forge schema with its supported_ops. Companion forge_schema(name) returns the field list for one schema."
+
+notes = "Take this list before forging a new kind so the caller doesn't have to round-trip through 'unknown schema' errors."

@@ -1,0 +1,76 @@
+surface = "fs"
+action = "edit"
+purpose = "Replace an exact string in a file. The owned replacement for the harness Edit tool."
+notes = "CONTRACT: the file is read and CRLF normalized to LF before matching; the result is written with LF endings. old_string must occur exactly once unless replace_all is set. FAMILY PRECONDITION: editing an EXISTING file requires a prior full fs.read (and no change since) via the owned read-state — the same coupling as fs.write, so read/write/edit are self-consistent and can be denied together. SUBSTRATE UPGRADE (opt-in, default stays a plain exact-string replace): record mode emits an ArtifactEdited event (intent → event rationale) keyed by the absolute path — the edit half of the write->read provenance loop. Emission is fail-open: an event-log error never fails an edit that already committed."
+
+[[params]]
+  name = "file_path"
+  type = "string"
+  required = true
+  description = "Absolute or working-directory-relative path to edit."
+
+[[params]]
+  name = "old_string"
+  type = "string"
+  required = true
+  description = "The exact text to replace. Empty string creates a new file (nonexistent path) or fills an empty file from new_string."
+
+[[params]]
+  name = "new_string"
+  type = "string"
+  required = true
+  description = "The replacement text. Must differ from old_string."
+
+[[params]]
+  name = "replace_all"
+  type = "bool"
+  required = false
+  description = "Replace every occurrence of old_string (default false → replace the single occurrence; >1 match without this errors)."
+
+[[params]]
+  name = "record"
+  type = "bool"
+  required = false
+  description = "OPT-IN provenance mode: emit an ArtifactEdited event for this edit so fs.read provenance mode can fold it into the file's mutation history. Default off (no event)."
+
+[[params]]
+  name = "intent"
+  type = "optional_string"
+  required = false
+  description = "Free-text intent recorded as the ArtifactEdited event's rationale (only meaningful with record=true)."
+
+[[param_aliases]]
+  from = "path"
+  to = "file_path"
+
+[[errors]]
+  condition = "file_path missing or empty"
+  message = "fs.edit requires file_path"
+
+[[errors]]
+  condition = "old_string equals new_string"
+  message = "fs.edit: No changes to make: old_string and new_string are exactly the same."
+
+[[errors]]
+  condition = "old_string not present in the file"
+  message = "fs.edit: String to replace not found in file.\\nString: <old_string>"
+
+[[errors]]
+  condition = "old_string occurs more than once and replace_all is false"
+  message = "fs.edit: Found <n> matches of the string to replace, but replace_all is false. ...\\nString: <old_string>"
+
+[[errors]]
+  condition = "editing an existing file that was not fully read first (or changed since read)"
+  message = "fs.edit: File has not been read yet. Read it first before writing to it. (or: ... modified since read ...)"
+
+[[errors]]
+  condition = "non-empty old_string on a nonexistent file"
+  message = "fs.edit: file does not exist: <path>"
+
+[[errors]]
+  condition = "empty old_string on a non-empty existing file"
+  message = "fs.edit: Cannot create new file - file already exists."
+
+[returns]
+  shape = "EditResult"
+  description = "file_path, created (true when an empty old_string created a new file), replacements (occurrences replaced), and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactEdited event; omitted on a default edit."

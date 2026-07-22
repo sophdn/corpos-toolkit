@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/SuggestionReported.json",
+  "title": "SuggestionReported payload",
+  "description": "Emitted when a new suggestion is filed via forge(schema_name='suggestion', ...). Captures the create-time field values; mirrors the suggestion forge-schema. Subsequent mutations emit their own typed events (SuggestionResolved, SuggestionReopened, SuggestionStamped). The suggestion's entity reference is in the envelope; this schema covers payload-only. NOTE: native vocabulary throughout — `priority` not `severity`. See chain `agent-suggestion-box` for why suggestions are a separate entity from bugs rather than a discriminator on the bugs table.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "problem_statement"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short human description — one line, sentence-style. Mirrors suggestion.toml's title field. Required at file-time."
+    },
+    "problem_statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the suggestion proposes and why it would help. Mirrors suggestion.toml's problem_statement — forward-looking voice (the case for the change), unlike bug.problem_statement which is observational."
+    },
+    "surface": {
+      "type": ["string", "null"],
+      "description": "Subsystem / crate / concept the suggestion lives in. Comma-separated lowercase-kebab tags. Convention matches suggestion.toml — see its description for the matching semantics in suggestion_list."
+    },
+    "priority": {
+      "type": ["string", "null"],
+      "enum": ["low", "medium", "high", null],
+      "description": "Accepted values: low, medium, high. null when the caller omitted priority; the forge writer defaults to medium downstream. Native vocabulary — this is the suggestion-side analogue of severity."
+    },
+    "source": {
+      "type": ["string", "null"],
+      "description": "Where the suggestion was surfaced — conventional value 'session retro on <YYYY-MM-DD>' for skill-driven filings; originating session/arc identifier for arcreview-pipeline filings."
+    },
+    "tags": {
+      "type": ["string", "null"],
+      "description": "Categorical labels — broader than bug.tags (testing, lint, docs, tooling, prose, architecture, skill, workflow). Comma-separated, lowercase-kebab."
+    },
+    "acceptance_criteria": {
+      "type": ["string", "array", "null"],
+      "description": "What 'adopted' looks like. Accepts a list of strings (one bullet per criterion) or a single string (coerced to a 1-element list upstream). Optional at file-time.",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": ["string", "null"],
+      "description": "Scope limits — don't-over-build notes, boundaries the implementation must respect. Paragraph prose."
+    }
+  }
+}

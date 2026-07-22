@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BenchmarkBaselineUpdated.json",
+  "title": "BenchmarkBaselineUpdated payload",
+  "description": "Emitted by measure.bench_run when called with update_baseline=true. Records the explicit baseline overwrite separately from the routine BenchmarkDiff so the events ledger has a first-class audit trail for 'this is when the baseline shifted'. Composite with BenchmarkDiff: a single update_baseline=true call emits both events in one transaction (BenchmarkBaselineUpdated first, then BenchmarkDiff with baseline_updated=true). T1 design audit added this as the 9th event type beyond the chain's original 8.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "baseline_json_path"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The bench's slug."
+    },
+    "baseline_json_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path to the baseline file that was overwritten."
+    },
+    "previous_baseline_sha256": {
+      "type": "string",
+      "description": "Optional SHA-256 of the baseline file content BEFORE overwrite. Set when the file existed; absent when this was a first-time baseline write."
+    },
+    "new_baseline_sha256": {
+      "type": "string",
+      "minLength": 1,
+      "description": "SHA-256 of the baseline file content AFTER overwrite. Pairs with previous_baseline_sha256 for round-trip auditability."
+    }
+  }
+}

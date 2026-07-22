@@ -1,0 +1,34 @@
+surface = "work"
+action = "bug_stamp_sha"
+purpose = "Stamp a commit SHA on an already-resolved bug."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Bug id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+
+[[params]]
+  name = "commit_sha"
+  type = "string"
+  required = true
+  description = "SHA to stamp. Alias: sha. Accepts 'unversioned'."
+
+[[param_aliases]]
+  from = "sha"
+  to = "commit_sha"
+
+[[examples]]
+  call = "{\"slug\":\"my-bug\",\"sha\":\"abc1234\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

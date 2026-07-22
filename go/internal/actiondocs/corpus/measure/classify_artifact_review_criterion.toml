@@ -1,0 +1,22 @@
+surface = "measure"
+action = "classify_artifact_review_criterion"
+purpose = "Dispatches the artifact-review rubric via Qwen — evaluates ONE criterion against ONE artifact excerpt under a named review purpose; purpose ∈ {safety, completeness, scope-fit, quality, coherence, scope-drift, custom}; label ∈ {pass, fail, mixed, n-a}; bias-toward-mixed clause: use mixed over fail when violation is partial; writes a benchmark_results row; returns {label, latency_ms, model_name}."
+notes = "Bias-toward-mixed clause: use mixed over fail when violation is partial."
+
+[[params]]
+  name = "artifact_excerpt"
+  type = "string"
+  required = true
+  description = "The artifact excerpt to evaluate."
+
+[[params]]
+  name = "purpose"
+  type = "string"
+  required = true
+  description = "Review purpose. One of: safety, completeness, scope-fit, quality, coherence, scope-drift, custom."
+
+[[params]]
+  name = "criterion"
+  type = "string"
+  required = true
+  description = "The single criterion to evaluate against this excerpt under this purpose."

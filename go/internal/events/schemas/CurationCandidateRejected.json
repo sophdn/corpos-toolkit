@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/CurationCandidateRejected.json",
+  "title": "CurationCandidateRejected payload",
+  "description": "Emitted when a curation_candidate transitions from status='pending' to status='rejected' via MCP curation_reject (single) or curation_bulk_action (one event per row). The reason field is required — the dispatch boundary refuses empty-reason calls; this schema is the second line of defense.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidate_id", "source_type", "source_ref", "origin", "reason"],
+  "properties": {
+    "candidate_id": {
+      "type": "integer",
+      "description": "Row id in curation_candidates that was rejected."
+    },
+    "source_type": {
+      "type": "string",
+      "description": "Mirrors curation_candidates.source_type."
+    },
+    "source_ref": {
+      "type": "string",
+      "description": "Mirrors curation_candidates.source_ref."
+    },
+    "origin": {
+      "type": "string",
+      "enum": ["zero_result_gap", "task_handoff", "session_mining"],
+      "description": "Which discovery path originally produced the candidate."
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-supplied reason for the rejection. Non-empty (the handler enforces this and so does this schema)."
+    }
+  }
+}

@@ -1,0 +1,75 @@
+# Quadlet container unit — the FLIP target: toolkit-server backend owning the
+# CANONICAL DB (chain auto-startup-dev-services T7, "the CRUX").
+#
+# This is the post-flip replacement for toolkit-server.container. The
+# difference is the DB source:
+#   - toolkit-server.container       → its OWN volume (tks-data), separate DB
+#                                       (DB strategy c — the validation/coexist phase).
+#   - toolkit-server-canonical.container → BIND-mounts the host's canonical ledger
+#                                       dir, so the container is the SOLE opener
+#                                       of data/toolkit.db (the flip).
+#
+# DO NOT install this alongside a running native :3000 daemon or any native
+# stdio session that still opens the same file — that is the cross-mount-
+# namespace WAL hazard this whole chain exists to avoid. Install it ONLY via
+# scripts/flip-to-container-canonical.sh, which first proves no other process
+# holds the file (single-writer is non-negotiable).
+#
+# Same unit name + published port as toolkit-server.container (ContainerName=
+# toolkit-server, 3001:3000) so the flip is a content swap of one quadlet file,
+# not a fleet of renames. The stdio→HTTP proxy (cmd/toolkit-proxy, the .mcp.json
+# command post-flip) reaches it at http://localhost:3001/mcp/<surface>.
+#
+# image-lags-HEAD (chain req 3) still holds: this runs localhost/toolkit-server
+# :dev AS BUILT. Advance it explicitly:
+#     scripts/build-toolkit-image.sh && systemctl --user restart toolkit-server
+[Unit]
+Description=toolkit-server backend (containerized) — CANONICAL DB owner on :3001
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=toolkit-server
+Image=localhost/toolkit-server:dev
+Network=corpos.network
+PublishPort=3001:3000
+# Bind the host canonical ledger DIR (not a named volume). /data/toolkit.db is
+# then the live canonical file; WAL/SHM sit beside it in the same bind → one
+# mount namespace owns all three.
+# RELOCATED 2026-06-09 (finish-sophdn-repo-split T6): the canonical DB moved out
+# of the to-be-archived mcp-servers working tree into a repo-independent host path
+# (~/.local/share/toolkit/data) so mcp-servers can be frozen/archived without
+# stranding the live ledger. Service-named (not repo-named) → survives the T9
+# repo rename. Re-running install-quadlet-units.sh now installs THIS path.
+Volume=%h/.local/share/toolkit/data:/data
+# Bind the host agent vault so memory/vault-note/retrospective artifacts written
+# by the containerized toolkit land on the HOST vault (~/.claude/vault) — not the
+# container's ephemeral FS. Without this the artifact .md bodies are lost on
+# restart and never materialize into MEMORY.md (bug containerized-toolkit-writes-
+# vault-artifacts-to-ephemeral-container-fs-not-host-vault). The image's $HOME is
+# /home/nonroot, so $HOME/.claude/vault resolves under this mount; the UserNS
+# keep-id map below makes the writes land as the host user.
+Volume=%h/.claude/vault:/home/nonroot/.claude/vault
+# Rootless uid bridge: the distroless image runs as nonroot (uid 65532), but the
+# canonical file is owned by the host user (uid 1000). keep-id:uid=65532 maps the
+# container's 65532 back to the invoking host uid, so the nonroot process reads
+# AND WRITES the host file as the host user. Without this, writes fail silently
+# or the file flips ownership. (Validated under podman 4.9.3, T7.)
+UserNS=keep-id:uid=65532,gid=65532
+# Inference base URL: from INSIDE the container, llama.cpp is NOT at localhost
+# (that's this container) — it's the llama-server container on corpos-net. Point
+# both the inference router (TOOLKIT_LOCAL_URL) and the health probe
+# (LLAMA_CPP_BASE_URL) at the corpos-net DNS name. The localhost:8081 default
+# only works for the native fallback (bug containerized-toolkit-reaches-llama-at-
+# localhost-8081-not-llama-server-container).
+Environment=TOOLKIT_LOCAL_URL=http://llama-server:8081
+Environment=LLAMA_CPP_BASE_URL=http://llama-server:8081
+
+[Service]
+# A crash should bring it back. With the canonical DB now container-owned, the
+# WAL is recovered on restart by the same single opener — safe to auto-restart.
+Restart=on-failure
+TimeoutStartSec=90
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,104 @@
+name        = "reference-domain-term-detector"
+description = "Classify whether a short noun phrase from a user message is a project-internal domain term (something the toolkit's knowledge surface — vault / library / chains / bugs — would have a binding for) versus generic English, a person's name, or an external technical concept."
+# Cold-start rubric for the reference-resolution substrate (chain
+# reference-resolution-substrate T2). The substrate's domain-term
+# detector calls into this rubric via go/internal/measure/classify;
+# T7 swaps a trained sklearn classifier behind the same surface
+# when the ML capability chain ships. Keep is_deployed=true so the
+# Detect call path doesn't reject the rubric at startup.
+is_deployed = true
+output_enum = [
+  "domain-term",
+  "not-domain-term",
+  "unclear",
+]
+
+criteria = [
+  "domain-term: the phrase names a project-internal concept the toolkit's knowledge surfaces (vault / library / chains / bugs / glossary) plausibly bind. Examples: 'Tripolar Invariant' (a glyph-model concept in self.compile), 'Tier-1 confidence' (rubric vocabulary), 'click_kind enum' (telemetry-substrate concept), 'span_id contract' (event-substrate concept), 'Stop hook supersession' (this very chain's concept). Often capitalized; often domain-loaded vocabulary; often the phrase reads as a coined name rather than plain English.",
+  "not-domain-term: the phrase is generic English ('The User', 'A Few Things'), a person's name ('Sophi Neilson', 'Anthropic'), an external technical concept the toolkit doesn't itself own ('React Native', 'SQLite FTS5', 'Linear Regression'), or a multi-word noun that's just descriptive rather than coined ('The Server', 'A Quick Note'). External technical terms go to kiwix; person names go nowhere; generic English is filtered out by the upstream detector.",
+  "unclear: the phrase could plausibly be domain-internal OR external technical OR generic depending on context the rubric doesn't have. Use sparingly — bias toward not-domain-term when the phrase looks generic, toward domain-term when the phrase looks coined.",
+]
+
+prompt_template = """You classify ONE short noun phrase by whether it is a project-internal \
+domain term that the toolkit-server knowledge surface (vault notes, library \
+entries, chain / task / bug slugs, glossary entries) would have a binding for.
+
+The toolkit-server is the agent-OS for several local projects: mcp-servers \
+(this repo), seed-packet, self-compile (a Godot 4 game with glyph-model \
+mechanics), dm-toolkit, and dashboard. Domain terms include: glyph-model \
+vocabulary ('Tripolar Invariant', 'Vessel Quirk'), telemetry-substrate vocab \
+('click_kind', 'span_id', 'prompt_id', 'query_source'), reference-resolution \
+vocab ('confidence tier', 'resolver registry', 'shape category'), event-substrate \
+vocab ('event envelope', 'cascade emit', 'fold function'), rubric-classifier \
+vocab ('Tier-1 confidence', 'tiered context loading'), and any coined \
+multi-word concept named in a vault note or library entry.
+
+Labels (output exactly one):
+- **domain-term**: a project-internal coined concept; toolkit knowledge \
+surfaces likely bind it.
+- **not-domain-term**: generic English, a person's name, or an external \
+technical concept the toolkit doesn't own. External terms route to kiwix; \
+person names route to nothing; generic English is filtered upstream.
+- **unclear**: the phrase could plausibly be domain-internal or external \
+or generic depending on context not visible here. Use rarely; bias toward \
+not-domain-term when generic, toward domain-term when coined."""
+
+[[examples]]
+text      = "Tripolar Invariant"
+label     = "domain-term"
+reasoning = "Coined three-word concept; matches the self-compile glyph-model vocabulary. Toolkit vault has notes on this exact term."
+
+[[examples]]
+text      = "click_kind enum"
+label     = "domain-term"
+reasoning = "Telemetry-substrate vocabulary. Maps to docs/TELEMETRY_SUBSTRATE.md §5; vault has the canonical four-tier rationale note."
+
+[[examples]]
+text      = "React Native"
+label     = "not-domain-term"
+reasoning = "External technical framework. Routes to kiwix, not the toolkit's project-internal knowledge surfaces."
+
+[[examples]]
+text      = "Sophi Neilson"
+label     = "not-domain-term"
+reasoning = "Person name. Toolkit has no person-name binding surface."
+
+[[examples]]
+text      = "The Server"
+label     = "not-domain-term"
+reasoning = "Generic English noun phrase, not a coined concept. The toolkit-server is named directly elsewhere; 'The Server' is descriptive."
+
+[[examples]]
+text      = "span_id contract"
+label     = "domain-term"
+reasoning = "Event-substrate concept (docs/EVENT_SUBSTRATE.md §6). The 'contract' qualifier is project-internal vocabulary."
+
+[[examples]]
+text      = "Quick Question"
+label     = "not-domain-term"
+reasoning = "Generic English phrase. Frequently appears at the start of user messages but binds to nothing in the toolkit's knowledge surface."
+
+[[examples]]
+text      = "Vessel Quirk"
+label     = "domain-term"
+reasoning = "Self-compile glyph-model vocabulary; specific game-domain coined term with a binding in the world/ CSVs and vault notes."
+
+[[examples]]
+text      = "Hook Supersession"
+label     = "domain-term"
+reasoning = "Coined reference-resolution-substrate concept (this chain's design doc §7). Toolkit has the canonical write-up."
+
+[[examples]]
+text      = "Linear Regression"
+label     = "not-domain-term"
+reasoning = "External ML concept; routes to kiwix or general technical references. Not toolkit-internal."
+
+[[examples]]
+text      = "Tier-1 Confidence"
+label     = "domain-term"
+reasoning = "Rubric-vocabulary concept; appears in the two-tier confidence model documented in vault learnings."
+
+[[examples]]
+text      = "Cross Encoder"
+label     = "unclear"
+reasoning = "Could be the project's planned cross-encoder reranker (domain-term, per local-ml-roadmap.md §1.1) OR the general ML technique (external, kiwix). Without context, label as unclear."

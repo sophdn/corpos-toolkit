@@ -1,0 +1,7 @@
+surface = "ecosystem"
+action = "canon_list"
+purpose = "Enumerate the canonical-names map: every entry (slug, kind, canonical value, status) with its aliases."
+
+[returns]
+  shape = "CanonListResult"
+  description = "entries (with aliases) and a count."

@@ -1,0 +1,88 @@
+# Memory schema — auto-memory entries created via forge.
+#
+# Replaces the direct-Write authoring path for Claude Code auto-memory
+# entries with a schema-enforced shape that:
+#   1. Renders the legacy-compatible frontmatter the harness auto-load
+#      expects (`name`, `description`, `metadata.type`, plus optional
+#      `metadata.source`, `metadata.observed_first`,
+#      `metadata.recurrence_count`). See docs/MEMORY_SUBSTRATE.md §3.
+#   2. Routes the file to ~/.claude/vault/memory/<kind>/<name>.md per
+#      the four-kind taxonomy locked in T1 (user / feedback / project /
+#      reference). Path layout: see docs/MEMORY_SUBSTRATE.md §4.
+#   3. Emits a MemoryWritten event for the arc-close-filing-review
+#      telemetry pipeline + future training corpus (T7 §Memory lifecycle
+#      in docs/EVENT_CATALOG.md).
+#
+# Sibling of vault-note: distinct schema because the frontmatter shape
+# differs (auto-memory contract requires `metadata:` as a nested block;
+# vault-note uses flat top-level keys), the memory-specific fields
+# (source / observed_first / recurrence_count) don't belong on vault-note,
+# and the `reference` kind has different semantics (external-system
+# pointers here vs project/domain reference material there). Full
+# rationale in docs/MEMORY_SUBSTRATE.md §2.
+#
+# CROSS-PROJECT BY DESIGN. `cross_project = true` exempts the schema
+# from the forge dispatcher's project-required gate. Kind drives the
+# subdir routing (not scope, unlike vault-note's `learning` kind);
+# top-level `project` carries DB attribution (which project_id the
+# resulting knowledge_pointer is stamped with). User-kind entries
+# semantically span every project; T3's materialization hook fans them
+# out to every project's harness dir on session start.
+supported_ops = ["create", "update"]
+
+[schema]
+name = "memory"
+prefix = ""
+output_dir = "vault"
+filename_pattern = "memory/{kind}/{slug}.md"
+cross_project = true
+
+[storage]
+target = "markdown"
+prefix = ""
+output_dir = "vault"
+filename_pattern = "memory/{kind}/{slug}.md"
+
+[[fields]]
+# Named `memory_kind` (not `kind`) because top-level `kind` is a reserved
+# alias for `schema_name` on the forge sugar shape — a field literally
+# named `kind` would be silently stripped on sugar-shape calls. Same
+# disambiguation as vault-note's `note_kind`.
+name = "memory_kind"
+type = "string"
+description = "Vault subdir routing. One of `user` (about the user — role, expertise, preferences; cross-project semantics, fanned out to every project's harness dir by T3's materialization hook), `feedback` (guidance from corrections + confirmations; project-scoped), `project` (ongoing work / decisions / incidents; project-scoped), or `reference` (pointers to external systems like Linear projects, Grafana dashboards, Slack channels; project-scoped). The taxonomy is closed."
+enum_values = ["user", "feedback", "project", "reference"]
+
+[[fields]]
+name = "name"
+type = "string"
+description = "Kebab-case slug. Becomes both the filename (`<name>.md`) and the frontmatter `name:` field. Must match `^[a-z0-9-]+$` (enforced at forge-validate time)."
+
+[[fields]]
+name = "description"
+type = "string"
+description = "One-line description. No newline characters (rejected at validation). Surfaced in MEMORY.md index rebuilds (T3) and in parse_context candidate listings."
+
+[[fields]]
+name = "body"
+type = "string"
+description = "Markdown body. For `feedback` and `project` kinds, lead with the rule/fact, then a `**Why:**` line, then a `**How to apply:**` line. Link related memories with `[[name]]`. The schema does not enforce body structure — only that it is non-empty."
+
+[[fields]]
+name = "source"
+type = "optional_string"
+description = "Provenance — e.g. `arc-close-filing-review` (substrate-side fire via the Stop hook), `manual` (user-authored via direct forge call), `migration` (T4's one-shot harness-dir migration). Surfaced in the `MemoryWritten` event for telemetry."
+
+[[fields]]
+name = "observed_first"
+type = "optional_string"
+description = "ISO date (YYYY-MM-DD) the pattern first surfaced. Optional; defaults to write date when absent. Used by the future recurrence-merging path to determine when a memory entry first captured a behaviour."
+
+[[fields]]
+name = "recurrence_count"
+type = "optional_string"
+description = "Stringified integer counting how many times the agent has observed this pattern. Optional. The future de-duplication path uses this to merge near-duplicate writes (T7 §Open questions). Stored as string to match forge's optional-int representation; downstream consumers parse to int."
+
+[[sections]]
+heading = ""
+fields = ["body"]

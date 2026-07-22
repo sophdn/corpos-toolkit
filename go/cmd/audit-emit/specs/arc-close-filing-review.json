@@ -1,0 +1,69 @@
+{
+  "actor_id": "claude-opus-4-7-arc-close-filing-review-T7",
+  "entity": {
+    "kind": "chain",
+    "slug": "arc-close-filing-review",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ArcCloseFilingReviewSubstrateAuditCompleted",
+      "rationale": "Chain arc-close-filing-review T7 retrospective — emitting the substrate audit findings through the write-side events ledger as the self-hosting proof of the substrate-mediated firing pattern. Sister to the substrate quartet's closing audits (Architecture / Telemetry / ReferenceResolution / MLCapability). All eight chain-completion criteria pass except (f) which lands as partial (single-session validation; 2-session cross-boundary criterion deferred pending the user merging the Stop-hook entry into ~/.claude/settings.json). The substrate ROI begins materializing when corpus volume from real-session fires accumulates enough to unlock the trained-classifier + smart-snapshot-filter ml-temp candidates.",
+      "payload": {
+        "audit_doc": "docs/ARC_CLOSE_FILING_REVIEW.md (T2 design — 578-line canonical spec, all five implementation decisions locked at §Implementation-decisions) + docs/ARC_CLOSE_FILING_REVIEW_RETROSPECTIVE_2026-05-19.md (T7 retrospective).",
+        "summary": "Arc-close filing review substrate ships verified end-to-end. Seven chain tasks plus T1.5 cruft-scan landed across nine substantive commits + four follow-up fixes surfaced during validation. The three structural moves from the originating audit (scheduled trigger, computational separation, prescriptive prompt language) are adopted with one substitution: the firing surface is Qwen via llama-server instead of a recursive Claude subagent — mirror of parse_context's substrate-mediated decision pattern, with the cost going from ~$0.05-0.20 + ~30s to ~$0 + ~1-2s per review. Completion criteria (a)-(e) all pass with on-disk artifacts (T1 skill body rewrites, T3 detector library, T4 MCP action + DB-backed debouncer, T5 Stop hook + HTTP MCP write surface). (g) pass — this doc. (h) pass — THIS event. (f) partial — three arc-close fires recorded in a single session; the 2-session cross-boundary criterion deferred pending the user merging the Stop-hook entry into ~/.claude/settings.json (auto-mode classifier blocked the agent self-modification mid-T5). Key precision lift mid-chain: a snapshot-extractor blindness bug surfaced during T6 validation (extractContent kept only type=text content parts, dropping 13/20 tool_use+tool_result+thinking parts in real transcripts) was fixed in-chain (commit 26b82f0) and demonstrated a +60% snapshot-token-count lift + visibly more specific arc summaries on a same-transcript re-fire. Eight friction items surfaced during T4-T6 are all filed and routed per the retrospective doc's routing table — no orphans. Memory-substrate-within-vault (chain id 613, 7 tasks) was forged as a follow-on after T6 surfaced that the default memory path is not forge-mediated / not in vault / not cross-project queryable.",
+        "recommended_next_phase": "Two parallel ml-temp candidates emerge from this chain, both gated on corpus volume from real-session fires: (1) trained-arc-close-filing-classifier-v1 replaces the Qwen review pipeline with a trained model (promotion gate: matches Qwen precision/recall on held-out arc-closes; latency target ≤50ms p95 vs Qwen's ~1-2s). (2) trained-smart-snapshot-filter-v1 replaces the dumb last-N-turns truncation with a learned per-turn relevance filter. Both ride ml-capability-substrate's A/B harness; the corpus accumulates through the ArcCloseFilingReviewed events landed by this chain (3 fires so far; ~50-100 real sessions before training viable). The chain-internal listener.go ships scaffolded with LogOnlyTriggerObserver; substrate-side review-firing from event-table tails is deferred pending a session_id ↔ transcript_path registry resolution which is a separate follow-on. Memory-substrate-within-vault (chain id 613) is forged and ready to start independently.",
+        "findings": [
+          {
+            "item": "(a) T1: vault-filing-discipline + bug-filing-discipline SKILL.md bodies rewritten with prescriptive language (be-ACTIVE opener, signal taxonomy, inaction-is-failure framing, preference order)",
+            "status": "pass",
+            "evidence": "Commit 95baf8a. Both skills gained a new '## The active discipline — file as the default' section near the top of the body: Be ACTIVE / nothing-to-file is valid but NOT default / signal taxonomy / preference order (AMEND-or-SUPERSEDE before EXTEND before FILE-NEW) / Do-NOT-file anti-patterns. Adapted from the prescriptive review-prompt pattern from the originating audit. The T1 commit also landed T1.5 (scan-and-clear-old-methodology-cruft): retired friction-filing-reminder.sh + symlink + manifest entry + .friction-audit/ dir + 6 settings.json.bak files + 3 stale Bash allowlist entries + 4 stale code refs.",
+            "severity": "low"
+          },
+          {
+            "item": "(b) Arc-close detector heuristic ships with documented signal list + tunable thresholds + telemetry on every fire",
+            "status": "pass",
+            "evidence": "Commit 04c73d6. hooks/arc-close-detector.sh — bash detector library; counter (5-turn threshold) + user-shape regex (done/thanks/wrapping/that's-all/looks-good/clear-command/session-end/any-else); per-session counter state at ~/.claude/.arc-review/\u003csession_id\u003e.json; periodic cleanup of files older than 7 days. 16/16 tests pass at hooks/test-arc-close-detector.sh covering empty session_id, fresh session, threshold fire + counter reset, anti-loop guard, user-shape matches, counter+shape co-fire, file cleanup.",
+            "severity": "low"
+          },
+          {
+            "item": "(c) MCP action work.review_arc_for_filing exists with structured-output schema + fail-open on malformed/low-confidence/unreachable",
+            "status": "pass",
+            "evidence": "Commits 0ed4e64 (Stage 1 package foundation) + 0beb6d4 (Stage 2 handler+debouncer) + 8ac1e65 (Stage 2 follow-up: work_actions catalog) + 3a134e5 (Stage 3 telemetry+listener) + 19abc1f (Stage 4 close). go/internal/arcreview/ package: schema.go (FilingDecision + closed enum ActionKind + per-action payload structs + ValidateDecision); snapshot.go (ExtractSnapshot reads JSONL transcripts; post-fix at 26b82f0 retains tool_use/tool_result/thinking with role-aware prefixes and head+tail truncation); compose.go (prescriptive Qwen prompt aligned with T1 skill bodies); dispatch.go (DispatchReview makes both Qwen calls; drift-tolerant ParseReviewResponse handling fenced JSON + preface text + braces in strings); handler.go (HandleReviewArcForFiling with typed status discriminator fired/debounced/skipped/qwen_unreachable); debouncer.go (per-session DB-backed Debouncer with 60s backoff subsuming 30s coalesce); listener.go (substrate-trigger fold-hook chained in front of projections fold; LogOnlyTriggerObserver as v1 production default — substrate-side review firing deferred). 51 unit tests + live llama-server integration test (skip-if-unreachable; ~10s on real Qwen).",
+            "severity": "low"
+          },
+          {
+            "item": "(d) ArcCloseFilingReviewed event type added to write-side ledger with corpus-ready fields",
+            "status": "pass",
+            "evidence": "Commit 3a134e5. blueprints/events/ArcCloseFilingReviewed.json — closed-shape schema with session_id, triggers[], snapshot dims (truncated/token_count/message_count), arc_summary, decisions[] as lean summaries (action+confidence+reasoning; no full payload bodies — those land via downstream forge emits), partition counts, latency, optional token counts. ArcCloseFilingReviewedPayload + FilingDecisionSummary in go/internal/events/payloads.go. Handler emits on every successful fired outcome (debounced/qwen_unreachable/skipped paths do NOT emit). 3 rows now in the events table from T6 validation; corpus accumulation begins.",
+            "severity": "low"
+          },
+          {
+            "item": "(e) Claude Code Stop hook integration: hook calls review_arc_for_filing and dispatches the typed partition (auto-execute for forge_bug/forge_vault_note/memory_write; surface-for-confirm for skill_update at any confidence + medium-confidence others; skip for low-confidence + nothing_to_file)",
+            "status": "pass",
+            "evidence": "Commits acc73c1 (Stop hook + 10-case regression scaffold + manifest+README+install entries) + d3f9d0b (HTTP MCP dispatch route on observehttp — the T5 spec assumed POST /mcp/\u003csurface\u003e existed but the daemon was GET-only by design; the spec-underspec gap was fixed mid-T5). hooks/arc-close-filing-review-hook.sh runs detector → POSTs to MCP HTTP → dispatches partition (forge for auto-execute, system-reminder for surface-for-confirm, drift-log for skip); always exits 0. The HTTP MCP write surface (POST /mcp/{surface}) lands as a clean extension: dispatcherRegistry package-level sync.RWMutex avoids reordering main.go's table-construction sequence; CallToolResult.Content[0] TextContent unwrapped + written as bare 200 response body matching the hook's expected shape. Six new HTTP tests + the 25-PASS hook regression scaffold + live end-to-end fire (synthetic Stop event → real auto-execute → real toolkit-DB bug landed + telemetry event emitted).",
+            "severity": "low"
+          },
+          {
+            "item": "(f) Real-work validation: 3+ arc-closes fire reviews, decisions parsed, forges dispatched, telemetry lands; across 2+ sessions",
+            "status": "partial",
+            "evidence": "3 arc-close fires recorded in single session: live-smoke-test-1 (5 messages, 155 tokens, 1 auto-execute synthetic-bug forge), t6-validation-bug1456-fix (20 messages, 1364 tokens truncated, 2 auto-execute on a generic arc summary — diagnosed as snapshot-extractor blindness to tool_use payloads), t6-validation-post-snapshot-fix-1 (20 messages, 2183 tokens truncated [+60% from extractor fix], 1 auto-execute capturing the recurring type-mismatch pattern as a vault-worthy learning + 1 nothing_to_file correctly skipping routine gofmt). Auto-execute precision rate 3/4 = 75% on n=4 (smoke-test fabrication was 1 false-positive). Surface-for-confirm = 0 in 3 fires; skill_update = 0 in 3 fires. The 2-session cross-boundary criterion is deferred because the auto-mode classifier blocked the agent's attempt to merge the Stop-hook entry into ~/.claude/settings.json mid-T5; the install script prints the snippet for user-side merge. Once merged, cross-session fires accumulate naturally; the chain remains functional but un-exercised in production until that one user action lands.",
+            "severity": "medium"
+          },
+          {
+            "item": "(g) Retrospective doc captures Qwen prompt evolution, threshold tuning, false-positive/false-negative rates",
+            "status": "pass",
+            "evidence": "docs/ARC_CLOSE_FILING_REVIEW_RETROSPECTIVE_2026-05-19.md — sections: what landed (per-task SHA table), the substrate quartet's three structural moves with the Qwen-vs-subagent substitution explained, acceptance criteria table, threshold values held (no tuning applied), Qwen prompt iteration (one version shipped), the snapshot-extractor fix with measurable before/after data, filing decision distribution across the 3-fire corpus, recommendation for the trained-classifier and smart-snapshot-filter follow-on chains, forward-compat with chain 17 cross-harness-reflex-port + bridge-harness post_turn hook, friction observed (9-row routing table; no orphans), honest what-worked-what-didn't assessment.",
+            "severity": "low"
+          },
+          {
+            "item": "(h) ArcCloseFilingReviewSubstrateAuditCompleted event lands through write-side ledger",
+            "status": "pass",
+            "evidence": "THIS event — self-hosting proof. The substrate that processes arc-close filing review records its own closing audit through the same internal/events.Emit path the meta-tool handlers use. New event type ArcCloseFilingReviewSubstrateAuditCompleted registered in go/internal/events/payloads.go + JSON schema at blueprints/events/ArcCloseFilingReviewSubstrateAuditCompleted.json + EVENT_CATALOG.md catalog entry under §Audit-lifecycle. Audit-emit binary at go/cmd/arc-close-filing-review-audit-emit/main.go follows the substrate-quartet pattern: one-shot, idempotent run, clean exit, one event row per invocation.",
+            "severity": "low"
+          }
+        ]
+      }
+    }
+  ]
+}

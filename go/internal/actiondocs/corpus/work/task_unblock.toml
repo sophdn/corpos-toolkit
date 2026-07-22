@@ -1,0 +1,42 @@
+surface = "work"
+action = "task_unblock"
+purpose = "Remove a previously-set blocker from a task."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Blocked task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Blocked task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug of the blocked task."
+
+[[params]]
+  name = "blocker_slug"
+  type = "string"
+  required = true
+  description = "Slug of the blocker to remove."
+
+[[params]]
+  name = "blocker_chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug for cross-chain blockers."
+
+[[examples]]
+  call = "{\"slug\":\"telemetry-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

@@ -1,0 +1,35 @@
+surface = "measure"
+action = "gate_run"
+purpose = "Run corpos-gate over a repo (loads its gate.yml, runs the reused internal/gate core for the tier) and return the aggregated verdict: overall_ok + per-check results + parsed coverage/mutation. The verdict is IDENTICAL to `corpos-gate run --tier=<tier>` on the same repo/commit (same core, not a fork). Persists the run as EVENT-SOURCED trend data (a GateRunCompleted event → proj_gate_runs + proj_gate_check_results) so coverage/mutation/verdict become a time series per project, read back via gate_trend. Persistence is ADDITIVE + DB-optional: if no DB is available or no project is supplied, the verdict is still returned with persisted=false and a note (a gate run must work with storage unavailable, e.g. in CI)."
+
+[[params]]
+  name = "repo_dir"
+  type = "string"
+  required = true
+  description = "Absolute (or CWD-relative) path to the repo root — the directory holding gate.yml. The gate runs against this tree."
+
+[[params]]
+  name = "tier"
+  type = "optional_string"
+  required = false
+  description = "Gate tier to run: 'pre-commit', 'pre-push', or 'ci' (tiers are a superset: ci ⊃ pre-push ⊃ pre-commit). Defaults to 'pre-push' when omitted."
+
+[[params]]
+  name = "project"
+  type = "optional_string"
+  required = false
+  description = "Project the trend row is recorded under. Falls back to the dispatch envelope's project. When empty (and none in the envelope), the verdict is still returned but the trend row is skipped (persisted=false)."
+
+[[params]]
+  name = "commit_sha"
+  type = "optional_string"
+  required = false
+  description = "The commit SHA the gate ran against, stored verbatim on the trend row so it can be joined back to a revision. Empty for a dirty / uncommitted working-tree run."
+
+[[examples]]
+  description = "Run the pre-push gate over a repo and record the trend row"
+  call = "{\"action\":\"gate_run\",\"project\":\"corpos-toolkit\",\"params\":{\"repo_dir\":\"/home/user/dev/corpos-toolkit\",\"tier\":\"pre-push\",\"commit_sha\":\"95eeca1\"}}"
+
+[returns]
+  shape = "GateRunResult"
+  description = "Always carries the verdict: overall_ok, tier, per-check checks[] (name/tier/ok/skipped/duration_ms/note), coverage_pct, branch_pct, mutation_score (-1 = N/A), duration_ms. persisted reports whether a trend row was written; persist_note explains a skip/failure. error is set only on a param error or a gate-core infra failure (missing gate.yml, a check that could not run) — a check that merely FAILS is a verdict (overall_ok=false), not an error."

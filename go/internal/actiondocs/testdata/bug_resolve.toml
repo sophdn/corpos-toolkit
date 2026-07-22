@@ -1,0 +1,68 @@
+surface = "work"
+action = "bug_resolve"
+purpose = "Close a bug with a resolution kind, recording who/how/why it ended. Accepts a SHA stamp so the closing commit is queryable from bug_read later."
+
+[[params]]
+name = "slug"
+type = "string"
+required = true
+description = "Bug identifier (slug or numeric id; id is accepted as an alias). Per bug 1329 parity, id-by-default flows like bug_list → bug_resolve avoid the extra lookup."
+
+[[params]]
+name = "resolution_kind"
+type = "string"
+required = true
+description = "One of: fixed, wontfix, upstream, dup, routed. Determines downstream lifecycle wiring."
+
+[[params]]
+name = "commit_sha"
+type = "optional_string"
+required = false
+description = "Implementing commit SHA. Accepts the literal sentinel 'unversioned' for fixes whose artifacts live outside any git repo (e.g. ~/.claude/ scripts, vault docs)."
+
+[[param_aliases]]
+from = "kind"
+to = "resolution_kind"
+
+[[param_aliases]]
+from = "sha"
+to = "commit_sha"
+
+[[param_aliases]]
+from = "id"
+to = "slug"
+notes = "Numeric id is accepted in place of the slug; the dispatcher resolves either to the same row."
+
+[[value_aliases]]
+param = "resolution_kind"
+from = "fix"
+to = "fixed"
+
+[[value_aliases]]
+param = "resolution_kind"
+from = "route"
+to = "routed"
+
+[[value_aliases]]
+param = "resolution_kind"
+from = "wont_fix"
+to = "wontfix"
+
+[[value_aliases]]
+param = "resolution_kind"
+from = "duplicate"
+to = "dup"
+
+[[value_aliases]]
+param = "resolution_kind"
+from = "external"
+to = "upstream"
+notes = "Also accepts externalized and upstreamed for the same canonical 'upstream' resolution."
+
+[[errors]]
+condition = "missing resolution_kind"
+message = "returns an explicit error naming all five accepted values."
+
+notes = """
+'upstream' was added in bug 1330. Distinct from wontfix's 'out of scope / working as intended' — upstream means 'real, reproducible, traceable to a dependency we don't author; not fixed locally for that reason.' See skill:bug-filing-discipline § Unversioned-artifact exception for when commit_sha='unversioned' is appropriate.
+"""

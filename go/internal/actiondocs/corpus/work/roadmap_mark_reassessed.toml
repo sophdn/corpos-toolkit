@@ -1,0 +1,12 @@
+surface = "work"
+action = "roadmap_mark_reassessed"
+purpose = "Bump the last_reassessed_at marker to now. Use after a roadmap review to acknowledge that diff items have been considered."
+
+[[examples]]
+  call = "{}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

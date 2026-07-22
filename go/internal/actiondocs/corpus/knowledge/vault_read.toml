@@ -1,0 +1,9 @@
+surface = "knowledge"
+action = "vault_read"
+purpose = "Return the note content + parsed frontmatter for one vault note. The path comes from vault_search results."
+
+[[params]]
+  name = "path"
+  type = "string"
+  required = true
+  description = "Vault note path, as returned by vault_search."

@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskCreated.json",
+  "title": "TaskCreated payload",
+  "description": "Emitted when a new task is filed via forge(schema_name='task', ...). Captures the create-time field values; mirrors the task forge-schema. The chain assignment is captured here AND will be re-emitted via TaskAssignedToChain if the task moves chains later. The task's entity reference (and project_id) is in the envelope.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["chain_slug", "problem_statement"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The chain this task belongs to at create time. Required — every task is born into a chain (toolkit-server has no orphan-task concept; chain_slug is NOT NULL in the tasks table)."
+    },
+    "position": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Ordinal position in the chain's task list. null when the caller didn't supply one (the chain hook appends to the end and the resulting position is captured in the row, not re-emitted here)."
+    },
+    "problem_statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What this task is about. Mirrors task.toml's problem_statement."
+    },
+    "acceptance_criteria": {
+      "type": ["string", "array", "null"],
+      "description": "What done looks like. List of bullets or single string; coerced to list upstream.",
+      "items": { "type": "string" }
+    },
+    "context_required": {
+      "type": ["string", "null"],
+      "description": "Files, docs, and prior decisions a worker needs before starting. Mirrors task.toml."
+    },
+    "constraints": {
+      "type": ["string", "null"],
+      "description": "Scope limits — what NOT to do, boundaries the work must respect."
+    },
+    "handoff_output": {
+      "type": ["string", "null"],
+      "description": "What artifacts this task produces that downstream tasks consume."
+    }
+  }
+}

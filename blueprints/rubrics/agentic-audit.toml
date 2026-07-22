@@ -1,0 +1,49 @@
+name        = "agentic-audit"
+description = "Agentic-architecture audit finding severity rubric"
+is_deployed = true
+output_enum = ["critical", "high", "medium", "low"]
+
+criteria = [
+  "critical: actively harmful. Trust tier violation, data loss, uncontrolled side effect, agent behaviour that's wrong (not just unoptimal).",
+  "high: structurally wrong. Works now, compounds as the system grows. Missing pillar boundaries; fat handler bundling concerns; retirement workflow without observability.",
+  "medium: naive. Works, but misses an opportunity. Prose describing what code should do; manually maintained structure where a generator would be cleaner; weak typing.",
+  "low: hygiene. No architectural consequence. File naming drift; redundant docs; lint warnings; comments out of date with code.",
+]
+
+prompt_template = """You classify ONE audit finding's severity. Severity tracks consequence, \
+NOT effort. Pick the lowest tier that fits.
+
+- **critical**: actively harmful. Trust tier violation, data loss, \
+uncontrolled side effect, agent behaviour that's wrong (not just \
+unoptimal). Examples: a Tier-1 read handler performing Tier-2 writes; \
+a workflow that silently overwrites prior decisions; a tool that can \
+exfiltrate secrets via SSRF.
+- **high**: structurally wrong. Works now, compounds as the system grows. \
+Examples: missing pillar boundaries (P3 transport doing P2 logic); \
+a "fat handler" that bundles persistence + observability; a \
+retirement workflow that updates persistence without observability.
+- **medium**: naive. Works, but misses an opportunity. Examples: prose \
+describing what code should do (MD-conversion smell); manually \
+maintained structure where a generator would be cleaner; weak typing \
+on a value that's about to grow constraints.
+- **low**: hygiene. No architectural consequence. Examples: file naming \
+drift; redundant docs; lint warnings; comments out of date with code.
+
+Severity tracks consequence. Do NOT assign **critical** to a hygiene \
+issue because it's visible. Do NOT assign **low** to a trust-tier \
+violation because the fix is small."""
+
+[[examples]]
+text      = "Finding: dispatch arm for `bug_resolve` accepts a `commit_sha` value passed through unaliased to forge_edit, but the dispatch layer does NOT enforce that the action's allowed-key list matches the schema's actual fields. A typo'd key name (e.g. `commit-sha` with a hyphen) is silently dropped at the dispatch boundary; the bug resolves with empty commit_sha."
+label     = "critical"
+reasoning = "Silent data loss at the dispatch boundary affects every agent that resolves a bug; uncontrolled-side-effect shape (data is silently lost, not erroring)."
+
+[[examples]]
+text      = "Finding: structure-lint hardcodes its rule set in match-arm prose; a TOML-driven rule definition would let users override per-project without recompiling."
+label     = "medium"
+reasoning = "Naive: works but misses the opportunity to make the rule set declarative. No correctness consequence today."
+
+[[examples]]
+text      = "Finding: blueprints/rubrics/artifact-review.toml's `description` field repeats the rubric name verbatim (\"artifact-review — artifact review\") rather than describing what it classifies."
+label     = "low"
+reasoning = "Hygiene. No behavioural impact; cosmetic. The description field doesn't gate any logic."

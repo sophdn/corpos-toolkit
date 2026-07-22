@@ -1,0 +1,31 @@
+[skill]
+name = "forge-edit"
+version = "1.0.0"
+description = "Edit a single field on an existing artifact — update or append. Markdown/dual shapes by artifact_path; DB-only shapes by key."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "forge_edit",
+    "edit artifact",
+    "update artifact",
+    "edit task",
+    "edit chain",
+    "edit pitch",
+    "update task field",
+    "update chain field",
+    "append to a list field",
+    "append to acceptance_criteria",
+    "rewrite a field",
+    "change problem_statement",
+    "edit handoff_output",
+]
+when_not = [
+    "creating a new artifact — use forge",
+    "deleting an artifact — use forge_delete",
+    "discovering schemas — use forge_list",
+    "task-row edits where dedicated tools exist (start_task, complete_task, populate_task_content, edit_task_content)",
+]
+
+[instructions]
+path = "action-manifests/instructions/forge-edit.md"

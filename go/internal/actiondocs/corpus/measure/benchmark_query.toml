@@ -1,0 +1,33 @@
+surface = "measure"
+action = "benchmark_query"
+purpose = "Return previously-recorded benchmark result rows, with optional filters. Each classify_* call writes one row implicitly, so this is the entry point for inspecting what was classified, when, and what came back. project comes from the dispatch envelope (empty project = cross-project); all params below are optional filters."
+
+[[params]]
+  name = "tool_name"
+  type = "optional_string"
+  required = false
+  description = "Filter to rows whose tool_name matches exactly."
+
+[[params]]
+  name = "model_name"
+  type = "optional_string"
+  required = false
+  description = "Filter to rows whose model_name matches exactly."
+
+[[params]]
+  name = "run_id"
+  type = "optional_string"
+  required = false
+  description = "Filter to rows whose run_id matches exactly."
+
+[[params]]
+  name = "since"
+  type = "integer"
+  required = false
+  description = "Lower-bound run_at (unix seconds); returns only rows with run_at >= since."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Cap the number of rows returned (most recent first by run_at)."

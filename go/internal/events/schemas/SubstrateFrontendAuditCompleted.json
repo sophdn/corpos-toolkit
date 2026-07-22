@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/SubstrateFrontendAuditCompleted.json",
+  "title": "SubstrateFrontendAuditCompleted payload",
+  "description": "Emitted by the chain agent-substrate-frontend F5 retrospective to record that the dashboard surfaces serving the event ledger (per-entity timelines, audit-ledger page, dispatch-policy peek) have been verified against the chain's design doc and completion criteria. Self-hosting check parallel to ArchitectureAuditCompleted — the frontend exercising the substrate to record its own audit outcome. Findings are keyed to the design doc's sections (docs/SUBSTRATE_FRONTEND.md §1–§12), each entry recording whether the section's contract is honored end-to-end. See docs/SUBSTRATE_FRONTEND.md and the chain's completion_condition for context.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the design / contract doc the findings are keyed against — typically docs/SUBSTRATE_FRONTEND.md plus the chain's completion criteria."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome covering all completion-criterion sub-items (a)–(f)."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the follow-on work (typically Phase 4 — legacy free-form field deprecation and a query-telemetry-substrate completion to wire the related_queries surface end-to-end). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per design-doc section or completion-criterion item. status uses the same enum as the architecture audit (pass / fail / partial / deferred).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Design-doc section identifier and short description (e.g. \"§3 cursor pagination on event_id\")."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = contract honored end-to-end; fail = gap (must file follow-on); partial = honored with documented gap; deferred = explicitly out of scope per chain non-goals."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence: test names, file paths, screenshots, commit SHA, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

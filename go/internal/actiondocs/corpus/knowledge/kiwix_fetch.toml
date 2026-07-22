@@ -1,0 +1,15 @@
+surface = "knowledge"
+action = "kiwix_fetch"
+purpose = "Fetch a specific page from a Kiwix ZIM archive by path. Companion to kiwix_search — search finds the path, fetch returns the body."
+
+[[params]]
+  name = "zim_id"
+  type = "string"
+  required = true
+  description = "The versioned ZIM identifier."
+
+[[params]]
+  name = "path"
+  type = "string"
+  required = true
+  description = "The page path within the ZIM."

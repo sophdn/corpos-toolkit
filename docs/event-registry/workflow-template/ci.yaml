@@ -1,0 +1,96 @@
+# toolkit-event-registry CI — the canonical event registry's validity-stamp
+# gate (chain emit-surface-forge-v2 T2). Runs in Gitea Actions on every push.
+#
+# What it enforces (the "thorough-CI" tier, per EMIT_SURFACE_PHASE2 §4 + §12
+# CI-rule taxonomy): the FULL enum-backed validation, NOT a structural stub.
+# It checks out this registry, clones sibling repo sophdn/mcp-servers (which
+# owns the one canonical event-type enum + per-type validators in
+# go/internal/events), then runs `event-registry validate`:
+#   - schema (structural + per-type payload) — strict on the PUSHED DELTA only
+#     (newly-added event files); the immutable historical baseline is
+#     grandfathered (you correct a published event by compensation, never by
+#     editing — see registry.ValidateOptions.StrictSchemaEventIDs).
+#   - causal — every caused_by_event_id resolves on canonical (whole set).
+#   - projection-coherence — the whole ledger folds cleanly into a from-empty
+#     projection rebuild (whole set).
+#
+# Fast-forward-only immutability itself is enforced at the git layer by this
+# repo's branch protection (force-push + deletion disabled), not by CI.
+#
+# Homelab specifics (learned the hard way, chain emit-surface-forge-v2):
+#   - The registry is checked out into a ./registry SUBDIR, NOT the workspace
+#     root. This is load-bearing: actions/checkout injects a host-scoped auth
+#     header (http.<host>.extraheader) into the checked-out repo's git config,
+#     carrying THIS repo's (registry-scoped) token. If the registry were at
+#     the workspace root, the subsequent `git clone` of mcp-servers on the
+#     same host would inherit that header and authenticate with the wrong
+#     token → 403. Keeping the registry in a subdir leaves the workspace root
+#     a non-repo, so the clone inherits no header and uses its own token.
+#   - mcp-servers is cloned with a manual `git clone`, NOT actions/checkout:
+#     the homelab Gitea serves under a /git/ subpath and uses a self-signed
+#     cert, which actions/checkout's auto-built cross-repo URL trips on. An
+#     explicit /git/ URL + http.sslVerify=false + the oauth2: token-auth
+#     username (the read-scoped-token shape) sidesteps all three.
+#   - The delta diff degrades gracefully: on a shallow checkout or a push with
+#     no new event files it yields an empty delta = grandfather-all, which is
+#     the correct CI behavior for a baseline/no-new-events push.
+
+name: validate-registry
+
+on:
+  push:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: trust the checkout (git safe.directory)
+        run: git config --global --add safe.directory '*'
+
+      - name: checkout the event registry (into ./registry subdir)
+        uses: actions/checkout@v4
+        with:
+          path: registry
+
+      # Clone the branch that carries the validator. Until the
+      # emit-surface-forge-v2 chain lands on main, go/cmd/event-registry only
+      # exists on the worktree-emit-surface-forge-v2 branch — so CI clones
+      # that branch explicitly. Once the chain merges to main, drop the
+      # --branch flag (default branch then has the validator).
+      - name: clone mcp-servers (validator source — owns the canonical enum)
+        env:
+          MCP_TOKEN: ${{ secrets.MCP_SERVERS_TOKEN }}
+        run: |
+          if [ -z "$MCP_TOKEN" ]; then
+            echo "::error::MCP_SERVERS_TOKEN secret is not set — the registry CI needs a read-scoped Gitea token to clone sophdn/mcp-servers for the validator."
+            exit 1
+          fi
+          # http.sslVerify=false: the homelab Gitea uses a self-signed cert.
+          base="example-host.local/git/sophdn/mcp-servers.git"
+          ref="worktree-emit-surface-forge-v2"
+          git -c http.sslVerify=false clone --depth 1 --branch "$ref" "https://sophdn:${MCP_TOKEN}@${base}" mcp
+
+      - name: install go toolchain (version from mcp-servers go.mod)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: mcp/go/go.mod
+
+      - name: compute the pushed delta (added event files)
+        run: |
+          BEFORE='${{ github.event.before }}'
+          : > "$GITHUB_WORKSPACE/delta.txt"
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            # Best-effort: needs both commits in the (possibly shallow) clone.
+            # On failure the delta is empty = grandfather-all, the correct
+            # behavior for a baseline / no-new-events push.
+            git -C registry diff --diff-filter=A --name-only "$BEFORE" '${{ github.event.after }}' -- events/ \
+              > "$GITHUB_WORKSPACE/delta.txt" 2>/dev/null || : > "$GITHUB_WORKSPACE/delta.txt"
+          fi
+          echo "strict (newly-added) event files this push: $(wc -l < "$GITHUB_WORKSPACE/delta.txt")"
+
+      - name: validate (schema delta + causal + projection-coherence)
+        run: |
+          cd mcp/go
+          go run -tags sqlite_fts5 ./cmd/event-registry validate \
+            --dir "$GITHUB_WORKSPACE/registry" \
+            --strict-list "$GITHUB_WORKSPACE/delta.txt"

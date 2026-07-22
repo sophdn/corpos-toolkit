@@ -1,0 +1,13 @@
+surface = "ecosystem"
+action = "describe"
+purpose = "Return the full stored record for a host (with its addresses, services, and access methods) or a service."
+
+[[params]]
+  name = "target"
+  type = "string"
+  required = true
+  description = "A host slug, service slug, or host address to describe."
+
+[returns]
+  shape = "DescribeResult"
+  description = "found + kind (host|service) + the matching host or service record."

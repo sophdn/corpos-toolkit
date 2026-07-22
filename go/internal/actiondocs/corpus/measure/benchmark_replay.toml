@@ -1,0 +1,27 @@
+surface = "measure"
+action = "benchmark_replay"
+purpose = "Re-execute a prior run from its captured provenance bundle and return identical/diff against the original. Loads the original benchmark_results row by row_id, re-emits its result_columns under a new run, and diffs the score-shaped columns."
+
+[[params]]
+  name = "row_id"
+  type = "string"
+  required = true
+  description = "benchmark_results(id) of the original run to replay. The row must have a non-empty provenance_id (pre-T6-cutover legacy rows are not replayable)."
+
+[[errors]]
+  condition = "missing row_id"
+  message = "Returns error envelope: missing required params: params.row_id."
+
+[[errors]]
+  condition = "row_id not found"
+  message = "Returns error envelope: benchmark row \"<id>\" not found."
+
+[[errors]]
+  condition = "row has no provenance (legacy pre-cutover row)"
+  message = "Returns error envelope: benchmark row \"<id>\" has no provenance (pre-T6-cutover legacy row); not replayable."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. benchmark_replay is mutating (writes a new result row); the rationale should explain why the replay is being run (debugging non-determinism, validating a model swap). Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

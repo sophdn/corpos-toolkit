@@ -1,0 +1,9 @@
+surface = "knowledge"
+action = "curation_read"
+purpose = "Return the full candidate body for one curation_candidate."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = true
+  description = "The candidate id."

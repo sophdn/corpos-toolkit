@@ -1,0 +1,19 @@
+surface = "work"
+action = "_general"
+purpose = "Task, chain, and bug lifecycle, plus the live roadmap. Read actions are cross-project by default; pass 'project' to scope. Write actions on project-scoped schemas (forge/forge_edit for chain, task, bug) REQUIRE a top-level 'project' parameter — calls without it fail with an explicit error."
+
+notes = """
+chain identifiers accept 'slug', 'chain', or 'chain_slug'. Removal goes through the lifecycle actions (task_cancel, chain_close, bug_resolve with kind=wontfix|dup); forge_delete is plumbed but rejected for chain/task/bug schemas because they don't declare Delete support.
+
+IMPORTANT: forge and forge_edit REQUIRE schema_name at the top level of params (e.g. params={schema_name: "bug", slug: "...", ...}). Omitting schema_name is the most common first-call mistake and returns an explicit error. Call forge_schema(schema_name) first to see the field list before forging a new artifact.
+
+ENVELOPE-LEVEL FIELD — project scope (bug 1070). `project` is a TOP-LEVEL dispatch arg — it sits next to `action`, `params`, `rationale` on the envelope, NOT inside `params`. A `project` nested inside `params` (e.g. params={status:"open", project:"corpos"}) used to be silently dropped by the handler's param decode, after which the empty top-level project fell through to the server's --default-project — returning confidently-wrong empties for an intended cross-project / other-project query. The dispatcher now PROMOTES a params-nested `project` to the top level when the top-level project is empty (the envelope field still wins when both are set), so the nested intent is honored rather than dropped. Note: an EMPTY top-level project with a configured --default-project resolves to THAT default — it does NOT mean cross-project; pass no project AND no default (or rely on the read action's no-filter fallback) for a genuine cross-project read.
+
+ENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). Every mutating action on this surface requires a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / <6-char rationales with `error: "rationale_required"`. Actions on this surface that require rationale: bug_resolve, bug_reopen, bug_stamp_sha, chain_close, forge, forge_edit, forge_delete, roadmap_insert, roadmap_mark_reassessed, roadmap_set, task_block, task_cancel, task_complete, task_edit, task_reopen, task_stamp_sha, task_start, task_unblock. The rationale should be one to two sentences in the agent's own words describing why this state change is happening — boilerplate ("ok", "done", "as requested") is rejected by stop-list. Read actions (bug_list, bug_read, chain_state, task_read, task_search, roadmap_list, etc.) do NOT require rationale.
+
+All four SHA-accepting actions (bug_resolve, bug_stamp_sha, task_complete, task_stamp_sha) accept the literal sentinel commit_sha='unversioned' for fixes whose artifacts live outside any git repo (e.g., user-level scripts under ~/.claude/, vault docs) — satisfies the friction-filing-reminder hook's SHA audit without misrepresenting the fix as a real commit. See skill:bug-filing-discipline § Unversioned-artifact exception.
+
+bug_stamp_sha and bug_resolve also accept 'sha' as an alias for 'commit_sha'.
+
+task_read accepts {slug} or {id}; bug_read, bug_resolve, bug_stamp_sha, and task_blockers also accept {slug} or {id} (bug 1329 parity + bug 1387 follow-on: id-by-default flows like bug_list → bug_resolve or chain_state → task_blockers avoid the extra lookup). task_block and task_unblock have always accepted slug-or-id for the blocked task (and blocker_slug-or-blocker_id for the blocker).
+"""

@@ -1,0 +1,9 @@
+surface = "admin"
+action = "host_list"
+purpose = "List the registered remote hosts available to remote_exec. By default only active (non-retired) hosts are returned."
+
+[[params]]
+  name = "include_retired"
+  type = "bool"
+  required = false
+  description = "When true, include hosts that have been retired (host_remove sets retired_at). Defaults to false (active hosts only)."

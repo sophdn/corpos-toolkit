@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ObservabilityAuditCompleted.json",
+  "title": "ObservabilityAuditCompleted payload",
+  "description": "Emitted by the chain per-tool-per-model-observability retrospective (T13) to record that the inference-telemetry cluster was relocated onto the read-side substrate without behavioral regression. It is the first chain of the telemetry-consolidation program (docs/TELEMETRY_CONSOLIDATION.md). Self-hosting check parallel to TelemetryAuditCompleted — the relocated inference telemetry's closing audit lands through the write-side events ledger as the proof that the consolidation preserved the cross-substrate seam. Findings are keyed to the chain completion_condition items and the refactor-discipline seven-step gate (characterization net → audit → behavior-preserving execution → parity → densification). See docs/CHAIN1_INFERENCE_TELEMETRY_DESIGN.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the audit source-doc the findings were keyed against — typically docs/CHAIN1_INFERENCE_TELEMETRY_DESIGN.md + docs/TELEMETRY_CONSOLIDATION.md + the chain completion_condition items."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome — what landed, what's deferred, which downstream chains become buildable."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the next phase of work (e.g. the telemetry-consolidation Chains 2-5). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per audit checklist item. Severity uses the audit-convention enum (low / medium / high / critical); use n/a for informational findings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Audit checklist item identifier and short description."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = criterion satisfied; fail = criterion not satisfied (must file follow-on); partial = satisfied with documented gap; deferred = explicitly out of scope for this chain."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence supporting status — SQL query result, test name, commit SHA, doc pointer, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

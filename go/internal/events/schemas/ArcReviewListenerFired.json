@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArcReviewListenerFired.json",
+  "title": "ArcReviewListenerFired payload",
+  "description": "Emitted by the arcreview SubstrateReviewObserver once per Observe invocation. Records the observer's own fire/skip outcome so investigations have a structured single-source signal independent of process boundaries (stdio MCP processes' stderr is consumed by Claude Code, not redirected to /tmp/toolkit-http.log — the prior obs.Logger lines were invisible to centralized debugging; see bug `stdio-process-observer-logs-not-captured-in-central-log-file`). Fires on every Observe call, including skipped paths, so the audit ledger has the full distribution of trigger → observer outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trigger_event_id",
+    "trigger_event_type",
+    "trigger_slug",
+    "status"
+  ],
+  "properties": {
+    "trigger_event_id": {
+      "type": "string",
+      "description": "event_id of the substrate trigger event that invoked the observer (BugResolved / TaskCompleted / ChainClosed / CommitLanded / RoadmapUpdated). Joins this row back to the trigger row on the events table."
+    },
+    "trigger_event_type": {
+      "type": "string",
+      "description": "Type field of the trigger event. Mirrors the keys of arcreview.SubstrateTriggerEventTypes; redundant with trigger_slug but cheaper to query."
+    },
+    "trigger_slug": {
+      "type": "string",
+      "description": "Substrate trigger slug (event_bug_resolved / event_task_completed / event_chain_closed / event_commit_landed / event_roadmap_updated). Same value the downstream review_arc_for_filing fire would receive in its triggers[] array."
+    },
+    "project_id": {
+      "type": ["string", "null"],
+      "description": "Project the trigger event belonged to. Null when the trigger event had no project (status will then be skipped with skip_reason=no_project_id)."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["fired", "skipped"],
+      "description": "fired: the observer ran HandleReviewArcForFiling and the handler returned status=fired (a review landed and pending_decisions was written). skipped: any other outcome — no project, no active session, handler returned non-fired (debounced / qwen_unreachable / etc.), pending_decisions write failed, or an earlier validation/marshal error."
+    },
+    "skip_reason": {
+      "type": ["string", "null"],
+      "description": "Populated when status=skipped. Closed set: no_project_id, session_lookup_failed, no_active_session, marshal_params_failed, handler_error, review_non_fired, pending_decisions_write_failed. Null when status=fired."
+    },
+    "session_id": {
+      "type": ["string", "null"],
+      "description": "Session resolved from session_registry for the trigger's project. Null when status=skipped at no_project_id, session_lookup_failed, or no_active_session — i.e. the lookup never produced a session."
+    },
+    "review_event_id": {
+      "type": ["string", "null"],
+      "description": "event_id of the ArcCloseFilingReviewed row the handler wrote when status=fired. Null on every skipped path (including review_non_fired, which means the handler ran but didn't emit ArcCloseFilingReviewed)."
+    },
+    "review_status": {
+      "type": ["string", "null"],
+      "description": "The HandleReviewArcForFiling handler's status field when the observer reached the handler call (fired / debounced / qwen_unreachable / skipped_empty_transcript / ...). Null when the observer skipped before reaching the handler (no_project_id / session_lookup_failed / no_active_session / marshal_params_failed)."
+    },
+    "decisions_count": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Count of FilingDecisions returned by the handler when status=fired. Null on every skipped path."
+    }
+  }
+}

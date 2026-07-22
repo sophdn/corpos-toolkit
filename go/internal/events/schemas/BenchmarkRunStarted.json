@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BenchmarkRunStarted.json",
+  "title": "BenchmarkRunStarted payload",
+  "description": "Emitted at the start of a benchmark run. The provenance bundle is fully populated at this point — every component needed to replay the run identically (T6's first-class replay operation) is captured here, not deferred to BenchmarkRunCompleted. A run that starts but never emits Completed/Failed (e.g. process killed mid-run) is detectable by absence; provenance is preserved for the partial run regardless.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenario_id", "provenance"],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Which scenario / rubric is being run. Matches the existing benchmark_results.scenario_id / task_id concept."
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_version",
+        "prompt_template_hash",
+        "corpus_hash",
+        "retriever_version",
+        "retriever_config_hash",
+        "seed",
+        "env_hash"
+      ],
+      "description": "Fixed-shape provenance bundle. Every field required — a benchmark run that can't pin one of these is not replayable and shouldn't be recorded as a benchmark (it should be a different event type, or upstream code should fix the gap). T6 detail-filled the T1 draft: added retriever_config_hash (distinct from retriever_version — version pins which retriever, config_hash pins its runtime knobs). The envelope's event_time captures wall-clock-start; BenchmarkRunCompleted.wall_clock_ms captures wall-clock-end, so neither lives here as a payload field.",
+      "properties": {
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Model identifier — e.g. 'claude-opus-4-7', 'qwen2.5-32b'. The user-facing model name."
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Specific model version / weights identifier. For Anthropic models: the full versioned ID (e.g. 'claude-opus-4-7-20260301'). For local Qwen: the GGUF file hash or Ollama digest."
+        },
+        "prompt_template_hash": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hex SHA-256 of the prompt template used for this scenario. Pinning prompt content; a template edit produces a different hash and thus a different replay."
+        },
+        "corpus_hash": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hex SHA-256 of the corpus content used (vault snapshot, kiwix ZIM version, scenario fixture set). Pins the retrieval-time data."
+        },
+        "retriever_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Version identifier for the retriever (e.g. 'qwen-rerank-2.5-32b-v3', 'fts5-default'). A retriever change shifts what gets returned for a query."
+        },
+        "retriever_config_hash": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hex SHA-256 over the retriever's runtime configuration knobs (top-k, similarity threshold, reranker temperature, score-fusion weights). Distinct from retriever_version: same version with different config produces different rankings, so config must be pinned for replay determinism. For retrievers with no tunable knobs, use the SHA-256 of an empty JSON object '{}' as a canonical sentinel."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "RNG seed. Required for replay determinism. For models that don't accept a seed (Anthropic API), record 0 and document the non-determinism in the model_id metadata."
+        },
+        "env_hash": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hex SHA-256 over the runtime environment fingerprint (binary version, library versions, platform). Detects 'replayed on a different machine and got a different answer' drift."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+-- Setup-recipe runtime parameter declaration.
+--
+-- Bug #1010 surfaced: recipe steps embed shell commands as string
+-- literals; there's no way to interpolate run-time parameters
+-- (e.g. ${SENTRY_DSN}, ${HOST_ADDR}) into a step's command or
+-- idempotency_check at apply time. The Sentry walkthrough's DSN is
+-- a one-time human-supplied secret, not a literal an agent can bake
+-- in at forge time.
+--
+-- Schema response: setup_recipes carries a `params_spec` JSON array
+-- declaring which params the recipe accepts at apply time. Each item:
+--   {"name": "SENTRY_DSN", "required": true, "secret": true, "description": "..."}
+-- apply_recipe / step_probe accept a params map, validate against the
+-- spec, substitute `${NAME}` tokens in command + idempotency_check
+-- bodies before sending to transport. Secret-marked params are
+-- redacted in remote_ops audit rows.
+--
+-- Empty/NULL params_spec means the recipe takes no params (the common
+-- case today). Adding the column unconditionally as TEXT NOT NULL
+-- DEFAULT '[]' keeps the schema uniform and avoids NULL-handling on
+-- every read.
+
+ALTER TABLE setup_recipes ADD COLUMN params_spec TEXT NOT NULL DEFAULT '[]';

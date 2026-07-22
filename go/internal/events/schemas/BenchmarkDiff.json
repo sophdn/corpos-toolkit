@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BenchmarkDiff.json",
+  "title": "BenchmarkDiff payload",
+  "description": "Emitted by measure.bench_run on every completed run (success OR error). Records the per-metric delta against the stored baseline so consumers can chart drift over time without re-reading the harness output. The chain-close-completeness audit + future trained perf-regression-classifier consume this. On error (subprocess timeout, parse failure), metrics is empty + error names the failure mode.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "metrics", "run_latency_ms", "baseline_updated"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The bench's slug (matches bench_harnesses.slug + BenchmarkForged.slug)."
+    },
+    "metrics": {
+      "type": "array",
+      "description": "Per-metric diff entries. Empty array when the harness errored before producing parseable output.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "baseline", "observed"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "baseline": {
+            "description": "The baseline value from baseline_json_path. Numeric metrics carry numbers; non-numeric carry strings; absent baselines carry null."
+          },
+          "observed": {
+            "description": "The observed value from the just-ran harness output. Numeric / string / null per metric shape."
+          },
+          "delta_abs": {
+            "type": ["number", "null"],
+            "description": "observed - baseline for numeric metrics; null for non-numeric or when either side is null."
+          },
+          "delta_pct": {
+            "type": ["number", "null"],
+            "description": "(observed - baseline) / baseline * 100 for numeric non-zero baselines; null otherwise."
+          }
+        }
+      }
+    },
+    "run_latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock latency of the harness subprocess run in milliseconds. Matches timeout_ms exactly when the run timed out (the field doubles as the timeout-fired signal alongside the error field)."
+    },
+    "baseline_updated": {
+      "type": "boolean",
+      "description": "True when the call was invoked with update_baseline=true; the diff is zero by construction in that case (baseline overwritten before computing). False on the normal compare-against-existing-baseline path."
+    },
+    "stderr_log_path": {
+      "type": "string",
+      "description": "Optional repo-absolute path to the subprocess stderr log (/tmp/bench-<slug>-<ts>.stderr.log). Set when the run produced any stderr output."
+    },
+    "error": {
+      "type": "string",
+      "description": "Optional error string when the subprocess failed (timeout, non-zero exit, parse failure). Empty / absent on success."
+    },
+    "gate_passed": {
+      "type": ["boolean", "null"],
+      "description": "Deterministic-metric gate verdict. Absent/null when the harness declared no gate_metrics (report-only) or on the error paths (gate not computed). True when every metric matching the harness's gate_metrics allowlist had an exact-zero delta; false when a gate metric drifted (or the patterns matched no metrics). Lets a re-run produce a meaningful pass/fail even when non-gate metrics (latency, live-data envelope sizes) drift. See bug bench-diff-exact-equality-vs-live-data-defeats-regression-detection."
+    },
+    "gate_failures": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Names (with baseline/observed values) of the gate metrics that drifted, or a single misconfiguration line when gate_metrics matched no metrics. Empty/absent when the gate passed or wasn't configured."
+    }
+  }
+}

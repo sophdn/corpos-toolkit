@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/_envelope.json",
+  "title": "Event envelope",
+  "description": "Shared envelope every event in the toolkit-server substrate wears. Closed shape — 11 top-level fields, no additionalProperties at this layer. Per-type payload validation happens against blueprints/events/<type>.json; the envelope schema validates everything else. The leading underscore in the filename sorts this first in the directory listing and signals 'not an event type'. See docs/EVENT_SUBSTRATE.md §2 for field-by-field rationale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "ts",
+    "actor",
+    "type",
+    "entity",
+    "payload",
+    "refs",
+    "span_id",
+    "schema_version"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "UUIDv7. Time-ordered (the first 48 bits are a Unix-ms timestamp), globally unique, FK-targetable. Sortable by event_id gives wall-clock event order. Required for the sibling chain's query_resolutions.write_event_ids JSON-array FK semantics — do not weaken to UUIDv4 without a chain-level decision."
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp with UTC zone, millisecond precision. Redundant with event_id's embedded timestamp; kept as its own column so range queries on (ts BETWEEN ... AND ...) don't require parsing UUIDs. Always UTC; local timezones never appear in the events table."
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "description": "Who emitted the event. Inferred at dispatch from the transport that delivered the call — never caller-supplied. See EVENT_SUBSTRATE.md §4 for the inference rules.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["agent", "human", "system"],
+          "description": "Closed enum. agent = stdio MCP transport (Claude Code, qwen-via-mcp, etc.); human = portal HTTP write paths; system = CLI subcommands, cron jobs, in-transaction hooks (which actually inherit from the parent — see §4)."
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For agent: the connecting MCP client's name+version from the initialize handshake (e.g. 'claude-opus-4-7'). For human: a portal-session identifier ('portal-anonymous-<uuid>' until auth lands). For system: 'cli-<subcommand>' or 'cron-<job-name>'."
+        }
+      }
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Event type name. Must match a registered type with a payload schema at blueprints/events/<type>.json. PascalCase, past-tense (BugResolved, not ResolveBug). Closed set — emitting an unknown type is rejected at the dispatcher with InvalidInput before any DB write. See docs/EVENT_CATALOG.md for the registered set."
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "slug"],
+      "description": "The primary entity this event acts on. Secondary entities go in refs.related_entities, not here.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Entity kind. Currently: bug, suggestion, task, chain, benchmark_run, benchmark_metric. Adding a new kind requires the same PR-and-schema discipline as adding a new event type."
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The natural-key identifier for the entity. Toolkit-server uses slugs (e.g. 'forge-bug-title-omitted') as primary IDs throughout — numeric IDs never appear in event envelopes."
+        },
+        "project_id": {
+          "type": ["string", "null"],
+          "description": "Project this entity belongs to. Required for project-scoped kinds (bug, task, chain) — mirrors the project-scoping convention from blueprints/forge-schemas/. Cross-cutting events (benchmark runs spanning projects, system-wide events) carry null and document why in their type schema."
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "description": "Type-specific payload. Validated against blueprints/events/<type>.json at write time. May be {} for types that record a state change with no parameters beyond the entity reference (rare; most types carry at least one field)."
+    },
+    "rationale": {
+      "type": ["string", "null"],
+      "description": "Why this event, in the actor's words. Required (non-null, non-whitespace-only) for actor.kind == 'agent' on actions whose manifest declares requires_rationale = true. Enforced at the dispatch boundary, NOT in handler code — see EVENT_SUBSTRATE.md §5. Boilerplate detection is a read-side concern (sibling chain), not enforced here."
+    },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caused_by_event_id", "related_entities"],
+      "description": "Causal and cross-entity references. caused_by_event_id is the structural backbone of the causal graph; related_entities is the cross-cutting metadata.",
+      "properties": {
+        "caused_by_event_id": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "description": "For compensating events (BugTriageReversed undoing a BugTriaged): points at the event being undone. For cascade-emitted events (an in-transaction hook firing from a parent action): points at the parent. null for root events that aren't caused by another."
+        },
+        "related_entities": {
+          "type": "array",
+          "description": "Cross-entity references that aren't the primary entity. Example: BugRoutedToTask has entity = bug, related_entities = [{kind: task, slug: ..., project_id: ...}].",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "slug"],
+            "properties": {
+              "kind": { "type": "string" },
+              "slug": { "type": "string", "minLength": 1 },
+              "project_id": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "span_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Per-MCP-request span identifier (UUIDv4 — random; no need for time order). Shared by every event and structured-log line emitted while serving one tools/call request. The join key between the events table and the future structured-log store (T5). See EVENT_SUBSTRATE.md §6."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Envelope version. Currently 1. Bumping requires a migration that backfills or maps. Per-type evolution is via type renaming (BugResolvedV2), not per-type version."
+    }
+  }
+}

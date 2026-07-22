@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BugTriaged.json",
+  "title": "BugTriaged payload",
+  "description": "Emitted when a bug's triage-shape metadata changes — severity and/or tags. Only the changed fields are populated as from/to pairs; unchanged fields are absent. The payload is intentionally narrow so an agent reading the events ledger can see exactly which dimensions of triage moved without re-reading the full bug row. Resolution is a separate event (BugResolved); reopening is BugReopened.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "from_severity": {
+      "type": ["string", "null"],
+      "enum": ["low", "medium", "high", null],
+      "description": "Severity before the change. null if the bug had no severity set (the default-medium had not yet been overwritten with an explicit value)."
+    },
+    "to_severity": {
+      "type": ["string", "null"],
+      "enum": ["low", "medium", "high", null],
+      "description": "Severity after the change. Must differ from from_severity when both are present (a no-op edit should not emit this event)."
+    },
+    "from_tags": {
+      "type": ["string", "null"],
+      "description": "Tags string before the change. Comma-separated lowercase-kebab, same convention as BugReported.tags."
+    },
+    "to_tags": {
+      "type": ["string", "null"],
+      "description": "Tags string after the change. Must differ from from_tags when both are present."
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["to_severity"],
+      "description": "At least one of (severity, tags) must change; this branch covers severity changes."
+    },
+    {
+      "required": ["to_tags"],
+      "description": "At least one of (severity, tags) must change; this branch covers tag changes."
+    }
+  ]
+}

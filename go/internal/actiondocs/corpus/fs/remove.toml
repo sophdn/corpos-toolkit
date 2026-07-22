@@ -1,0 +1,62 @@
+surface = "fs"
+action = "remove"
+purpose = "Delete a file, or a directory only when an explicit recursive flag is set (pure Go os.Remove / os.RemoveAll). The owned, substrate-native delete primitive — no shell, so it works in the distroless container. Destructive."
+notes = "CONTRACT: in-process via os.Remove (file / empty dir) or os.RemoveAll (non-empty dir, recursive=true only). A NON-EMPTY directory without the explicit recursive flag is refused and nothing is deleted — the guard against a single call wiping a tree. A small closed set of obviously dangerous absolute targets (filesystem roots like /, /home, /etc) is refused outright as a backstop; real confinement is the process's filesystem permissions (and, in deployment, the container's mount set). fs.remove is DESTRUCTIVE: rationale-gated for agent actors at the dispatch boundary and risk-classified ClassDestructive in the corpos gate. There is no read-state precondition (you remove a path, not its content). SUBSTRATE UPGRADE (opt-in, default stays a plain delete): record mode emits an ArtifactRemoved event (intent → event rationale) keyed by the removed absolute path. Emission is fail-open: an event-log error never fails a remove that already committed."
+
+[[params]]
+  name = "file_path"
+  type = "string"
+  required = true
+  description = "Absolute or working-directory-relative path to remove (file or directory)."
+
+[[params]]
+  name = "recursive"
+  type = "bool"
+  required = false
+  description = "Required to delete a NON-EMPTY directory (os.RemoveAll). Without it, a non-empty directory is refused and nothing is deleted; a regular file or an empty directory removes without it. Default false."
+
+[[params]]
+  name = "record"
+  type = "bool"
+  required = false
+  description = "OPT-IN provenance mode: emit an ArtifactRemoved event for this deletion so fs.read provenance mode can record it in the file's history. Default off (no event)."
+
+[[params]]
+  name = "intent"
+  type = "optional_string"
+  required = false
+  description = "Free-text intent recorded as the ArtifactRemoved event's rationale (only meaningful with record=true)."
+
+[[param_aliases]]
+  from = "path"
+  to = "file_path"
+
+[[errors]]
+  condition = "file_path missing or empty"
+  message = "fs.remove requires file_path"
+
+[[errors]]
+  condition = "the path does not exist"
+  message = "fs.remove: path does not exist: <path>"
+
+[[errors]]
+  condition = "a non-empty directory without recursive=true"
+  message = "fs.remove: <path> is a non-empty directory; pass recursive=true to delete it and its contents"
+
+[[errors]]
+  condition = "the target is a protected filesystem root (/, /home, /etc, …)"
+  message = "fs.remove: refusing to remove a protected filesystem root: <path>"
+
+[[errors]]
+  condition = "the process lacks permission"
+  message = "fs.remove: permission denied: <path>"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required. fs.remove is destructive; the rationale records WHY a path was deleted."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "RemoveResult"
+  description = "file_path, was_dir (the removed entry was a directory), and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactRemoved event; omitted on a default remove."

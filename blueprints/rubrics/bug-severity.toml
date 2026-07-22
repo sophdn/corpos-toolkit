@@ -1,0 +1,103 @@
+name        = "bug-severity"
+description = "Classify a bug report's severity along the two-axis observer-impact × blast-radius matrix from skill:bug-filing-discipline."
+# is_deployed gates whether classify() will run the rubric. Set true so
+# the action is callable (smoke runs need a working call path); the
+# verdict in observehttp/benchmarks_meta.go remains DeferredWithTrigger
+# until a smoke session validates accuracy ≥ 70%. Auto-classification
+# from forge(bug) post-create stays opt-in until then.
+is_deployed = true
+output_enum = [
+  "low",
+  "medium",
+  "high",
+  "unclear",
+]
+
+criteria = [
+  "low: paper cuts and single-site annoyances. observer_impact is `none` or `paper-cut`, OR observer_impact is `workflow-break` confined to a single call site. Examples: gofmt drift in committed code; misleading-but-correct error message; verbose-by-default response.",
+  "medium: workflow breaks contained to one subsystem, OR paper cuts that span multiple subsystems. The observer needs a workaround to continue but no shipped surface is wrong. Examples: a gate (precommit, advisor) misses a whole layer; a CLI flag is silently required to make a tool work.",
+  "high: a workflow break spans subsystems (cross-cutting infrastructure failure), OR ANY user-visible break (a shipped surface is fully nonfunctional or produces wrong output). Examples: every Claude session opens with zero MCP tools; the dashboard's bug list dumps null for all queries; a write path commits but the read path can't see it.",
+  "unclear: the bug report doesn't give enough information to place the bug on the matrix. Symptom described without scope (“sometimes broken”, “feels slow”), or contradictory signals (“one-line fix” + “every session affected”). Use sparingly — bias toward the matrix when there's enough text to make a call.",
+]
+
+prompt_template = """You classify ONE filed bug report by severity along the two-axis \
+matrix from skill:bug-filing-discipline.
+
+Axis 1 — observer_impact: how badly does the observer feel the bug?
+- none: cosmetic; observer doesn't change behavior.
+- paper-cut: working-but-annoying; observer notices but completes the task.
+- workflow-break: a specific workflow fails or requires a workaround to continue.
+- user-visible-break: a shipped surface is fully nonfunctional or produces wrong output.
+
+Axis 2 — blast_radius: how many places does this bug touch?
+- single-site: one call site, one file, one command.
+- one-subsystem: scoped to one crate / package / surface area.
+- cross-subsystem: spans multiple subsystems or affects the whole agent OS.
+
+Severity from the matrix:
+| observer-impact | single-site | one-subsystem | cross-subsystem |
+|---|---|---|---|
+| none           | low         | low           | low             |
+| paper-cut      | low         | low           | medium          |
+| workflow-break | low         | medium        | high            |
+| user-visible-break | high    | high          | high            |
+
+Labels (output exactly one):
+- **low**: paper cut or single-site annoyance per the matrix.
+- **medium**: workflow break confined to one subsystem, OR paper cut crossing subsystems.
+- **high**: workflow break spanning subsystems, OR any user-visible break.
+- **unclear**: not enough scope information in the report to place on the matrix.
+
+Bias toward the matrix when you can; reserve unclear for genuinely \
+under-described reports. If the report names “every session” / “all commits” / \
+“all agents”, that's cross-subsystem blast radius."""
+
+[[examples]]
+text      = "Bug: Go server's MetaToolInputSchema emits params type-array, Claude client validator rejects all 4 tools at every session start. Affected sessions cannot file bugs, close tasks, or invoke any work/admin/measure/knowledge action through the canonical surface. Reproducer: open a fresh Claude Code session in any project whose .mcp.json points at the Go binary."
+label     = "high"
+reasoning = "Workflow-break crossing subsystems: every session of every project loses all 4 MCP surfaces. observer_impact=workflow-break, blast_radius=cross-subsystem → high."
+
+[[examples]]
+text      = "Bug: Six Go files have drifted from gofmt formatting in go/internal/ (internal/admin/health.go, internal/admin/remote.go, internal/eventbus/http.go, internal/observehttp/benchmarks.go, internal/observehttp/benchmarks_aggregate.go, internal/observehttp/tasks.go). Root cause: precommit had no Go-side gate."
+label     = "low"
+reasoning = "Paper cut confined to formatting; observer doesn't change behavior. observer_impact=paper-cut, blast_radius=one-subsystem (gofmt of go/) → low."
+
+[[examples]]
+text      = "Bug: scripts/precommit.sh gates only Rust — Go orchestration layer is ungated. Broken Go (vet errors, failing tests) can land without anything stopping it. The pre-commit hook delegates to this script, so the gate that protects every commit has no Go visibility."
+label     = "medium"
+reasoning = "Workflow-break confined to one subsystem (the commit gate); the gate covers all Go code in this repo but isn't a runtime user-visible break. observer_impact=workflow-break, blast_radius=one-subsystem → medium."
+
+[[examples]]
+text      = "Bug: forge auto-derived slug truncates mid-word at 80 chars instead of at a word boundary. Resulting slugs look unprofessional but don't break anything."
+label     = "low"
+reasoning = "Paper cut; observer notices the slug looks weird but the artifact lands and is reachable by slug. observer_impact=paper-cut, blast_radius=single-site → low."
+
+[[examples]]
+text      = "Bug: mcp__toolkit-server__work bug_list returns bare `null` instead of empty list when no rows match. Caller cannot distinguish 'no bugs match this filter' from 'tool errored silently'."
+label     = "low"
+reasoning = "Paper cut about API shape. Observer can work around by checking JSON, but the wire shape is misleading. observer_impact=paper-cut, blast_radius=single-site (one action) → low. Could rise to medium if many callers depend on the distinction."
+
+[[examples]]
+text      = "Bug: vault_search returns empty inference response at session start — regression of bugs 1162 and 1167. Vault discovery silently fails for the first ~30 seconds of every session."
+label     = "high"
+reasoning = "Workflow-break crossing subsystems: vault-pull-discipline is an ambient skill all session-start flows depend on, and the regression hits every fresh session. observer_impact=workflow-break, blast_radius=cross-subsystem → high."
+
+[[examples]]
+text      = "Bug: post-commit-restart-advisor.sh has no case arms for go/ — Go orchestration diffs misclassified as \"dashboard-only\". Observed at commit 1b10838 (this session): the diff was 6 go/internal/*.go files plus scripts/precommit.sh."
+label     = "medium"
+reasoning = "Workflow-break confined to one subsystem (the commit advisor's classifier). Misleads operators into not restarting; doesn't break the running daemon by itself. observer_impact=workflow-break, blast_radius=one-subsystem → medium."
+
+[[examples]]
+text      = "Bug: The build is broken sometimes when I rebase off main. Not sure exactly when. It feels intermittent."
+label     = "unclear"
+reasoning = "No scope information. “sometimes” “not sure” “feels” — can't place on the matrix without a reproducer or affected-surface enumeration."
+
+[[examples]]
+text      = "Bug: chain task positions drift when a task is inserted mid-chain, breaking T-number references in handoffs and commit messages. Observed across multiple chains. T-number references in agent-os-go-migration handoffs now point at the wrong tasks after T76 was inserted."
+label     = "high"
+reasoning = "User-visible break: shipped handoffs and commit messages now reference wrong content. Even though it's confined to chain-management, user-visible-break promotes to high regardless of blast radius (per matrix row 4)."
+
+[[examples]]
+text      = "Bug: knowledge_search Qwen rerank silently falls back to FTS5 order due to integer path stripping. Search returns results but ranked by FTS5 score, not Qwen reranking."
+label     = "medium"
+reasoning = "Workflow-break confined to one subsystem (knowledge_search reranking). The action succeeds but with degraded quality; observer gets results but they're worse than expected. observer_impact=workflow-break, blast_radius=one-subsystem → medium."

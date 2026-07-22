@@ -1,0 +1,32 @@
+surface = "fs"
+action = "ls"
+purpose = "List the immediate entries of a directory as structured rows. SELF-DEFINED (the harness has no LS tool — listing there is done via Bash/Glob), so this is a first-principles contract, not a parity match."
+notes = "CONTRACT (see go/internal/fs/testdata/LS_CONTRACT.md): immediate children only (non-recursive), sorted by name (byte order); dotfiles omitted unless all=true. Self-defined — no harness LS counterpart."
+
+[[params]]
+  name = "path"
+  type = "optional_string"
+  required = false
+  description = "Directory to list; defaults to the working directory."
+
+[[params]]
+  name = "all"
+  type = "bool"
+  required = false
+  description = "Include entries whose name begins with '.' (default false)."
+
+[[param_aliases]]
+  from = "file_path"
+  to = "path"
+
+[[errors]]
+  condition = "the path does not exist"
+  message = "fs.ls: path does not exist: <path>"
+
+[[errors]]
+  condition = "the path is a file, not a directory"
+  message = "fs.ls: <path> is not a directory"
+
+[returns]
+  shape = "LSResult"
+  description = "path (the listed directory), entries (rows of {name, type: dir|file|symlink, size in bytes — 0 for dirs}), count."

@@ -1,0 +1,32 @@
+# Canonical Go action: work.task_cancel (see go/internal/actiondocs/corpus/work/task_cancel.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "cancel-task"
+version = "1.0.0"
+description = "Cancel a task that no longer applies — flip a non-terminal task to cancelled so the chain reflects the work being abandoned. Distinct from complete_task (which closes finished work)."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "cancel the task",
+    "cancel this task",
+    "abandon the task",
+    "drop the task",
+    "task no longer applies",
+    "task is obsolete",
+    "won't be doing",
+    "scrap the task",
+    "kill the task",
+    "cancel_task",
+]
+when_not = [
+    "the task is finished — use complete_task instead",
+    "the task is just temporarily blocked — use block_task instead",
+    "rolling back a closure — use reopen_task instead",
+    "cancelling several tasks in one sweep — use cancel_tasks (batch) instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/cancel-task.md"

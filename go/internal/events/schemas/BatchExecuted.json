@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BatchExecuted.json",
+  "title": "BatchExecuted payload",
+  "description": "Emitted once per work.batch call. Records the per-op rationales + outcome + the cascade event ids of any sub-ops that committed (cascade events have refs.caused_by_event_id pointing at this BatchExecuted's event_id). The envelope's entity carries the batch's own synthetic identity (kind='batch', slug='<span_id-prefix>'); per-op entities live in their own cascade events. continue_on_error mirrors the caller's flag — false (default) means abort-on-first-error with the whole outer tx rolled back; true means run every op regardless and report per-op status. rolled_back is true iff the outer tx rolled back (which only happens when continue_on_error=false AND failed>0). Per the T1 design audit (docs/WORK_BATCHING_AND_FORGE_TEMPLATES_PLAN.md §3.1), batch_rationale is recorded in addition to the envelope-level rationale so listeners can distinguish 'why this MCP call' from 'why these ops were grouped' when both are supplied.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["op_count", "succeeded", "failed", "continue_on_error", "rolled_back", "ops"],
+  "properties": {
+    "op_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total ops the caller supplied. Always equals len(ops)."
+    },
+    "succeeded": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of ops with ok=true. In default mode (continue_on_error=false), succeeded+failed equals the index of the failing op + 1, not op_count, because remaining ops never executed. In continue_on_error=true mode, succeeded+failed always equals op_count."
+    },
+    "failed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of ops with ok=false."
+    },
+    "continue_on_error": {
+      "type": "boolean",
+      "description": "Mirrors the caller-supplied flag (default false). false = abort on first error + outer-tx rollback. true = run every op regardless + each op commits independently in its own savepoint; failures land in ops[].error_* without rollback."
+    },
+    "rolled_back": {
+      "type": "boolean",
+      "description": "true iff the outer tx rolled back. Only possible when continue_on_error=false AND failed > 0. When true, all entries with ok=true in ops[] DID execute and emit cascade events, but those events did NOT commit — they are absent from the events table. When false, every ok=true entry's cascade event_id refers to a committed row."
+    },
+    "batch_rationale": {
+      "type": ["string", "null"],
+      "description": "Optional 'why these ops were grouped' rationale, distinct from the envelope-level rationale ('why this MCP call'). Often duplicative; supplied when the caller wants to record both grains."
+    },
+    "ops": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-op outcome records, in caller-supplied order. ok=false entries carry error_kind + error_message; ok=true entries that committed carry event_id (the cascade event's id). When rolled_back=true, ok=true entries lack event_id because their cascade events were rolled back with the outer tx.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["position", "action", "ok", "rationale"],
+        "properties": {
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based index in the caller-supplied ops list."
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The work-surface action name (e.g. 'task_complete')."
+          },
+          "ok": {
+            "type": "boolean",
+            "description": "Whether the op's handler returned without error."
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Verbatim per-op rationale from the caller. Required on every op per the dispatch-policy gate."
+          },
+          "event_id": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "description": "The cascade event's id. Present only when ok=true AND rolled_back=false (the cascade actually committed)."
+          },
+          "error_kind": {
+            "type": ["string", "null"],
+            "description": "Short error classifier (e.g. 'TaskNotFound', 'InvalidTransition', 'UnknownAction'). Present only when ok=false."
+          },
+          "error_message": {
+            "type": ["string", "null"],
+            "description": "Full error message verbatim. Present only when ok=false."
+          }
+        }
+      }
+    }
+  }
+}

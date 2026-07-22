@@ -1,0 +1,36 @@
+surface = "work"
+action = "roadmap_insert"
+purpose = "Insert one entry at the supplied position (project-scoped). Shifts existing entries with position >= target down by one within the same project. Returns an error if the ref is already on the roadmap (use roadmap_set with an explicit position to reposition)."
+
+[[params]]
+  name = "ref_kind"
+  type = "string"
+  required = true
+  description = "chain or task."
+
+[[params]]
+  name = "ref_slug"
+  type = "string"
+  required = true
+  description = "Slug of the chain or task."
+
+[[params]]
+  name = "position"
+  type = "integer"
+  required = false
+  description = "Target position (1-indexed). Defaults to append-at-end. Clamps to 1..currentMax+1."
+
+[[params]]
+  name = "note"
+  type = "optional_string"
+  required = false
+  description = "Free-text note attached to the entry."
+
+[[examples]]
+  call = "{\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"foundation\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

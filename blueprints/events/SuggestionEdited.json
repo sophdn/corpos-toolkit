@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/SuggestionEdited.json",
+  "title": "SuggestionEdited payload",
+  "description": "Emitted when a suggestion's content fields change via forge_edit(suggestion) — title, problem_statement, surface, priority, source, acceptance_criteria, constraints, tags, routed_* pointers. Status transitions emit SuggestionResolved / SuggestionReopened instead (status carries set_by=\"suggestion_resolve\" so forge_edit rejects it). SHA stamping emits SuggestionStamped. Mirrors BugEdited: updated_fields carries the changed field names; updated_values carries the post-edit values for each changed column so the projection fold can rebuild proj_current_suggestions from payload alone, without re-reading a CRUD row (the suggestions CRUD table was retired in T5-suggestions). Added by bug `forge-edit-on-lifecycle-fields-bypasses-state-machine-and-suggestion-edit-broken` to make the schema's declared supported_ops=[\"create\",\"update\"] actually honor `update`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["updated_fields"],
+  "properties": {
+    "updated_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Snake-case names of the suggestion fields that changed in this edit. At least one entry — a no-op edit must not emit this event."
+    },
+    "updated_values": {
+      "type": ["object", "null"],
+      "description": "Map of changed-column-name → new value. Keys mirror updated_fields exactly; values carry the post-edit content for each column so the projection fold can reconstruct proj_current_suggestions from payload alone. Value types follow each column's storage form (string for most; lists join to \"\\n- \" strings at write time).",
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,9 @@
+surface = "knowledge"
+action = "library_get"
+purpose = "Return one library entry by slug. The single-row read for the project's knowledge catalogue."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Library entry slug."

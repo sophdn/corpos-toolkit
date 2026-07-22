@@ -1,0 +1,6 @@
+surface = "work"
+action = "roadmap_diff"
+purpose = "Surface pending/active chains and tasks that arrived after the last reassessed_at timestamp and aren't yet on the roadmap."
+
+[[examples]]
+  call = "{}"

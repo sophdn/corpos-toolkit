@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BenchmarkForged.json",
+  "title": "BenchmarkForged payload",
+  "description": "Emitted by forge(schema_name='bench', ...) on every successful create — both fresh creates and idempotent re-runs (existing slug returned). Records that a benchmark harness landed in bench_harnesses. Consumers: dashboard bench-harnesses page (future), measure.bench_run (looks up the row), and the chain-close-completeness audit which checks that every chain that ships a perf-touch task also registers a bench.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "binary_path", "baseline_json_path", "parse_output_as"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The kebab/snake-case bench identifier (e.g. `parse-context`). Unique within the project_id scope."
+    },
+    "binary_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path to the harness binary or `go run` target."
+    },
+    "baseline_json_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path to the baseline JSON file."
+    },
+    "parse_output_as": {
+      "type": "string",
+      "enum": ["json"],
+      "description": "How bench_run parses the harness's stdout. v1 ships json only."
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Subprocess wall-clock budget. Optional on the wire; defaults to 60000."
+    },
+    "idempotent": {
+      "type": "boolean",
+      "description": "True when the call was an idempotent re-run (existing slug returned without writing). False on fresh creates. Optional; treat absent as false."
+    },
+    "flag_set_json": {
+      "type": "string",
+      "description": "Canonical normalized JSON array of {flag,value} pairs (forge.NormalizeFlagSet output) — the flag_set_json column the harness re-tokenizes at run time. OPTIONAL and intentionally NOT minLength-constrained: the two pre-P2-A (2026-05-29) BenchmarkForged events predate this field and must stay valid as the immutable baseline, while every new event populates it. The bench_harnesses fold reads it back; an absent/empty value marks a pre-bump event the fold skips."
+    },
+    "gate_metrics": {
+      "type": "string",
+      "description": "Comma-separated allowlist of deterministic metric-name patterns that constitute the regression gate (the gate_metrics column). Empty = report-only. Optional (added P2-A alongside flag_set_json so the fold can reconstruct the full bench_harnesses row)."
+    }
+  }
+}

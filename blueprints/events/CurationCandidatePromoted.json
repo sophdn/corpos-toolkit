@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/CurationCandidatePromoted.json",
+  "title": "CurationCandidatePromoted payload",
+  "description": "Emitted when a curation_candidate transitions from status='pending' to status='promoted', creating a new knowledge_pointers row. Two trigger paths: MCP curation_promote (human-driven) sets promoted_automatically=false; curate-rescore --pass run sets promoted_automatically=true when quality_score >= AutoPromoteThreshold (0.85).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidate_id", "pointer_id", "source_type", "source_ref", "origin", "promoted_automatically"],
+  "properties": {
+    "candidate_id": {
+      "type": "integer",
+      "description": "Row id in curation_candidates that was promoted."
+    },
+    "pointer_id": {
+      "type": "integer",
+      "description": "Row id of the new knowledge_pointers row created from this candidate."
+    },
+    "source_type": {
+      "type": "string",
+      "description": "Mirrors curation_candidates.source_type (e.g. 'task', 'vault')."
+    },
+    "source_ref": {
+      "type": "string",
+      "description": "Mirrors curation_candidates.source_ref (e.g. '<project>::<slug>' for tasks)."
+    },
+    "origin": {
+      "type": "string",
+      "enum": ["zero_result_gap", "task_handoff", "session_mining"],
+      "description": "Which discovery path originally produced the candidate."
+    },
+    "quality_score": {
+      "type": ["number", "null"],
+      "description": "The candidate's quality_score at the moment of promotion. May be null for human-driven promotions of unscored candidates (an MCP user may promote without waiting for the rescore pass to score)."
+    },
+    "promoted_automatically": {
+      "type": "boolean",
+      "description": "true if curate-rescore auto-promoted at threshold; false if MCP curation_promote (human-driven)."
+    }
+  }
+}

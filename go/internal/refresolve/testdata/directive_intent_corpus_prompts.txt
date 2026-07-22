@@ -1,0 +1,125 @@
+Now that the mcp has been restarted, why don't we test out the shape of it? There's another open bug, so Im asking you to solve it, but also to analyze how the new tools function. Try your best to use the new workflow
+You have a great context on the issue, so you should run those final two tasks of the chain. Please also keep in mind: during this chain we retired our hooks to remind you to file friction or to the vault, so AC also includes you being drawn to take those actions at the appropriate times
+You are running task T13 (post-migration-substrate-report-card) of chain reference-resolution-migration (id 598) in the mcp-servers repo at /home/user/dev/mcp-servers. This task EXPLICITLY requires a fresh agent session. Produce docs/REFERENCE_RESOLUTION_REPORT_CARD_2026-05-18.md. Read task #6497 problem_statement, docs/REFERENCE_RESOLUTION_RETROSPECTIVE_2026-05-18.md, docs/REFERENCE_RESOLUTION_MIGRATION_PLAN.md, docs/SELF_CONTAINMENT.md, docs/REFERENCE_RESOLUTION_MIGRATION_RETROSPECTIVE_2026-05-18.md, process-docs/adhoc/reference-resolution-migration-bootstrap-verification-2026-05-18.md, skills/parse-context-first-call/SKILL.md, feedback_resolve_references_as_orienting_call.md, project_parse_context_directive_state_gap.md. Use mcp__toolkit-server__work action task_read for task 6497, then task_complete, then chain_close. Use vault-filing-discipline and bug-filing-discipline skills if friction emerges. Commit message: feat(refresolve): T13 — post-migration substrate report card (fresh-session grading). Audit event_id 019e3d96-6c41-7fc9-ae33-092728266307.
+Quickly re-resolve chain reference-resolution-migration and the task post-migration-substrate-report-card.
+I need to send you a bunch of context from a crashed conversation. Everything that follows is a conversation: Chain closed cleanly. reference-resolution-migration CLOSED 2026-05-19 00:21. Three commits this session: 128f793, b3ee6c4, 1141452. T13 post-migration report card. Surprising finding: sub-agent admin.server_version returned git_sha=715dc19 while HEAD=b3ee6c4 stdio binary 5 commits behind. Strongest argument for SessionStart staleness signal. Friction + vault filed: 2 bugs parse-context-token-can-appear-in-references-and-no-hit-tokens, parse-context-first-call-skill-lacks-retry-on-error-fallback-rule; 1 vault decision 2026-05-18_retire-reminder-hooks-for-substrate-mediated-discovery.md; 1 project memory project_parse_context_directive_state_gap.md. User chose Flavor A SessionStart hook informational implementation. #5 framing: parse_context should always give agent what it needs across ~12 surfaces of index (task, bug, skill, vault, etc.), load agent as lean as possible, low confidence responses point toward kiwix destinations.
+Right now the mcp-servers frontend roadmap page has mixed together results from different projects. Could you please take the project dropdown picker from the sidebar, remove it from there, and repurpose it to filter the roadmap page results by project? I'm not using it for anything where it is
+Right now, when i look at the front end of mcp-servers, and im looking at the tasks/chains page, I think that there are a number of chains that I normally expect to see in "In Progress" and "Pending" that I dont see at all. In addition, I am seeing a lot of pending chains that show tasks 0/0 on their card, despite them clearly having tasks
+please work through reference-resolution-substrate-frontend. You can work through it until you need my input
+please file a bug about the failure mode about me having to prompt you for those things, or add to any existing bugs that cover the topic. In addition, you didn't file to the vault using the forge tool. This means there is a gap in our harness providing you tools, and also those vault entries are lacking data that forge actions provide.
+please continue work on reference-resolution-substrate-frontend
+Verifying reference-resolution-substrate-frontend post-reconnect: this should detect chain-slug references and emit through the post-RF2 handler so the reference_resolution_emits side-table populates. See docs/REFERENCE_RESOLUTION_FRONTEND.md for the contract.
+please take a look at toolsearch-rerank-hook chain. Is any part of it still applicable? I know that we are trying to avoid adding hooks by convention now.
+please sanity check ml-capability-substrate against our current status and context. Make any updates that we need, then if its ready to go, start it
+can you please sanity check telemetry-substrate-cleanup, make any edits necessary, then start working through the chain until you need my input
+arc-close-filing-review please continue, there is a scratchpad note to help pickup
+can you please work through T1 of vault-hygiene-extract-and-migrate
+arc-close-filing-review was recently closed out. Did any of that work properly land in this session? Why or why not?
+please start work on arc-close-filing-review-substrate-listener-wiring
+Fix bug 1458 (roadmap-list-undocumented-default-scope-filter) end-to-end. admin.action_describe(surface='work', action='roadmap_list') returns only {purpose: ...} with no params field. Calls without params return positions 5-13 (open only); positions 1-4 don't appear. Fix candidates: (a) populate roadmap_list's action_describe with params + default-value docs; (b) make the default return ALL entries. Steps: read bug body, investigate go/internal/work/roadmap.go::HandleRoadmapList and go/internal/work/actions_discovery.go, pick fix, run scripts/precommit.sh, commit, bug_resolve.
+please continue work on vault-hygiene-extract-and-migrate
+when it comes to the content set up in arc-close-filing-review-substrate-listener-wiring, how is it working for you
+please sanity check forge-vault-note-schema-rework, see if any of it needs updates, edits, cancellations, or additions
+please pick up from where we left off with forge-vault-note-schema-rework. You can work on it until you need my design in put
+vault-hygiene-migration-and-cleanup please work through this chain, stop and ask if you need my input
+parse-context-skill-body-inline-on-use-directly please sanity check and start this chain. You can make any updates you like to bring it up to current spec and context during the sanity pass. Once it's ready please start it
+please work through     janitorial-pass-2026-05. You can do as much of the chain as you like until you need my input to progres
+are we clean and ready for another agent to pick up agent-suggestion-box? I'd like to talk about the proposed implementation a little if possible
+agent-suggestion-box please work through the feature, stop if you need my design input, otherwise you can keep working until its done
+please take a look through agent-substrate-crud-retirement to sanity check it against our current state. Make any updates or additions you need, then please start on it if it's ready to start
+please pick up where we left off with agent-substrate-crud-retirement
+please sanity check phase-4-legacy-field-deprecation, see if the premise holds, see if it needs any updates/additions/removals. Once it's where it needs to be, please work through the chain
+I'm about to start a long debugging session, let me set up a scratchpad to track state
+Setting up a scratchpad for this debugging session
+looking at a golang interface-discipline question
+let's revisit phase-4-legacy-field-deprecation and look at the parse-context-lean-orienting chain next
+please sanity check go-toolkit-dry-extraction-audit-followup. If it needs edits due to more recent context, or additions, etc, feel free to add them. Then please work through it
+please sanity check parse-context-lean-orienting for cold pickup. Compare its tasks against your experience from the harness this session
+please work through parse-context-lean-orienting sequentially. Pause if you need me to restart the mcp or if you need my input
+live verify of parse-context-lean-orienting cache after T1 fix
+fix bug 1426 — tokens appear in both arrays
+verify probe against seed-packet for zero-fire event
+please continue working on parse-context-lean-orienting
+please sanity check go-toolkit-dry-extraction-audit-followup
+are the new envelope fields surfacing in the dashboard?
+build the kiwix fallback path for low-confidence envelopes
+fix bug 1426 — tokens appear in both references[] and no_hit_tokens[]
+the dashboard's context pull inspector shows null source_type — track it down
+explain how the fold hook chain works in events.SetFoldHook
+what's the difference between resolve_references and parse_context?
+give me a brief overview of the parse-context-lean-orienting chain
+tl;dr the migration plan for substrate-crud-retirement
+what's the status of chain parse-context-lean-orienting?
+is bug 1428 still open?
+list every open bug in mcp-servers
+enumerate the pending tasks on parse-context-lean-orienting
+please sanity check memory-substrate-within-vault for pickup. Make any edits/additions/cancellations necessary given the current context of our app
+Check the linguistic-tics memory entry for context
+worktree-agents-pattern is the recipe for spawning parallel isolation worktree agents
+Thanks to our new qwen automations, we have an absolute ton of bugs to work through. I see 21 listed as high severity. Can you slowly work through each bug by first confirming its validity, then following the process detailed in /home/user/Documents/files/ideas-to-process/root-cause-diagnosis-playbook.md in order to fix it?
+rust-retirement-and-db-hardening please resume. ~/.claude/scratchpads/sessions/rust-retirement-and-db-hardening.md should point you to where to pick up
+please clear the bug backlog using the bug fixing discipline
+please pick up harvest-the-consolidation. you can work through tasks until you need my input
+can we finish up parse-context-lean-orienting?
+show me the in-progress tasks across all chains
+Please verify chain parse-context-lean-orienting closed cleanly and surface any open bugs
+please work through work-batching-and-forge-templates
+please continue with work-batching-and-forge-templates
+In our frontend, when I look at chains % tasks, bug index, suggestion index, I can see a similar pattern across the board. There's a header, a refresh button, then sort/filter/search options available depending on the page. However, I can see that on bug and suggestion index, it renders on 2 lines, where in chains and tasks index, it renders single-line. What is this the case?
+can you please fix that bug? Also, right before you start, let me know if this prompt successfully handed you the bug fixing discipline info
+There are three folders at /home/user/Documents/files which I've been using as a sort of pre-chain pipeline. It's a helpful arrangement while all of our critical migrations are happening so that the db and frontend dont get overpopulated while things land and settle. The three folders are already-processed ideas (most of these became chains, many are closed already), ideas-to-process, which is where ideas end up as single md docs when they are worthy of becoming one or more chains, but don't belong in the db yet, and intake-content, where I use general ideas.md to just dump all my random thoughts, and mining opportunities, where we learn from open source projects to improve our own methodologies. Can you read those over, make sure you understand, maybe write a few vault filings/vault memories so that you remember this structure, maybe even some vault memories to connect already-processed-ideas to the work that emerged from them. Take as long as you need, please make sure you batch where you can
+You are a fresh sub-agent grading the closure of chain `work-batching-and-forge-templates` in repo ~/dev/mcp-servers. The chain delivered eight tasks (T1-T8) that ship batched work operations, lifecycle macros, and forge schemas for migrations / retrospectives / report-cards / benchmarks / chain+tasks atomic create.
+can you please fix that bug? Also let me know if this handed you the bug fixing discipline info
+I want to refactor this module and clean up the code — can you restructure it?
+I want to port from Rust to Go without regressions — and separately, should I refactor this module?
+please use bug fixing discipline to solve our open bugs
+now please implement suggestion #18
+please continue working through refactor-handler-parse-context-core
+can you see how seed-packet and dm-toolkit both get pushed to gitea, see the entire setup?
+please start working through substrate-health-audit-projections
+can you do a little bit of investigatory work for me please? expo-rewrite-cross-platform and dm-toolkit-v2-worldbuilding-depth seem to have, to my eyes, too many closed or cancelled tasks. Some of the work in both has been done, but for some reason I feel like, during a migration this past week, extra ones were closed or cancelled
+Please take a look at the mcp-servers roadmap. Pick up the next task in order that is ready
+We need to make task create batchable. Right now, we have implemented batching but every agent that forges a chain does it one-by-one.
+please work through single-source-action-describe
+please work through single-source-action-describe picking up from where we left off
+please work on a branch in order to fix http://localhost:5180/benchmarks. Currently I see Unexpected Application Error! can't access property "map", axes is undefined
+please work through latent-inert-arm-audit
+we have three in-progress chains, arc-close-snapshot-corpus-capture, substrate-health-audit-projections, memory-substrate-within-vault which are all paused, awaiting fire conditions. I believe one of them specifies two weeks but that is just a random number the agent picked. Id rather the fire condition be based in enough material being accrued from the processes in place. Can you make that edit, and then can you please confirm that we are accruing the data these chains are waiting on?
+I think we may be ready to finish out arc-close-snapshot-corpus-capture
+please work through work-batching-and-forge-templates-followons
+confirm the migration ran cleanly on staging
+survey the migration directory for SQLite-incompatible syntax
+please work through refactor-discipline-intent-go
+Check over our mcp-servers go dependencies/packages, see if there are previously installed ones we no longer rely on and can uninstall. The ones left, do a thorough check that they are at a safe version with no vulnerability reports, no recent supply chain injection or malicious attack issues, and pin the versions. Set up a discipline with the full skill registration migration so all new Go packages are vetted before install, then version pinned. Install go-mutesting
+Please work through refactor-intent-discipline-surfacing
+verify the migration ran cleanly
+verify the migration ran cleanly — just do it
+please work through establish-action-doc-contract-on-work
+can you please see where we left off with establish-action-doc-contract-on-work, and pick up the chain?
+are either of memory-substrate-within-vault or substrate-health-audit-projections unblocked yet?
+remember the gitea-api-access detail and watch for my linguistic-tics
+Please work through own-memory-read-then-disable-harness-auto-memory. You can work on as many tasks as you like, as long as it doesn't need my input. Please work on a branch that is up to date with main.
+Watch for the linguistic-tics pattern where I append -o to words.
+Use the worktree-agents-pattern for parallel isolated work.
+Remember feedback-substrate-health-before-ml: don't backfill to unblock ML.
+please work through refactor-forge-shape-dispatch
+please pick up refactor-forge-shape-dispatch where it was left, and finish it of
+start the task-edit-control-param-typing chain
+now, please do a deep dive on our open mcp-servers chains. I'd like for you to lay out a new, correctly phased roadmap of all our current planned work. substrate-health-audit-projections is in flight, but as of yesterday, materially blocked by telemetry accumulation. That may not be the case now, but I think it likely still is
+please work through per-tool-per-model-observability
+please sanity check then work through to the end of per-tool-per-model-observability. Please do all your work on a branch off of main (push latest main first if it needs it). When you're finished, please do not auto-merge to main, just let me know its done.
+right now another agent is working on per-tool-per-model-observability. In parallel, on a worktree based off of main, I'd like for you to work on migrate-knowledge-action-docs-to-derive-contract. You can work all the way through unless you need my input. When you're done, please dont merge to main. We'll coordinate when you and the other agent are both finished
+an agent was working on branch per-tool-per-model-observability in order to work through the entirety of the chain, but the terminal crashed before they could start. Can you please pick up that chain?
+Please open a worktree and complete migrate-measure-action-docs-to-derive-contract. migrate-knowledge-action-docs-to-derive-contract was just finished, and work before that, so you should have good patterns to follow. When you're done, please don't merge your worktree to main, as other agents are working too.
+Please open a worktree and complete worktree-multi-agent-orchestration-support. Do not merge when you're done
+Please open a worktree and complete migrate-admin-action-docs-to-derive-contract. Do not merge when you're done
+Please open a worktree and complete migrate-ml-action-docs-to-derive-contract. Do not merge when you're done
+we have the 5 retros from the work, admin, knowledge, measure, and ml chains, as well as the chains themselves. Those sessions also surfaced bugs and suggestions. These were made in parallel according to one plan, but I think there could be some remaining work for them to gel into one coherent surface. Take a pass over everything and forge a finalization chain for the action docs epic
+please open a branch based on latest main. complete finalize-action-docs-epic on that branch.
+Please solve our open bugs. solve by root cause where you can, and test new surfaces so that code coverage on those areas exceeds 70%
+please complete telemetry-success-model-unification on a new worktree
+please complete orchestrator-tier-escalation-contract on a new worktree.
+Please get everything back up and running, reap, then empty our bug backlog please
+please complete bridge-harness-mcp-client on a new worktree
+please complete arc-close-decision-authoring-split on a new worktree
+please complete parse-context-directive-intent-extension on a new worktree

@@ -1,0 +1,12 @@
+surface = "work"
+action = "sweep_unauthored_staged"
+purpose = "Forge the unreviewed-fallback for staged arc-close decisions the in-session agent never authored (chain arc-close-decision-authoring-split T5). Body-heavy decisions (vault-note / memory_write) in the auto-execute band are staged for the agent to author rather than auto-forged with Qwen's draft; if the seat disengages, this captures the retained draft flagged `unreviewed`+`qwen-authored` so capture is never lost. The in-session trigger (reap-on-next-fire) is built into review_arc_for_filing; this is the explicit session-end / skip surface a reaper hook calls. Honors a grace window (TOOLKIT_ARCCLOSE_FALLBACK_GRACE) and suppresses the forge when the agent already authored a matching note."
+
+[[params]]
+  name = "session_id"
+  type = "string"
+  required = true
+  description = "Session whose still-staged, past-grace decisions should be swept."
+
+[[examples]]
+  call = "{\"session_id\":\"sess-123\"}"

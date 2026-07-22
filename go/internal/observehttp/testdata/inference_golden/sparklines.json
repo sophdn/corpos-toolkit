@@ -1,0 +1,40 @@
+[
+  {
+    "buckets": [
+      {
+        "call_count": 3,
+        "date": "\u003cDATE2\u003e",
+        "p95_latency_ms": null,
+        "success_rate": null,
+        "tokens_burned": 150
+      },
+      {
+        "call_count": 6,
+        "date": "\u003cDATE1\u003e",
+        "p95_latency_ms": 205,
+        "success_rate": 1,
+        "tokens_burned": 300
+      },
+      {
+        "call_count": 10,
+        "date": "\u003cDATE0\u003e",
+        "p95_latency_ms": 106,
+        "success_rate": 0.7,
+        "tokens_burned": 350
+      }
+    ],
+    "task_id": "multi-day-task"
+  },
+  {
+    "buckets": [
+      {
+        "call_count": 5,
+        "date": "\u003cDATE0\u003e",
+        "p95_latency_ms": 54,
+        "success_rate": 1,
+        "tokens_burned": 250
+      }
+    ],
+    "task_id": "zzz-second-task"
+  }
+]

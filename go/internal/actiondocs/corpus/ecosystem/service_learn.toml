@@ -1,0 +1,65 @@
+surface = "ecosystem"
+action = "service_learn"
+purpose = "Learn (upsert) a service running on an already-learned host. Idempotent; rationale-gated."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Stable service identifier, e.g. 'gitea', 'jellyfin'."
+
+[[params]]
+  name = "host_slug"
+  type = "string"
+  required = true
+  description = "The host it runs on (must already be learned)."
+
+[[params]]
+  name = "kind"
+  type = "optional_string"
+  required = false
+  description = "Freeform kind: http | db | git | media | ..."
+
+[[params]]
+  name = "endpoint"
+  type = "optional_string"
+  required = false
+  description = "URL or 'host:port'."
+
+[[params]]
+  name = "port"
+  type = "integer"
+  required = false
+  description = "Numeric port, if applicable."
+
+[[params]]
+  name = "status"
+  type = "optional_string"
+  required = false
+  description = "live | retired (default live)."
+
+[[params]]
+  name = "soft_ref"
+  type = "optional_string"
+  required = false
+  description = "Pointer to the vault how-to note, e.g. 'memory/reference/...'."
+
+[[params]]
+  name = "notes"
+  type = "optional_string"
+  required = false
+  description = "Freeform notes."
+
+[[errors]]
+  condition = "the host_slug is not learned"
+  message = "host_not_found: <slug> (learn the host first)"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "LearnResult"
+  description = "ok + kind='service' + slug."

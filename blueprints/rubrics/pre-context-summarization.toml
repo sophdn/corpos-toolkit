@@ -1,0 +1,19 @@
+name        = "pre-context-summarization"
+description = "Pre-context window summarization decision rubric (not deployed — deferred)"
+is_deployed = false
+output_enum = ["summarize", "skip", "unclear"]
+
+criteria = [
+  "summarize: the context segment should be summarized before the session continues.",
+  "skip: the context segment should be passed through without summarization.",
+  "unclear: insufficient information to decide.",
+]
+
+prompt_template = """You classify whether a context segment should be summarized \
+before being passed to the next session window.
+
+- **summarize**: the context segment should be summarized.
+- **skip**: the context segment should be passed through without summarization.
+- **unclear**: insufficient information to decide."""
+
+# No worked examples — rubric deferred before gold corpus was built.

@@ -1,0 +1,87 @@
+{
+  "actor_id": "claude-opus-4-7-per-tool-per-model-observability-T13",
+  "entity": {
+    "kind": "chain",
+    "slug": "per-tool-per-model-observability",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "ObservabilityAuditCompleted",
+      "rationale": "Chain per-tool-per-model-observability T13 retrospective — emitting the inference-telemetry-relocation audit findings through the write-side events ledger as the self-hosting close. Refactor-discipline gate held end to end: the characterization net (3 /inference endpoint goldens + predicate registry, combinatorially complete across acceptance/rejection/boundary, mutation 9/9 on the predicate file) was GREEN before any code change and stayed UNMODIFIED across the cutover, proving byte-parity; inference_invocations + proj_inference_tool_model_performance landed on the read-side substrate with remote-Claude coverage as the only flagged feature delta; dead work_tool_calls + its false migration-075 precursor comment removed. Chains 2-5 of the telemetry-consolidation program are the documented handoff.",
+      "payload": {
+        "audit_doc": "docs/CHAIN1_INFERENCE_TELEMETRY_DESIGN.md (T10 findings ledger + target schemas + percentile decision + triage) + docs/TELEMETRY_CONSOLIDATION.md (program) + chain per-tool-per-model-observability completion_condition items.",
+        "summary": "Inference telemetry relocated onto the read-side substrate without behavioral regression — Chain 1 of the telemetry-consolidation program. The qwen_invocations sink became inference_invocations (model-agnostic, +call-level success/error_class, +remote-Claude coverage at the router seam); a proj_inference_tool_model_performance read-side projection (keyed (task_id, model_name), totals, Fold==RebuildFromEmpty so byte-identical rebuild holds vacuously) and a /inference/tool-model-performance ranking endpoint were added; the existing /inference endpoints were repointed to inference_invocations with golden-parity proven by the UNMODIFIED characterization net; the Inference page gained a per-tool-per-model ranking panel reading the new endpoint; dead work_tool_calls and its false migration-075 precursor comment were removed. The discipline's load-bearing decision (latency percentiles are not foldable from totals, so they stay on the per-call table while the projection backs the foldable aggregates + ranking) is documented in the design doc §3. Success-model rework, data-driven routing, page-IA unification, and the qwen_invocations table DROP are routed to Chains 2-5 with reasons recorded.",
+        "recommended_next_phase": "Proceed down the telemetry-consolidation program (docs/TELEMETRY_CONSOLIDATION.md): Chain 2 (success-model unification — materialize the read-time predicate registry into the projection + the call-level layer the success/error_class columns now record); Chain 3 (data-driven model routing — the router reads proj_inference_tool_model_performance with a static-rules cold-start fallback); Chain 4 (telemetry page IA unification — vet mockups before build); Chain 5 (legacy-sink retirement — DROP qwen_invocations now that it is unread, + data-format unification). Follow-on: curation-scorer-telemetry-coverage (the curation scorer bypasses the router) and the trailing T7 forge-shape-liveness-reaudit on this chain.",
+        "findings": [
+          {
+            "item": "Completion (net) — golden snapshots of all 3 /inference endpoints captured BEFORE any code change",
+            "status": "pass",
+            "evidence": "Commit d6440884: testdata/inference_golden/{health_cards,sparklines,retrieval_health}.json over a deterministic, combinatorially-complete fixture (call-count tiers, token present/absent, single/multi-model, every predicate class incl rejections, bug-count join, staleness sort, all 4 retrieval click tiers). Net green before the first refactor commit; deterministic across runs; coverage gap-analysis classified the remainder (DB-fault returns + 2 dead branches); go-mutesting on the predicate file scored 1.000 (9/9).",
+            "severity": "low"
+          },
+          {
+            "item": "Completion — inference_invocations created + router emits per model call (local AND remote) via the read-side seam",
+            "status": "pass",
+            "evidence": "Commit 69957d84: migration 077 inference_invocations (same per-call grain as qwen_invocations, honoring bug-1328 §9.2; +success/error_class CHECK-guarded closed enums). router GenerateWithOpts emits on all branches; GenerateRemote NOW emits (the remote-coverage gap closed) on success/upstream_error/empty_response/not_configured. RecordInferenceInvocation + recorder wiring; remote-path coverage is the flagged feature delta covered by new tests, not parity.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion — inference_tool_model_performance projection registered + byte-identical rebuild-from-empty verified",
+            "status": "pass",
+            "evidence": "Commit b2df3589: migration 078 proj_inference_tool_model_performance; projections/inference.go re-snapshots from inference_invocations (Fold==RebuildFromEmpty, query_volume pattern) so byte-identical rebuild holds vacuously; 'inference_' added to readSidePrefixes; registry guards (All/namespace/checksum) updated. Tests: rebuild totals + idempotent-rebuild byte-identity + FoldAllReadSide wiring.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion — /inference endpoints + Inference page repointed to read the projection with golden-parity proven",
+            "status": "pass",
+            "evidence": "Commits f97cd465 (endpoints → inference_invocations; T9 golden net UNMODIFIED \u0026 green = byte-parity) + e67c8a11 (Inference page per-tool-per-model ranking panel reading /inference/tool-model-performance). Design decision (doc §3): latency percentiles are not foldable from a totals projection, so percentile/predicate-success reads stay on the per-call table (parity-trivial via rename) while the projection backs the foldable aggregates + the new ranking surface + the Chain-3 router. 'Reads the projection' is satisfied by the new ranking endpoint/panel; existing numbers are byte-identical.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion — dead work_tool_calls table + its false migration-075 precursor comment removed",
+            "status": "pass",
+            "evidence": "Commit 46e8b6ad: migration 079 DROP work_tool_calls + 4 indexes; the 075 comment's false 'PRECURSOR to roadmap #8 … ALTER-ADD' claim corrected in place (the runner tracks applied migrations by name, not checksum, so the edit is inert on existing DBs); main.go writer removed. The generic dispatch.CallObserver seam was intentionally retained (no DB dependency, zero-cost unset, own test) — a reusable hook, not work_tool_calls-specific.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion — qwen_invocations write path removed (table DROP deferred to Chain 5)",
+            "status": "pass",
+            "evidence": "Commit f97cd465 dropped the qwen_invocations dual-write once readers were repointed in the same chain; the now-empty, unread table soaks until its DROP in Chain 5 (legacy-telemetry-sink-retirement), exactly as the completion condition specifies. RecordQwenInvocation + qwen_telemetry.go remain compilable but unwired.",
+            "severity": "low"
+          },
+          {
+            "item": "Refactor-discipline step 7 — post-refactor densification of the NEW structure",
+            "status": "pass",
+            "evidence": "Coverage re-run against the new code: db.RecordInferenceInvocation 100%, projections/inference 100%, router emit 100%; GenerateWithOpts 90.9% / GenerateRemote 94.7% after pinning the new error_class branches (remote empty-content, empty-text→empty_response) the cutover introduced. Remaining uncovered = DB-fault dbErr returns + the real-env New() constructor. go-mutesting re-run on the new ranking endpoint (T13). Net parity assertions never modified to accommodate a refactor (reflex 3).",
+            "severity": "low"
+          },
+          {
+            "item": "Refactor-discipline steps 3-5 — classified findings ledger + first-principles target + triage recorded",
+            "status": "pass",
+            "evidence": "Commit 5d1757e3: docs/CHAIN1_INFERENCE_TELEMETRY_DESIGN.md F1-F12 classified behavior-preserving / behavior-changing / taste with blast radius + disposition; routed-out work recorded with reasons (success-model→Ch2, routing→Ch3, page-IA→Ch4, qwen DROP + data-format→Ch5, curation→follow-on) so it is not re-audited.",
+            "severity": "low"
+          },
+          {
+            "item": "Dead-code findings logged (not silently carried)",
+            "status": "partial",
+            "evidence": "Two unreachable branches in inference_v2.go confirmed via coverage and LEFT in place with the parity net guarding them: the nil-last_call_at sort branches (127-135, unreachable because inferenceListTaskIDs only returns task_ids with in-window rows) and buildHealthCard's n==0 branch (244-248, unreachable via the list→build path). Documented in the design ledger (F7/F8); cheap-to-keep defensive code, candidates for removal if inference_v2.go is next refactored.",
+            "severity": "low"
+          },
+          {
+            "item": "Self-hosting close — ObservabilityAuditCompleted lands through the write-side ledger",
+            "status": "pass",
+            "evidence": "THIS event. The relocated inference telemetry records its own closing audit through internal/events.Emit (the same path the meta-tool handlers use), keyed to chain entity per-tool-per-model-observability — the consolidation's self-hosting proof, mirroring TelemetryAuditCompleted's seam exercise.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Branch not merged; per-call projection fold cost",
+            "status": "deferred",
+            "evidence": "Work lands on branch per-tool-per-model-observability (user merges). The recorder re-snapshots proj_inference_tool_model_performance on every model call (targeted RebuildAll, fail-open) — O(n) GROUP BY over inference_invocations, trivial at homelab volume; an incremental fold is a future optimization if call volume ever makes the scan matter (noted in projections/inference.go).",
+            "severity": "medium"
+          }
+        ]
+      }
+    }
+  ]
+}

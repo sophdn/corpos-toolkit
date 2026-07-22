@@ -1,0 +1,81 @@
+surface = "ecosystem"
+action = "access_learn"
+purpose = "Learn (upsert) an access method for a host or service. Idempotent; rationale-gated."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Stable access-method identifier, e.g. 'gitea-api'."
+
+[[params]]
+  name = "target_kind"
+  type = "string"
+  required = true
+  description = "host | service — what this method unlocks."
+
+[[params]]
+  name = "target_slug"
+  type = "string"
+  required = true
+  description = "The host or service slug (must already be learned)."
+
+[[params]]
+  name = "method"
+  type = "string"
+  required = true
+  description = "ssh | https-api | https-basic | token | none."
+
+[[params]]
+  name = "principal"
+  type = "optional_string"
+  required = false
+  description = "The login/API user, e.g. 'youruser', 'sophdn'."
+
+[[params]]
+  name = "credential_pointer"
+  type = "optional_string"
+  required = false
+  description = "POINTER to where the secret lives (a path/env name like '~/.git-credentials'), NEVER the secret."
+
+[[params]]
+  name = "scope_note"
+  type = "optional_string"
+  required = false
+  description = "Scope/caveat, e.g. 'admin', 'repo-scoped not org'."
+
+[[params]]
+  name = "enabled"
+  type = "bool"
+  required = false
+  description = "Whether the method is currently usable (default true)."
+
+[[params]]
+  name = "soft_ref"
+  type = "optional_string"
+  required = false
+  description = "Pointer to the vault how-to note."
+
+[[params]]
+  name = "notes"
+  type = "optional_string"
+  required = false
+  description = "Freeform notes."
+
+[[errors]]
+  condition = "credential_pointer looks like an inline secret"
+  message = "credential_pointer looks like an inline secret; store a POINTER instead"
+
+[[errors]]
+  condition = "the target is not learned"
+  message = "<kind>_not_found: <slug> (learn the target first)"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "LearnResult"
+  description = "ok + kind='access_method' + slug."

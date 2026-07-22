@@ -1,0 +1,10 @@
+surface = "measure"
+action = "classify_audit_finding_severity"
+purpose = "Dispatches the agentic-architecture-audit severity rubric via Qwen — classifies ONE audit finding by consequence severity; label ∈ {critical, high, medium, low}; severity tracks consequence NOT effort (critical=actively harmful trust/data violation, high=structurally wrong compounds over time, medium=naive misses opportunity, low=hygiene no architectural consequence); writes a benchmark_results row; returns {label, latency_ms, model_name}."
+notes = "Severity tracks CONSEQUENCE, not effort. critical = actively harmful trust/data violation. high = structurally wrong, compounds over time. medium = naive, misses opportunity. low = hygiene, no architectural consequence."
+
+[[params]]
+  name = "finding_prose"
+  type = "string"
+  required = true
+  description = "The audit finding prose to classify."

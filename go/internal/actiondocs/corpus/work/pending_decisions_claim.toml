@@ -1,0 +1,18 @@
+surface = "work"
+action = "pending_decisions_claim"
+purpose = "Drain pending arc-close filing decisions for the project. Atomically SELECTs the oldest undispatched rows (LIMIT) and UPDATEs dispatched_at + dispatch_session_id in one tx so concurrent claims serialize via SQLite's writer lock (exactly-once dispatch per row). The Stop hook calls this after the session_registry UPSERT, formats each claimed row into a system-reminder block on stdout, and exits. See docs/ARC_CLOSE_FILING_REVIEW_SUBSTRATE_LISTENER.md §Q3."
+
+[[params]]
+  name = "session_id"
+  type = "string"
+  required = true
+  description = "Calling session's id; lands on each claimed row as dispatch_session_id."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Max rows to claim in one call (default 10)."
+
+[[examples]]
+  call = "{\"session_id\":\"sess-123\",\"limit\":10}"

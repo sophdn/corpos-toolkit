@@ -1,0 +1,14 @@
+surface = "ecosystem"
+action = "canon_resolve"
+purpose = "Deterministically resolve any token — a canonical name, a retired alias, an old path, or an old port — to its current canonical artifact identity. Answers \"what is X really called / where does it live, and is this name current or retired?\""
+notes = "status='retired' means the token names a superseded artifact; `replacement` gives the current form. An un-learned token returns resolved=false with an 'unknown' answer, never a wrong canonical. soft_ref points at the vault retirement/history prose."
+
+[[params]]
+  name = "token"
+  type = "string"
+  required = true
+  description = "A canonical name, retired alias, path, or port, e.g. 'mcp-servers', 'corpos-toolkit', '~/dev/mcp-servers', '3000', ':3001'."
+
+[returns]
+  shape = "CanonRecord"
+  description = "resolved + kind + canonical value + status (current|retired) + replacement (for retired) + gitea_owner/local_path/port + a composed answer."

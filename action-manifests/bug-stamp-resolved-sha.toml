@@ -1,0 +1,28 @@
+# Canonical Go action: work.bug_stamp_sha (see go/internal/actiondocs/corpus/work/bug_stamp_sha.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "bug-stamp-resolved-sha"
+version = "1.0.0"
+description = "Backfill a resolved bug's resolved_commit_sha after the fix commit lands. Used when bug_resolve ran against a dirty tree and the original SHA stamp doesn't contain the fix."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "stamp the bug sha",
+    "backfill bug sha",
+    "update bug commit sha",
+    "fix bug sha",
+    "bug sha wrong",
+    "resolved_commit_sha",
+    "bug_stamp_resolved_sha",
+]
+when_not = [
+    "the bug is open — only resolved bugs carry resolved_commit_sha",
+    "rescinding the resolution — use bug_reopen instead",
+    "the resolution itself was wrong — use bug_reopen + fresh bug_resolve instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/bug-stamp-resolved-sha.md"

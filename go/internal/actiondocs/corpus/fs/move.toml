@@ -1,0 +1,74 @@
+surface = "fs"
+action = "move"
+purpose = "Rename or relocate a file or directory in-process (pure Go os.Rename, with a copy-then-remove fallback across filesystems). The owned, substrate-native move primitive — no shell, so it works in the distroless container. Mutating."
+notes = "CONTRACT: in-process via os.Rename (no shell). A cross-device move (EXDEV) falls back to a recursive copy-then-remove so the move still works when source and dest live on different filesystems (cross_device reports which path ran). fs.move REFUSES to overwrite an existing destination — move is mutating, not destructive; remove the target first (fs.remove) for a deliberate replace. Unlike fs.write/fs.edit, fs.move is NOT coupled to the read-state registry (it relocates bytes without inspecting content), so no prior fs.read is required. SUBSTRATE UPGRADE (opt-in, default stays a plain rename): record mode emits an ArtifactMoved event (intent → event rationale) keyed by the destination absolute path. Emission is fail-open: an event-log error never fails a move that already committed."
+
+[[params]]
+  name = "source"
+  type = "string"
+  required = true
+  description = "Path to move FROM. Must exist (file or directory)."
+
+[[params]]
+  name = "dest"
+  type = "string"
+  required = true
+  description = "Path to move TO. When dest is an existing directory the entry is moved INTO it (final path = dest/basename(source), like mv); otherwise dest is the literal target path and its missing parent directories are created. The final destination must NOT already exist — fs.move refuses to clobber."
+
+[[params]]
+  name = "record"
+  type = "bool"
+  required = false
+  description = "OPT-IN provenance mode: emit an ArtifactMoved event for this move so fs.read provenance mode can fold it into the file's mutation history. Default off (no event)."
+
+[[params]]
+  name = "intent"
+  type = "optional_string"
+  required = false
+  description = "Free-text intent recorded as the ArtifactMoved event's rationale (only meaningful with record=true)."
+
+[[param_aliases]]
+  from = "src"
+  to = "source"
+
+[[param_aliases]]
+  from = "from"
+  to = "source"
+
+[[param_aliases]]
+  from = "destination"
+  to = "dest"
+
+[[param_aliases]]
+  from = "to"
+  to = "dest"
+
+[[errors]]
+  condition = "source missing or empty"
+  message = "fs.move requires source"
+
+[[errors]]
+  condition = "dest missing or empty"
+  message = "fs.move requires dest"
+
+[[errors]]
+  condition = "the source path does not exist"
+  message = "fs.move: source does not exist: <source>"
+
+[[errors]]
+  condition = "the final destination already exists"
+  message = "fs.move: destination already exists: <dest> (remove it first if a replace is intended)"
+
+[[errors]]
+  condition = "the process lacks permission on source or destination"
+  message = "fs.move: permission denied: <path>"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required. fs.move is a mutating relocation; the rationale records WHY a path was moved."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "MoveResult"
+  description = "source, dest (the FINAL destination path with any dir-into resolved), is_dir (the moved entry was a directory), cross_device (true when source and dest were on different filesystems so a copy-then-remove ran instead of a plain rename), and (record mode only) event — the {event_id, type} receipt of the emitted ArtifactMoved event; omitted on a default move."

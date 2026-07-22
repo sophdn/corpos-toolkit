@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskCompleted.json",
+  "title": "TaskCompleted payload",
+  "description": "Emitted when a task closes via task_complete. Captures the closing commit_sha (the structural link between the task and the work that resolved it) and an optional closure_summary. The envelope's rationale carries the agent's 'why this counts as done' — closure_summary is operational color (what landed, what's left for follow-on).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "description": "Chain slug disambiguating which chain's task this event targets, so the fold scopes to one task rather than fanning out across same-slug tasks in the project (bug task-lifecycle-event-folds-fan-out-across-duplicate-task-slugs). Optional: pre-fix events omit it and the fold falls back to the legacy slug+project match."
+    },
+    "commit_sha": {
+      "type": ["string", "null"],
+      "description": "The commit SHA that landed the task's work, or the literal sentinel 'unversioned' for tasks whose artifacts live outside any git repo (user-level scripts, vault docs) per mcp__toolkit-server__work convention. Optional in this schema because the current task_complete handler accepts close-without-SHA (a friction-filing-reminder hook subsequently catches it at session-end audit, not at write time); future T3 tightening may gate on envelope.rationale or on a typed close-policy."
+    },
+    "closure_summary": {
+      "type": ["string", "null"],
+      "description": "Free-text wrap-up: what landed, what's left, follow-on pointers. Distinct from envelope.rationale (which is the 'why this counts as done' enforced field); closure_summary is the human-readable operational note. Optional."
+    }
+  }
+}

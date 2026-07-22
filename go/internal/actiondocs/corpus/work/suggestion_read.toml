@@ -1,0 +1,27 @@
+surface = "work"
+action = "suggestion_read"
+purpose = "Return a single suggestion's full content. Identify by id or slug."
+notes = "Numeric id is accepted in place of the slug; the dispatcher resolves either to the same row."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Suggestion id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+
+[[param_aliases]]
+  from = "suggestion_slug"
+  to = "slug"
+
+[[param_aliases]]
+  from = "suggestion_id"
+  to = "id"
+
+[[examples]]
+  call = "{\"slug\":\"add-fts5-coverage-to-roadmap-list\"}"

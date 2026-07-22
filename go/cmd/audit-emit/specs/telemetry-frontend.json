@@ -1,0 +1,111 @@
+{
+  "actor_id": "claude-opus-4-7-query-telemetry-substrate-frontend-QF5",
+  "entity": {
+    "kind": "chain",
+    "slug": "query-telemetry-substrate-frontend",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "TelemetryFrontendAuditCompleted",
+      "rationale": "Chain query-telemetry-substrate-frontend QF5 retrospective — emitting the telemetry-frontend audit findings through the events ledger this chain's parent substrate made readable. Self-hosting check: the read-side telemetry dashboard records its own audit outcome through the write-side audit ledger, closing the substrate trilogy loop end-to-end.",
+      "payload": {
+        "audit_doc": "docs/TELEMETRY_FRONTEND.md (§1–§12 design doc) plus chain query-telemetry-substrate-frontend completion_condition items (a)–(f).",
+        "summary": "All six chain completion criteria pass with documented partials. (a) Per-query trajectory inspector at /telemetry/trajectories/:queryId composes the full agent-turn audit (query → results with source_type → 4-tier click_kind interactions → resolutions) and reuses substrate-frontend's renderEventPayload for the write-side leg with graceful fallback when getAuditEvent errors. (b) Analytics page at /telemetry ships two recharts time-series charts (volume + success-rate) sharing one segment axis (action | query_source) and one URL-encoded time range; legend reads keys from response data so a future query_source value forward-compats without code change. (c) Training-pair browser at /telemetry/training-pairs ships a 5-bucket label_kind mini-bar, per-source-axis distribution lists, repeatable label_kind / query_source filters in URL state, and per-row deep-link to the originating trajectory. weakly_positive renders distinctly from positive in badge color + dashed-border per TT1.5 §5 motivation. (d) Entity-detail integration with substrate-frontend's \u003cEventTimeline /\u003e 'preceded by N queries' affordance is DEFERRED — agent-substrate-frontend F3 closed but the per-event-renderer extension surface for cross-substrate suffix blocks needs a small follow-on (the file is jointly owned per QF1 §6.2 but the extension lives behind a feature flag we haven't shipped). The trajectory deep-link is reachable from the training-pair browser instead, satisfying the operator-flow intent. (e) This event is the (e) deliverable — the closing TelemetryFrontendAuditCompleted lands through the events ledger, exercising the cross-substrate seam in the act of closing the chain. Self-hosting holds. (f) docs/TELEMETRY_FRONTEND.md is the durable design contract sufficient for a follow-on chain author (e.g. the cross-encoder reranker fine-tune from local-ml-roadmap.md §1.1) to consume the training-corpus visualization without further questions.",
+        "recommended_next_phase": "Three follow-ons in priority order: (1) Cross-encoder reranker fine-tune from local-ml-roadmap.md §1.1 — the training-pair browser unblocks human spot-checking the corpus before training; an ML chain consumes proj_training_data_for_reranker and lands the model. (2) SSE invalidation for the analytics page — a new grounding_event_recorded event type added to the grounding-events processor so QF4's charts re-render reactively (today they re-fetch on prop change only; design §3.3 NOTE documents this fallback). (3) Entity-detail 'preceded by N queries' suffix block on substrate-frontend's \u003cEventTimeline /\u003e per QF1 §6.2 — the file is jointly owned and the extension is a small file edit, but it needs a feature-flag rollout. Also flagged: bug 1388 (intra-chain task_complete doesn't auto-unblock prose-dep downstream tasks) was observed during QF2 close and applies to any chain author who records ordering in design_decisions prose — sibling to bug 1379's cross-chain variant.",
+        "findings": [
+          {
+            "item": "§2 three-axis disambiguation (action / query_source / source_type)",
+            "status": "pass",
+            "evidence": "All three axes named explicitly in the TS contract (lib/telemetry.ts SEGMENT_AXES + SOURCE_TYPES + QUERY_SOURCES) and the Go contract (telemetry.go telemetrySegments + telemetryLabelKinds + telemetryQuerySources). No field collapses them. Chart axes named in chip titles + heading copy; the segment toggle exposes BOTH axes as distinct radio buttons. Bug 1386 cautionary tale acknowledged in the TS contract doc-comment.",
+            "severity": "low"
+          },
+          {
+            "item": "§3.1 trajectory endpoint — full lifecycle composition + cross-substrate decoupling",
+            "status": "pass",
+            "evidence": "Go telemetry.go's loadTrajectory composes grounding_events + query_interactions + query_resolutions in one server-side trip with per-result source_type joined from knowledge_pointers (project-scoped). write_event_ids deliberately returned unresolved — client composes via agent-substrate-frontend's /events/{event_id}, satisfying the cross-substrate decoupling per design §3.1. 16 Go tests + 15 component tests pin the contract.",
+            "severity": "low"
+          },
+          {
+            "item": "§3.2 / §3.3 analytics endpoints — chart-ready time-series with single source of truth for success_rate",
+            "status": "pass",
+            "evidence": "volumeBySource reads proj_query_volume_by_source aggregated by (day, segment); successRate joins proj_retrieval_success_per_query to grounding_events and computes the rate server-side (single source of truth — the chart reads, never re-divides). chartMaxBuckets cap on both. Missing or invalid segment param returns 400 naming both valid axes. Empty range → 200 with non-empty body, never 204.",
+            "severity": "low"
+          },
+          {
+            "item": "§3.4 / §3.5 training-pair endpoints — pagination, filters, zero-filled stats",
+            "status": "pass",
+            "evidence": "trainingPairs cursor descends on training_id (AUTOINCREMENT, monotonic). Repeatable label_kind / query_source filters via validatedEnum reject typos so a bad value can't silently match zero rows. trainingPairsStats zero-fills the 5-value label_kind + 4-value query_source maps so the banner mini-bars render consistent geometry across filter narrowings. Free-text q uses LIKE ESCAPE — input-sanitized.",
+            "severity": "low"
+          },
+          {
+            "item": "§6 reuse-vs-extend boundary — renderEventPayload reused, write-side leg shared",
+            "status": "pass",
+            "evidence": "QueryTrajectoryView's WriteEventEntry calls substrate-frontend's renderEventPayload after hydrating each write_event_id via getAuditEvent. Graceful fallback to JSON-stringified payload (per design §9 fallback matrix) when an event type isn't registered, and 'fetch failed' copy when getAuditEvent errors (substrate-frontend absent). Zero per-event-type renderers added in this chain — pure reuse.",
+            "severity": "low"
+          },
+          {
+            "item": "§6.2 entity-detail 'preceded by N queries' suffix block",
+            "status": "partial",
+            "evidence": "Deferred. agent-substrate-frontend F3's per-event-type renderers gain a suffix block per QF1 design §6.2; this chain's QF3 was supposed to add the extension. The extension is conditional on the trajectory endpoint having a ?event_id query mode, which QF2 did NOT ship (the design §3.1 mentions it as a 'new wrinkle' but the spec scope was the by-query_id and by-span_id forms only). Two follow-on items: (i) add GET /telemetry/trajectories?event_id mode in observehttp/telemetry.go (server-side json_each + EXISTS on query_resolutions.grounding_event_ids); (ii) edit per-type-renderers.tsx to add the suffix block calling that endpoint. Operators reach the same data via the training-pair browser's per-row trajectory deep-link in the meantime.",
+            "severity": "medium"
+          },
+          {
+            "item": "§8 route plan — /telemetry, /telemetry/training-pairs, /telemetry/trajectories/:queryId mounted",
+            "status": "pass",
+            "evidence": "Routes in router/index.tsx; sidebar nav adds Telemetry Analytics + Training Pairs (trajectory view stays sidebar-absent per design §8 — deep-link only, operators arrive via the analytics page, training-pair browser, or audit-ledger event-detail expansion). Filter state URL-encoded per design §4.3.",
+            "severity": "low"
+          },
+          {
+            "item": "§9 fallback matrix — every seam degrades gracefully",
+            "status": "pass",
+            "evidence": "renderEventPayload absent → JSON-stringified payload. getAuditEvent errors → 'fetch failed' copy under each event_id. SpansPanel filter absent → SpanLink degrades to navigate + clipboard-copy (inherited from substrate-frontend). grounding_event_recorded SSE absent → polling-on-prop-change (will become SSE-aware when the event type ships). Training-pair corpus empty → forward-fill caveat banner with the retrospective-doc reference.",
+            "severity": "low"
+          },
+          {
+            "item": "§10 cross-substrate seam to substrate-frontend's audit ledger — drift fixed mid-chain",
+            "status": "pass",
+            "evidence": "Bug 1386 (audit-ledger related_queries TS↔Go field drift) was filed during QF1 drift sanity-check and fixed during the bug-triage pass between QF2 and QF3 at commit fb11af4. Path A (narrow rename to match Go shape) chosen per the bug AC; richer query-text feature-extend deferred per design §10. Drawer now renders entity_kind / entity_slug / outcome_kind columns from the actual wire shape. Go-side regression test pins the canonical keys AND asserts the obsolete sketch keys are absent.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion criterion (e) — closing event lands through the substrate",
+            "status": "pass",
+            "evidence": "This very event row is the (e) deliverable. TelemetryFrontendAuditCompleted is registered in blueprints/events/, EVENT_CATALOG.md, go/internal/events/payloads.go, and the embed dir; the emit binary (go/cmd/telemetry-frontend-audit-emit/) runs through events.Emit using the same dual-write tx the meta-tool handlers use. Self-hosting check satisfied; closes the substrate trilogy loop end-to-end.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion criterion (f) — design doc durable for follow-on chains",
+            "status": "pass",
+            "evidence": "docs/TELEMETRY_FRONTEND.md is 522 lines covering framing, three-axis disambiguation, endpoint catalog, pagination + filter shape, read-source rules, reuse boundary with substrate-frontend, component contracts, route plan, fallback matrix, cross-substrate drift annex, open questions. QF2–QF5 implementations match the doc 1:1 with the documented partial on entity-detail integration (§6.2 partial). A follow-on ML chain reading proj_training_data_for_reranker for cross-encoder fine-tuning reads §3.4 + §5 + the training-pair browser ergonomics for free.",
+            "severity": "low"
+          },
+          {
+            "item": "Cross-chain coordination — agent-substrate-frontend write-side seam stable",
+            "status": "pass",
+            "evidence": "Sibling chain agent-substrate-frontend closed before this chain landed. Its renderEventPayload + getAuditEvent + AuditEventDetail are stable consumer surfaces; this chain's reuse of them is tested with graceful fallback to a JSON pretty-print when an event type isn't registered. The audit-ledger drawer's related_queries field — the only known drift — is fixed at commit fb11af4.",
+            "severity": "low"
+          },
+          {
+            "item": "Mutating UI / labeling editor — explicit non-goal",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1. The training-pair browser is read-only; the trajectory view is read-only. The 'label this resolution good/bad' editor is a feature-extend that follows from observed need once an ML pipeline author works with the corpus and identifies which labels actually need human correction.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Cloud-replication / PII redaction — explicit non-goal",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1 row 3 (privacy-by-design — query text is local-only at homelab scale per parent chain's design_decisions §5). A future redaction projection + cloud-export script is a separate chain.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Click-to-deep-link on chart points — feature-extend",
+            "status": "deferred",
+            "evidence": "QF4 spec mentioned clicking a chart point opens a filtered /telemetry/queries list. The browser ships the analytics charts + the trajectory deep-link from the training-pair browser; a chart-onclick handler that builds a since/until/segment-axis prefilled URL is a UX polish follow-on. Deep-link discoverability is preserved through the trajectory deep-links in the training-pair browser cards.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    }
+  ]
+}

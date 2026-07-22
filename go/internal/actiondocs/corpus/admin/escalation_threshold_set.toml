@@ -1,0 +1,39 @@
+surface = "admin"
+action = "escalation_threshold_set"
+purpose = "Upsert one (project_id, trigger_kind) escalation threshold row. Omitted enabled / de_escalation_turns preserve the existing row's values (read-then-upsert); a brand-new row defaults to enabled=true, de_escalation_turns=2. See docs/ORCHESTRATOR_ESCALATION.md §6."
+
+[[params]]
+  name = "project_id"
+  type = "optional_string"
+  required = false
+  description = "Project the row belongs to. Optional — omit (or '') to write a GLOBAL-DEFAULT row applied to every project lacking an override."
+
+[[params]]
+  name = "trigger_kind"
+  type = "string"
+  required = true
+  description = "One of the 5 closed trigger kinds: retry_exhaustion, low_confidence, repeated_tool_error, parse_failure, explicit_handoff. Required; an unknown kind is rejected (also enforced by the DB CHECK constraint)."
+
+[[params]]
+  name = "threshold_value"
+  type = "object"
+  required = true
+  description = "The trigger's threshold (a JSON number). Semantics per trigger: a count for retry_exhaustion/repeated_tool_error/parse_failure/explicit_handoff; a confidence floor in [0,1] for low_confidence. Required."
+
+[[params]]
+  name = "enabled"
+  type = "bool"
+  required = false
+  description = "Whether the trigger is active. A disabled trigger never fires regardless of signals. Optional — preserves the existing value (or defaults true for a new row)."
+
+[[params]]
+  name = "de_escalation_turns"
+  type = "integer"
+  required = false
+  description = "Hysteresis K: the router stays escalated until K consecutive clean turns elapse before returning to the cheap tier. Must be >= 1. Optional — preserves the existing value (or defaults 2 for a new row)."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

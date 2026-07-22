@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ChainEdited.json",
+  "title": "ChainEdited payload",
+  "description": "Emitted when a chain's content fields change via forge_edit(chain) — output, design_decisions, completion_condition, closure_summary, etc. Chain close emits ChainClosed (which carries the closure_summary as a load-bearing field); other edits emit this event with the updated_fields list. updated_values (added 2026-05-20 via T3 of agent-substrate-crud-retirement, §9.4) carries the post-edit values for each changed column so payload-only fold reconstruction can rebuild proj_chain_status without re-reading the CRUD row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["updated_fields"],
+  "properties": {
+    "updated_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Snake-case names of the chain fields that changed in this edit. At least one entry — a no-op edit must not emit this event."
+    },
+    "updated_values": {
+      "type": ["object", "null"],
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.4 audit finding). Map of changed-column-name → new value. Keys mirror updated_fields exactly; values carry the post-edit content for each column so the projection fold can reconstruct proj_chain_status from payload alone (T5's contract). Optional for backward compatibility with pre-T3 events; once T5 lands, every new event carries this.",
+      "additionalProperties": true
+    }
+  }
+}

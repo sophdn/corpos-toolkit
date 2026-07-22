@@ -1,0 +1,34 @@
+# Canonical Go action: work.task_search (see go/internal/actiondocs/corpus/work/task_search.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "search-task-content"
+version = "1.0.0"
+description = "Case-insensitive substring search across task content fields (problem_statement, context_required, acceptance_criteria, constraints, handoff_output). Returns one match row per (task × field) with a snippet. Use for keyword sweeps, stale-reference hunts, and cross-chain pattern discovery."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "search task content",
+    "find tasks mentioning",
+    "which tasks reference",
+    "grep task fields",
+    "keyword in tasks",
+    "tasks containing",
+    "stale reference in tasks",
+    "cross-chain pattern",
+    "sweep task content",
+    "search across chains",
+    "find tasks with",
+    "pattern in problem statement",
+]
+when_not = [
+    "looking up a chain by approximate name — use find_chain for slug discovery",
+    "reading a specific known task — use read_task instead",
+    "getting a chain's full task table — use get_chain_state instead",
+    "listing all chains — use chain_status for a project overview",
+]
+
+[instructions]
+path = "action-manifests/instructions/search-task-content.md"

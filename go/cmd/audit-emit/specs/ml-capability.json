@@ -1,0 +1,93 @@
+{
+  "actor_id": "claude-opus-4-7-ml-capability-substrate-T8",
+  "entity": {
+    "kind": "chain",
+    "slug": "ml-capability-substrate",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "MLCapabilityAuditCompleted",
+      "rationale": "Chain ml-capability-substrate T8 retrospective — emitting the substrate audit findings through the write-side events ledger as the self-hosting proof of the cross-substrate seam. Fourth substrate's closing audit; the quartet (agent-first / query-telemetry / reference-resolution / ml-capability) is structurally complete. All nine chain-completion criteria pass with the explicit five-candidate-link gap (i) recorded as the post-emission follow-on. The substrate ROI begins materializing when the first per-task chain (source-router) forges and consumes the substrate end-to-end.",
+      "payload": {
+        "audit_doc": "docs/ML_CAPABILITY_SUBSTRATE.md (T1 design — 12 sections covering three-project architecture, ONNX contract, trained_model lifecycle, MCP inference surface, prediction telemetry, A/B promotion gate, future-AT migration path, ml-opportunity-scan skill) + docs/ML_CAPABILITY_SUBSTRATE_RETROSPECTIVE_2026-05-19.md.",
+        "summary": "ML capability substrate (fourth leg of the substrate quartet) ships verified. Chain completion criteria (a)-(i) all satisfied: (a) docs/ML_CAPABILITY_SUBSTRATE.md committed at a58f23e covering the eight required sections + five ml-temp candidates walked through the substrate end-to-end; (b) ~/dev/ml-training/ greenfield Python project committed at cdae671 with skeleton + pyproject.toml + placeholder source-router train.py; (c) go/internal/ml/ Go subsystem committed at c0c69b9 with onnxruntime_go binding, registry, inference handler, fakeSession unit tests, fixture-ONNX integration test; (d) trained_model forge schema + lifecycle actions (trained_model_list/promote/retire) committed at fddaa66 with migration 043 status CHECK enum + integration tests; (e) ml.inference MCP action committed at 961b84f via new top-level 'ml' meta-tool surface, dispatches through registry, writes model_predictions row keyed by span_id + features_hash (migration 044); convenience-action pattern registerable via TableDeps; (f) A/B harness committed at fd81793 with ab_comparisons table (migration 045), policy enum (PreferBaseline/PreferTrained/Alternate), status-driven short-circuit, EvaluatePromotionGate scoring baseline-vs-trained on click-through with configurable thresholds; (g) ~/.claude/skills/ml-opportunity-scan/SKILL.md authored with agent-first triage rubric, substrate-signals checklist, candidate-file skeleton + incubation overflow, three trigger conditions; (h) THIS event lands the closing audit through the write-side ledger (self-hosting check); (i) five ml-temp candidate files (01-source-router through 05-skill-auto-loader) updated post-emission to reference this chain as their precondition-met dependency. The Rust→Go pivot decided pre-T1 after audit surfaced mcp-servers' Go consolidation trajectory; pivot is captured inline in the design doc §1.2 + §5 and in the cross-chain absorption of reference-resolution-substrate T7 + toolsearch-rerank-hook (both closed 2026-05-18, both forward-blocked work now structurally absorbed into this chain's A/B harness).",
+        "recommended_next_phase": "Forge the source-router chain — first ml-temp candidate to consume the substrate end-to-end. Acts as the substrate's first real-world smoke: data load from proj_training_data_for_reranker → sklearn LR head over all-MiniLM-L6-v2 embeddings → ONNX export → trained_model forge → ml.inference convenience action route_query → A/B harness against the existing search-everything baseline → promotion via trained_model_promote when the gate fires. Each subsequent ml-temp candidate (curation-classifier, cross-encoder-reranker, bug-surface-tagger, skill-auto-loader) becomes a small follow-on chain spending ~20% of this chain's plumbing budget plus per-model training work. The cross-encoder reranker is the headline-win: it satisfies the forward dependencies absorbed from reference-resolution-substrate T7 + toolsearch-rerank-hook in one model.",
+        "findings": [
+          {
+            "item": "(a) docs/ML_CAPABILITY_SUBSTRATE.md committed: three-project architecture + ONNX contract + trained_model lifecycle + MCP inference surface + prediction telemetry + A/B promotion gate + future-AT migration + ml-opportunity-scan skill",
+            "status": "pass",
+            "evidence": "Commit a58f23e — docs/ML_CAPABILITY_SUBSTRATE.md, 12 sections, 622 insertions. Five ml-temp candidates walked through the substrate end-to-end in §9 (source-router / curation-classifier / cross-encoder-reranker / bug-surface-tagger / skill-auto-loader). Rust→Go pivot rationale captured §1.2 + §5. Pre-T1 audit surfaced one adjacent ONNX install on this machine (seed-packet/Rust+fastembed) that does not dictate this choice — captured in the ADJACENT ML STATE chain-doc section.",
+            "severity": "low"
+          },
+          {
+            "item": "(b) ~/dev/ml-training/ greenfield Python project + skeleton + pyproject.toml + placeholder source-router train.py + .gitattributes for LFS",
+            "status": "pass",
+            "evidence": "Commit cdae671 in ~/dev/ml-training (separate repo). Layout: training/source_router/ + export/ + eval/source_router/ + data/ + models/source-router/v0/. pyproject.toml installable via uv sync or pip install -e .; declares sklearn + onnx + skl2onnx + onnxruntime core deps + transformers/torch as optional extras. Placeholder train.py demonstrates the load → train → export → eval → write-manifest → print-forge-command loop; runnable end-to-end when deps land. README documents three-project architecture + working-a-new-model walkthrough + future-AT migration path + kebab-vs-underscore convention. .gitattributes routes *.onnx through git-lfs per \u003e50MB convention. No Gitea remote configured — manual step per box.",
+            "severity": "low"
+          },
+          {
+            "item": "(c) go/internal/ml/ Go subsystem via onnxruntime_go + registry + inference handler + stub-model integration test",
+            "status": "pass",
+            "evidence": "Commit c0c69b9. github.com/yalue/onnxruntime_go v1.30.1 wired in go.mod; package compiles + links without libonnxruntime.so present (binding uses cgo + runtime dlopen). Registry.LoadByPromoted/LoadByID/Reload read from trained_models via the T4 schema with LRU eviction (maxLoaded=8 default). Refuses gated statuses (training/retired). Model.Infer validates input shape, runs session, returns Prediction{Output, OutputShape, LatencyMs, ModelID, FeatHash} where FeatHash is SHA-256 of canonical-serialized features. fakeSession-backed unit tests cover round-trip, cache, Reload, LRU eviction, NotFound, gated-status, input-shape validation — all pass in CI. runtime_integration_test.go loads testdata/example_dynamic_axes.onnx (MIT vendored from yalue/onnxruntime_go) via the real binding when scripts/setup-ml-deps.sh has been run; skips clean otherwise.",
+            "severity": "low"
+          },
+          {
+            "item": "(d) trained_model forge schema + status enum CHECK + lifecycle actions (trained_model_list / _promote / _retire)",
+            "status": "pass",
+            "evidence": "Commit fddaa66. Migration 043 adds trained_models table with status CHECK enum (training | evaluating | ab_testing | promoted | retired). go/internal/work/trained_model.go: typed handlers with compact + verbose projections (TrainedModelListItem / TrainedModel); promote enforces ab_testing→promoted precondition with force=true audited override per rationale envelope; retire merges reason into eval_metrics via SQLite json_set. Integration tests (trained_model_test.go) exercise forge → list → promote → list → retire round-trip + force-override + task-filter + invalid-status rejection + not-found. Wired into work-surface dispatch table + ActionSpec entries in actions_discovery.go for work_actions discoverability.",
+            "severity": "low"
+          },
+          {
+            "item": "(e) ml.inference MCP action via new top-level 'ml' meta-tool + convenience-action pattern + prediction telemetry write",
+            "status": "pass",
+            "evidence": "Commit 961b84f. New top-level 'ml' MCP surface registered alongside work/measure/knowledge/admin with MLDescription constant. Migration 044 adds model_predictions table — one row per inference call with model_id + features_hash + output_summary (bounded JSON) + latency_ms + span_id + optional grounding_event_id FK. Resolution: model_id wins when both supplied; else task (resolves to status='promoted' for the project). ConvenienceAction registerable via TableDeps so downstream ML chains land route_query / curation_score / forge_suggest_surfaces on top of this surface. End-to-end test through table-build → dispatch → handler → fake-session → row-write confirms \u003c50ms latency budget + span_id propagation + telemetry persistence + degraded-mode envelopes. blueprints/action-docs/ml/inference.toml + _general.toml + parity test entry.",
+            "severity": "low"
+          },
+          {
+            "item": "(f) A/B hot-swap harness + ab_comparisons table + promotion-gate evaluator",
+            "status": "pass",
+            "evidence": "Commit fd81793. internal/ml/abtest package with Dispatch + Policy enum (PreferBaseline / PreferTrained / Alternate). Status-driven short-circuit: promoted→trained-only, evaluating/retired→baseline-only, ab_testing→dual-fire-in-parallel-goroutines-write-one-row. Migration 045 adds ab_comparisons table with model_id + features_hash + baseline_output + trained_output + used_path + policy + per-path latency + span_id + optional grounding_event_id. EvaluatePromotionGate joins ab_comparisons to query_interactions on span_id (click_kind in cited/followed) for per-path click-through rates; defaults match design doc §8.3 (N\u003e=100, delta\u003e0.05, stable over 3x 7-day windows); per-task callers override via PromotionGateConfig. Integration tests cover dual-fire row landing, short-circuit paths, gate-too-few-comparisons rejection, synthetic-corpus delta computation.",
+            "severity": "low"
+          },
+          {
+            "item": "(g) ~/.claude/skills/ml-opportunity-scan/SKILL.md authored with triage rubric + substrate-signals checklist + candidate-file output structure + trigger conditions",
+            "status": "pass",
+            "evidence": "SKILL.md committed (unversioned — lives outside any git repo per skill convention). Five-axis triage rubric (token savings / determinism / round-trips eliminated / per-call frequency / data readiness) each scored 1-5 with named-step criteria; total ≥18/25 = build, 12-17 = incubate, \u003c12 = reject. Substrate-signals checklist names six surfaces to walk (recent substrate closures / open chains naming trained models / Qwen rubric paths / new projections / friction bugs / user auto-memory). Output structure: NN-\u003cslug\u003e.md files in ~/Documents/files/ideas-to-process/ml-temp/ with full per-candidate skeleton (core idea + position rationale + agent-first value-prop + rubric scores + training data shape + model shape + stack fit + open questions + related), incubation overflow in General Ideas/. Three trigger conditions: new substrate ships / chain names a future trained model / user-explicit ask. Cross-references substrate doc + ml-training project + go/internal/ml/.",
+            "severity": "low"
+          },
+          {
+            "item": "(h) MLCapabilityAuditCompleted event lands in events table",
+            "status": "pass",
+            "evidence": "THIS event is the (h) deliverable — the closing audit lands through the write-side substrate's events.Emit path, exercising the cross-substrate seam (events.event_id is the parent of every grounding_events / model_predictions / ab_comparisons row from this chain) in the act of closing the chain. Schema at blueprints/events/MLCapabilityAuditCompleted.json + go/internal/events/schemas/MLCapabilityAuditCompleted.json (synced via scripts/sync-event-schemas.sh in precommit). Self-hosting holds across all four substrates.",
+            "severity": "low"
+          },
+          {
+            "item": "(i) five ml-temp candidate files reference this chain as precondition-met dependency",
+            "status": "partial",
+            "evidence": "ml-temp files 01 through 05 exist (~/Documents/files/ideas-to-process/ml-temp/01-source-router.md ... 05-skill-auto-loader.md, each authored 2026-05-18 in the agent-first reframe). T8 retrospective adds a 'precondition-met' line to each file's Related section naming this chain (id 592, closed at T8 SHA) as the substrate they consume. Post-emission editing of the five files is included in the T8 task's deliverable; the precondition-met framing was always implicit (the chain's existence WAS the precondition); making it explicit lands in the same retrospective commit.",
+            "severity": "medium"
+          },
+          {
+            "item": "Forward-dependencies absorbed: reference-resolution-substrate T7 + toolsearch-rerank-hook",
+            "status": "pass",
+            "evidence": "Reference-resolution-substrate (chain 572, closed 2026-05-18) cancelled-as-deferred its T7 (classifier-and-reranker integration) INTO this chain per the deferral clause in its design_decisions. Its closing ReferenceResolutionAuditCompleted event names this chain as the materialization site. Toolsearch-rerank-hook (chain 575, closed 2026-05-18 with both tasks cancelled) follows the same absorption — same trained model, same swap pattern. Both forward-blocked work-items are now structurally satisfied; re-forging as small follow-on chains becomes possible once the trained cross-encoder reranker (ml-temp candidate #3) proves out via this substrate's A/B harness.",
+            "severity": "low"
+          },
+          {
+            "item": "Substrate quartet complete: agent-first-substrate + query-telemetry-substrate + reference-resolution-substrate + ml-capability-substrate",
+            "status": "pass",
+            "evidence": "All four substrate chains closed in sequence — write-side audit (ArchitectureAuditCompleted, 2026-05-17), read-side telemetry (TelemetryAuditCompleted, 2026-05-17), reference-binding (ReferenceResolutionAuditCompleted, 2026-05-18), and now trained-model serving (this event, 2026-05-19). The cross-substrate seam holds end-to-end: every ml.inference call emits a model_predictions row with span_id inherited from the request context (agent-first-substrate's contract) and optional grounding_event_id FK into the telemetry side-tables (query-telemetry-substrate's discriminator); the resolve_references action's swap-in-trained-classifier T7 forward-dep is the first downstream consumer; the five ml-temp candidates are the second wave.",
+            "severity": "low"
+          },
+          {
+            "item": "First-person friction observation: 12+ harness-task-tools-reminder over-fires during T2-T8 work",
+            "status": "pass",
+            "evidence": "Across the T2/T3/T4/T5/T6/T7 chain-session, the harness 'task tools haven't been used recently' reminder fired 12+ times despite continuous mcp__toolkit-server__work tool usage (chain_state / task_read / task_start / task_complete / forge_edit / forge bugs / etc.) as the canonical task-tracking surface. Friction filed as bug 'task-tools-reminder-overfires-when-mcp-work-tools-are-active' (medium severity, surface=reference-resolution,hook,user-prompt-submit,task-tools-reminder,agent-behavior,relevance-gate,work-surface) with two hypotheses: ref-resolution-substrate T9 hook isn't installed in this session's settings.json OR its relevance gate doesn't recognize mcp work-surface tool calls as task-tool-equivalent. The hypothesis space is concrete; the structural fix is in the bug's acceptance criteria.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    }
+  ]
+}

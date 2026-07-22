@@ -1,0 +1,27 @@
+surface = "admin"
+action = "remote_exec"
+purpose = "Dispatch a shell command to one of the registered remote hosts (see host_register / host_list). Returns the command's stdout/stderr/exit status (stdout/stderr capped in the response; full output persisted in the remote_ops audit row)."
+
+[[params]]
+  name = "host"
+  type = "string"
+  required = true
+  description = "Host slug to run the command on (must be registered via host_register). Required — the handler rejects a missing host. An unregistered slug returns a host_not_registered envelope."
+
+[[params]]
+  name = "cmd"
+  type = "string"
+  required = true
+  description = "Shell command to execute on the remote host. Required."
+
+[[params]]
+  name = "transport_backend"
+  type = "optional_string"
+  required = false
+  description = "Transport to use. Defaults to 'system_ssh' (the only supported backend in the Go server; any other value returns a transport_not_implemented envelope)."
+
+[[params]]
+  name = "project_id"
+  type = "optional_string"
+  required = false
+  description = "Project to attribute the remote_ops audit row to. Defaults to 'mcp-servers' (the project housing the admin meta-tool)."

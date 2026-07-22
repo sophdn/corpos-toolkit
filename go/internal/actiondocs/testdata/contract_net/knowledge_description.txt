@@ -1,0 +1,5 @@
+Library entries, kiwix search, vault retrieval, unified knowledge index, curation lifecycle, and reference-resolution. Pass 'project' to scope (vault/knowledge actions are cross-project).
+
+Actions (alphabetical): curation_bulk_action, curation_list, curation_promote, curation_read, curation_reject, kiwix_fetch, kiwix_list_books, kiwix_search, knowledge_report_miss, knowledge_search, library_add, library_cross_reference, library_find, library_get, library_list_active, library_list_dewey, library_list_sections, library_retire, library_update, memory_read, parse_context, record_query_interaction, resolve_references, vault_read, vault_search.
+
+For per-action details (params, aliases, errors, examples, notes), call admin.action_describe(surface="knowledge", action="<name>"). For surface-wide conventions (cross-project defaults for vault/knowledge, curation event emission, kiwix-before-web-search reflex), call admin.action_describe(surface="knowledge", action="_general").

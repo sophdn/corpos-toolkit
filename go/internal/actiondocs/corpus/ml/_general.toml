@@ -1,0 +1,15 @@
+surface = "ml"
+action = "_general"
+purpose = "Trained-model inference. The `inference` action dispatches through the trained_model registry (see work.trained_model_list) and loads the live ONNX session from go/internal/ml/. Per-task convenience actions (route_query, curation_score, forge_suggest_surfaces, …) register on top of this surface when their model is promoted."
+
+notes = """
+SURFACE BOUNDARY. ml inference happens here; trained_model lifecycle (forge / list / promote / retire) lives on the work surface (work.trained_model_*). Read-side telemetry (model_predictions side-table) is written by this surface but queried via projections that future eval dashboards consume.
+
+MODEL RESOLUTION. ml.inference accepts either `model_id` (specific trained_models.id — useful for the A/B harness when comparing exact versions) or `task` (resolves the currently-promoted row for that task). model_id wins when both supplied. The status='promoted' filter is the only loadable lookup path through `task`; `evaluating` / `ab_testing` rows reach the serving layer only via model_id.
+
+TELEMETRY WRITE. Every successful inference writes one row to model_predictions, content-keyed by features_hash (SHA-256 of canonical-serialized features) and spanned via span_id from the agent-first-substrate envelope. Drift detection + prediction caching + future proj_model_eval projections all consume this table.
+
+LATENCY BUDGET. Inferences are CPU-only via onnxruntime_go; target <50ms per call for the five ml-temp candidate models (source router, curation classifier, cross-encoder reranker, bug surface tagger, skill auto-loader). Latency rows beyond 100ms are warning-shape and surface in future model-eval dashboards.
+
+DEGRADED MODE. When ML_MODELS_ROOT isn't configured or libonnxruntime.so isn't loadable (scripts/setup-ml-deps.sh hasn't been run on this box), the inference action returns a typed error envelope rather than panicking. Convenience actions follow the same pattern.
+"""

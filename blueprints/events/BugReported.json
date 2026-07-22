@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BugReported.json",
+  "title": "BugReported payload",
+  "description": "Emitted when a new bug is filed via forge(schema_name='bug', ...). Captures the create-time field values; mirrors the bug forge-schema. Subsequent mutations emit their own typed events (BugTriaged, BugResolved, BugReopened). The bug's entity reference is in the envelope; this schema covers payload-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "problem_statement"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short human description — one line, sentence-style. Mirrors bug.toml's title field. Required at file-time."
+    },
+    "problem_statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What was observed: behavior, symptom, reproduction steps. Mirrors bug.toml's problem_statement."
+    },
+    "surface": {
+      "type": ["string", "null"],
+      "description": "Subsystem / crate / concept the bug lives in. Comma-separated lowercase-kebab tags ('seed-mcp,library,bug_list'). Convention matches bug.toml — see its description for the matching semantics in bug_list."
+    },
+    "severity": {
+      "type": ["string", "null"],
+      "enum": ["low", "medium", "high", null],
+      "description": "Accepted values: low, medium, high. null when the caller omitted severity; the forge writer defaults to medium downstream. Enum validation here mirrors the downstream check in the bug handler."
+    },
+    "source": {
+      "type": ["string", "null"],
+      "description": "Where the bug was surfaced — session identifier, verification run name, chain slug, or free-form note. Mirrors bug.toml's source."
+    },
+    "tags": {
+      "type": ["string", "null"],
+      "description": "Categorical labels. Comma-separated, lowercase-kebab, no spaces. Same convention as surface. Captured as the string the caller sent (the validator may join a list to a string upstream)."
+    },
+    "acceptance_criteria": {
+      "type": ["string", "array", "null"],
+      "description": "What 'fixed' looks like. Accepts a list of strings (one bullet per criterion) or a single string (coerced to a 1-element list upstream). Optional at file-time; can be filled in later. Mirrors bug.toml.",
+      "items": { "type": "string" }
+    },
+    "constraints": {
+      "type": ["string", "null"],
+      "description": "Scope limits — don't-over-fix notes, boundaries the fix must respect. Paragraph prose. Mirrors bug.toml."
+    },
+    "qwen_task_id": {
+      "type": ["string", "null"],
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.5 audit finding). Optional pointer to the qwen-invocation row that surfaced this bug — populated when the bug was filed by the arc-close-filing pipeline; null for human-filed bugs. Mirrors the bugs.qwen_task_id CRUD column (migration 023) so payload-only fold reconstruction can recover it without joining."
+    },
+    "routed_suggestion_slug": {
+      "type": ["string", "null"],
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.5 audit finding). Optional cross-routing slug pointing at a sibling suggestion this bug emerged from. Default empty string ''; mirrors the bugs.routed_suggestion_slug CRUD column added by migration 054 (agent-suggestion-box). Payload-only fold reconstruction recovers this without joining."
+    }
+  }
+}

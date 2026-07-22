@@ -1,0 +1,24 @@
+surface = "work"
+action = "task_unstart"
+purpose = "Revert an in-flight task from status=active back to status=pending. Use for the mid-flight pause/revert case (multi-session cold-pickup, context-budget exhaustion) where task_start was called but the work paused without landing."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug."
+
+[[examples]]
+  call = "{\"id\":6326}"

@@ -1,0 +1,36 @@
+surface = "work"
+action = "emit_commit_landed"
+purpose = "Emit a CommitLanded event through the daemon's events substrate. Invoked by the post-commit-restart-advisor (via the commit-landed-emit binary) so the emit lands INSIDE the daemon's process — only that path fires the chained fold hook (SubstrateReviewObserver) that triggers the substrate-side review on every commit. Fail-open: invalid params / schema-validator failure / pool error all return status=skipped with a reason. See docs/EVENT_CATALOG.md §Commit-lifecycle."
+
+[[params]]
+  name = "commit_sha"
+  type = "string"
+  required = true
+  description = "Full 40-char hex SHA of the commit that just landed."
+
+[[params]]
+  name = "branch"
+  type = "optional_string"
+  required = false
+  description = "Branch name; null when HEAD is detached."
+
+[[params]]
+  name = "files_changed_count"
+  type = "integer"
+  required = false
+  description = "Files-changed count parsed from `git show --stat`."
+
+[[params]]
+  name = "author"
+  type = "optional_string"
+  required = false
+  description = "Commit author in 'Name <email>' form."
+
+[[params]]
+  name = "subject"
+  type = "optional_string"
+  required = false
+  description = "First line of the commit message."
+
+[[examples]]
+  call = "{\"commit_sha\":\"abc123...\",\"branch\":\"main\",\"files_changed_count\":3}"

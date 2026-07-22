@@ -1,0 +1,270 @@
+# Dispatch policy — runtime enforcement gates for every meta-tool action.
+#
+# This file is the single source of truth for the dispatch layer's per-action
+# enforcement policy. It is loaded once at server startup into the policy
+# registry (go/internal/dispatch/policy/) and consulted by the dispatcher
+# before invoking each handler.
+#
+# The per-skill TOML manifests in this directory (start-task.toml,
+# complete-task.toml, etc.) are agent-facing skill discoverability content.
+# This file is dispatcher-facing policy. They are deliberately separate
+# concerns; do not merge them.
+#
+# Schema:
+#
+#   [<surface>.<action_name>]
+#   requires_rationale = true | false   # default false (read-only ergonomic)
+#
+# Surface ∈ {work, knowledge, measure, admin} matches the meta-tool name the
+# action lives under. Action name matches the dispatch.Table key exactly.
+#
+# Rationale enforcement (chain agent-first-substrate T3):
+#
+#   when actor.kind == "agent" AND policy.requires_rationale == true,
+#   the dispatcher rejects with InvalidInput(field="rationale") if the
+#   call's top-level `rationale` field is empty, whitespace-only,
+#   shorter than 6 chars after trimming, or matches the boilerplate
+#   stop-list defined in go/internal/dispatch/policy/policy.go.
+#
+# Human and system actors are NOT subject to stop-list / min-length checks;
+# they pass through even with an empty rationale (the field is recorded
+# verbatim when supplied, NULL otherwise). The rationale-required policy is
+# explicitly an agent-discipline tool, not a UX gate for portal/CLI callers.
+#
+# Adding a new mutating action: add its `[surface.action]` block here with
+# `requires_rationale = true`. Read-only actions can be omitted entirely;
+# the dispatcher treats absent entries as `requires_rationale = false`.
+
+# ----- work meta-tool -----
+
+# Mutating: lifecycle transitions and content edits.
+[work.bug_resolve]
+requires_rationale = true
+
+[work.bug_reopen]
+requires_rationale = true
+
+# Suggestion lifecycle (agent-suggestion-box chain). Same rationale-gate
+# shape as bug_resolve / bug_reopen — agent actors must supply rationale
+# at the dispatch boundary so the events ledger captures the reasoning
+# behind each transition.
+[work.suggestion_resolve]
+requires_rationale = true
+
+[work.suggestion_reopen]
+requires_rationale = true
+
+[work.task_start]
+requires_rationale = true
+
+[work.task_complete]
+requires_rationale = true
+
+[work.task_cancel]
+requires_rationale = true
+
+[work.task_reopen]
+requires_rationale = true
+
+[work.task_block]
+requires_rationale = true
+
+[work.task_unblock]
+requires_rationale = true
+
+[work.task_edit]
+requires_rationale = true
+
+[work.chain_close]
+requires_rationale = true
+
+[work.forge]
+requires_rationale = true
+
+[work.forge_edit]
+requires_rationale = true
+
+[work.forge_delete]
+requires_rationale = true
+
+# Batched ops (work-batching-and-forge-templates T2). Envelope-level
+# rationale required: it's the "why this MCP call" grain. Per-op
+# rationale is separately required by the HandleBatch validator
+# (rejected pre-execution before any DB write); together both grains
+# land on the BatchExecuted event payload's envelope.rationale +
+# payload.ops[].rationale.
+[work.batch]
+requires_rationale = true
+
+# Lifecycle-step sugar (work-batching-and-forge-templates T3). Builds
+# a 2-op batch envelope; the per-op close_rationale + next_rationale
+# are enforced by HandleLifecycleStep at the validation gate before
+# dispatching the batch. Envelope rationale here is the call-level
+# "why this MCP call" grain that the dispatcher stamps on cascade
+# events.
+[work.lifecycle_step]
+requires_rationale = true
+
+# Forge-v2 event-submission surface (emit-surface-forge-v2 T3). Envelope
+# rationale is the "why this MCP call" grain the dispatcher stamps on the
+# recorded events; each event may also carry its own per-event rationale.
+# Mutating action → rationale required, consistent with forge/batch.
+[work.record]
+requires_rationale = true
+
+# SHA-stamp actions update audit fields on already-closed entities. They
+# are mutating but the operational meaning is "post-close bookkeeping" and
+# the rationale is typically just the commit message; flagged as required
+# so the events ledger still captures the agent's reasoning when the stamp
+# arrives separately from the close.
+[work.bug_stamp_sha]
+requires_rationale = true
+
+[work.task_stamp_sha]
+requires_rationale = true
+
+[work.suggestion_stamp_sha]
+requires_rationale = true
+
+# Roadmap mutations — reserved-namespace per EVENT_CATALOG.md; they don't
+# emit events in this chain but they DO mutate state, so agent actors must
+# supply rationale at the dispatch boundary even though no event row
+# captures it yet.
+[work.roadmap_set]
+requires_rationale = true
+
+[work.roadmap_insert]
+requires_rationale = true
+
+[work.roadmap_mark_reassessed]
+requires_rationale = true
+
+# Chain dependency edges (dependency-driven-roadmap). Direct-write table,
+# but mutating state, so agent actors supply rationale at the boundary.
+# chain_dep_list and roadmap_plan are reads — no rationale.
+[work.chain_dep_add]
+requires_rationale = true
+
+[work.chain_dep_remove]
+requires_rationale = true
+
+# ----- knowledge meta-tool -----
+
+# Mutating: library catalogue maintenance.
+[knowledge.library_add]
+requires_rationale = true
+
+[knowledge.library_update]
+requires_rationale = true
+
+[knowledge.library_retire]
+requires_rationale = true
+
+# knowledge_report_miss writes a feedback signal — the call IS the rationale
+# (staleness_reason captures the why), so dispatch-layer rationale is
+# redundant ceremony. Leave absent.
+
+# resolve_references is a read-only action — scans a message, returns
+# resolved bindings. No state mutation, no rationale required (per
+# docs/REFERENCE_RESOLUTION.md §5.4). The agent's caller still records
+# the call via grounding_events.query_source='reference_resolution'
+# once T5 lands.
+
+# ----- measure meta-tool -----
+
+# benchmark_record persists per-run rows. The provenance payload (T6
+# closed) is the substantive "why this run" — dispatch-layer rationale
+# would duplicate that. Leave absent.
+
+# benchmark_replay re-executes a prior run from its captured provenance,
+# producing a new benchmark_results row. Mutating (writes a row) — the
+# rationale should explain *why* the replay is being run (debugging
+# non-determinism, validating a model swap, post-incident reproduction).
+[measure.benchmark_replay]
+requires_rationale = true
+
+# bench_run executes a registered bench harness subprocess + emits a
+# BenchmarkDiff event (and BenchmarkBaselineUpdated when update_baseline
+# is true). Mutating (writes events; optionally overwrites a baseline
+# file on disk) — rationale should explain why this run is happening
+# (perf-touch validation, baseline refresh after a known regression
+# fixed, post-deploy sanity). T6 of work-batching-and-forge-templates.
+[measure.bench_run]
+requires_rationale = true
+
+# ----- admin meta-tool -----
+
+# Mutating: server-state changes outside the events substrate.
+[admin.project_register]
+requires_rationale = true
+
+[admin.host_register]
+requires_rationale = true
+
+[admin.host_remove]
+requires_rationale = true
+
+[admin.schema_reload]
+requires_rationale = true
+
+# vault_integrity_sweep retires orphan vault pointers (status='orphaned').
+# Mutating, agent-facing, infrequent — rationale lets the events ledger
+# capture *why* the sweep was triggered (post-incident cleanup, scheduled
+# hygiene, follow-up after manual file deletion). vault_orphan_list is the
+# read-only sibling and stays absent.
+[admin.vault_integrity_sweep]
+requires_rationale = true
+
+# Orchestrator-tier escalation contract (chain orchestrator-tier-escalation-
+# contract T2). The two mutating actions require rationale for agent actors:
+# escalation_threshold_set changes contract config; escalation_propose lands
+# an EscalationProposed event in the ledger (the reason param doubles as the
+# rationale on the system-actor HTTP path, which the gate doesn't cover).
+# escalation_threshold_list is the read-only sibling and stays absent.
+[admin.escalation_threshold_set]
+requires_rationale = true
+
+[admin.escalation_propose]
+requires_rationale = true
+
+# ----- fs meta-tool -----
+
+# Owned filesystem mutation primitives (chain owned-fs-move-remove-primitive).
+# fs.move relocates a path (mutating) and fs.remove deletes one (destructive);
+# both run in pure Go with no shell, so they work in the distroless container.
+# Agent actors must supply a rationale at the dispatch boundary so the events
+# ledger records WHY a file was relocated/deleted — the same posture as the
+# work/admin mutating actions. The read/search actions (read/grep/glob/ls) and
+# the existing write/edit stay absent: write/edit carry the read-state family
+# precondition as their discipline gate, and the read-only actions cannot mutate
+# state. (corpos internal/risk.Classify independently gates fs.remove as
+# ClassDestructive for autonomous workers; this is the server-side half.)
+[fs.move]
+requires_rationale = true
+
+[fs.remove]
+requires_rationale = true
+
+# ----- sys meta-tool -----
+# No gated sys actions: the introspection actions (ps/ports/units/containers) are
+# read-only/ungated, and the gated `exec` action was RETIRED from this surface
+# (corpos-substrate-topology T6) — corpos owns host command execution natively.
+
+# ----- ecosystem meta-tool -----
+# The local-ecosystem learn actions upsert the tenant's world map (hosts /
+# services / access methods) as data. Agent actors must supply a rationale at the
+# dispatch boundary so the events ledger records WHY a fact was learned/changed —
+# same posture as the work/admin/fs mutating actions. The read actions
+# (access_check / describe / list) are absent: deterministic reads cannot mutate
+# state and stay ungated. (chain 435 local-ecosystem-service-and-extraction-pattern.)
+[ecosystem.host_learn]
+requires_rationale = true
+
+[ecosystem.service_learn]
+requires_rationale = true
+
+[ecosystem.access_learn]
+requires_rationale = true
+
+[ecosystem.canon_learn]
+requires_rationale = true

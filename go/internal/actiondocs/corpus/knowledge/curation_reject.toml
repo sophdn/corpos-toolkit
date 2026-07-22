@@ -1,0 +1,19 @@
+surface = "knowledge"
+action = "curation_reject"
+purpose = "Mark a candidate rejected. Emits a CurationCandidateRejected substrate event visible in AuditLedger. Reason is REQUIRED and non-empty."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = true
+  description = "The candidate id."
+
+[[params]]
+  name = "reason"
+  type = "string"
+  required = true
+  description = "Why the candidate is being rejected. REQUIRED and non-empty."
+
+[[errors]]
+  condition = "missing or empty reason"
+  message = "curation_reject requires a non-empty reason; rejection without rationale is not accepted."

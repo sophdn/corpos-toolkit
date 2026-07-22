@@ -1,0 +1,35 @@
+# Canonical Go action: work.forge_schemas (see go/internal/actiondocs/corpus/work/forge_schemas.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "forge-list"
+version = "1.0.0"
+description = "List the forge schemas under blueprints/forge-schemas/ — discover what artifact shapes can be authored before calling forge."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "forge schemas",
+    "list forge schemas",
+    "forge_list",
+    "available schemas",
+    "what schemas are there",
+    "schema fields",
+    "schema field types",
+    "schema fields required",
+    "what fields does",
+    "what artifact shapes",
+    "list artifact types",
+    "what can I forge",
+    "before calling forge",
+    "preview a schema",
+]
+when_not = [
+    "creating an artifact (use forge directly when the schema name is known)",
+    "deleting or editing an artifact (forge_delete / forge_edit)",
+    "listing skills, tasks, or chains (skill_list / chain_status / find_chain)",
+]
+
+[instructions]
+path = "action-manifests/instructions/forge-list.md"

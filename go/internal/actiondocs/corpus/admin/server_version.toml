@@ -1,0 +1,3 @@
+surface = "admin"
+action = "server_version"
+purpose = "Report the running binary's build-time git SHA + timestamp + package version, so an agent can compare against 'git rev-parse HEAD' to detect deploy lag (running binary older than HEAD = restart the daemon before exercising new dispatch code)."

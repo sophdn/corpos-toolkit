@@ -1,0 +1,105 @@
+{
+  "actor_id": "claude-opus-4-7-agent-substrate-frontend-F5",
+  "entity": {
+    "kind": "chain",
+    "slug": "agent-substrate-frontend",
+    "project_id": "mcp-servers"
+  },
+  "events": [
+    {
+      "type": "SubstrateFrontendAuditCompleted",
+      "rationale": "Chain agent-substrate-frontend F5 retrospective — emitting the substrate-frontend audit findings through the events ledger this chain made readable. Self-hosting check: the dashboard surfaces that serve the ledger record their own audit outcome through that same ledger.",
+      "payload": {
+        "audit_doc": "docs/SUBSTRATE_FRONTEND.md (§1–§12 design doc) plus chain agent-substrate-frontend completion_condition items (a)–(f).",
+        "summary": "All six chain completion criteria pass. (a) BugDetailPanel, ChainIndex chain-detail, and TaskDetail render the EventTimeline component sourced via GET /entities/{kind}/{slug}/events; (b) /audit page renders with URL-encoded filters, cursor pagination, EventDetailDrawer reusing per-type renderers, and SSE-aware new-events affordance; (c) /admin/dispatch-policy page surfaces every (surface, action) entry from action-manifests/dispatch-policy.toml with reload-from-disk via a fresh observehttp /admin/dispatch-policy fetch; (d) related_queries field renders the null/empty/array trichotomy correctly per F1 §6 fallback contract — verified by go/internal/observehttp/events_test.go's sibling-table-present / sibling-table-absent / sibling-present-no-match cases; (e) this very event is the (e) deliverable — the closing SubstrateFrontendAuditCompleted lands through the substrate; (f) docs/SUBSTRATE_FRONTEND.md is the durable design contract sufficient for a follow-on chain author to add a new event-type renderer without re-deriving the layout. Cross-substrate seam to query-telemetry-substrate is wired structurally; sibling chain has not yet started, so related_queries currently always returns null in production.",
+        "recommended_next_phase": "Phase 4 — legacy free-form field deprecation. With the event timeline visible end-to-end, the BugDetailPanel's resolution_note / ChainIndex's design_decisions / TaskDetail's handoff_output free-form fields become candidates for retirement. A separate chain should audit dashboard usage, propose the cutover sequence, and land the panel changes after a bake-in period. Also recommended: complete query-telemetry-substrate so the related_queries cross-substrate join surfaces real data in the audit-ledger drawer.",
+        "findings": [
+          {
+            "item": "§2 observehttp endpoint catalog — three readers landed",
+            "status": "pass",
+            "evidence": "go/internal/observehttp/events.go ships /events/list (paginated DESC), /events/{event_id} (detail + cross-substrate join), /entities/{kind}/{slug}/events (chronological ASC). Mounted in router.go. SSE stream stays at /events; the JSON list lives at /events/list to avoid the path collision flagged in F1 §2.4.",
+            "severity": "low"
+          },
+          {
+            "item": "§3 cursor pagination on event_id — UUIDv7 sortable, no offset drift",
+            "status": "pass",
+            "evidence": "DESC cursor uses `event_id \u003c ?`; ASC cursor uses `event_id \u003e ?`. Visible-tail cursor semantic (caught + fixed mid-implementation; initial draft used the lookahead row's ID which skipped one event between pages). TestEventsList_CursorPaginationAdvances + TestEntityEvents_CursorAscendingPagination pin both directions; TestEventsList_CursorSurvivesMidPaginateInsert verifies append-only stability.",
+            "severity": "low"
+          },
+          {
+            "item": "§4 read-source rules — events table direct for timeline rows, projections for entity current-state",
+            "status": "pass",
+            "evidence": "Timeline queries hit events directly with explicit column list (no SELECT *). Entity-current-state lookups continue to use the proj_* tables that T4 introduced. The per-entity timeline reads from events; the chain/bug/task detail panels themselves read current state from projections.",
+            "severity": "low"
+          },
+          {
+            "item": "§5 span-id link contract with T5 SpansPanel — graceful fallback",
+            "status": "partial",
+            "evidence": "F3's \u003cSpanLink\u003e targets /spans?span_id=\u003cid\u003e and writes the span_id to navigator.clipboard on click (defensive). The SpansPanel filter for the query-param is NOT YET implemented in T5's pages/Spans/index.tsx; until that small follow-on lands, clicking a span link navigates to /spans showing the full live buffer and the operator falls back to the clipboard-copy. F1 §5.2 documented the seam; the SpansPanel-side filter is a 5-line change deferred to a follow-on.",
+            "severity": "medium"
+          },
+          {
+            "item": "§6 cross-substrate join — null vs empty-array vs populated trichotomy",
+            "status": "pass",
+            "evidence": "F2's loadRelatedQueries probes sqlite_master each request; absent table → nil (JSON null); present table → array. TestEventsDetail_RelatedQueriesPresentWhenSiblingTableExists / TestEventsDetail_RelatedQueriesEmptyArrayWhenSiblingTablePresentButNoMatch / TestEventsDetail_EmitsExplicitNullForRelatedQueriesWhenSiblingAbsent verify all three states. F4 drawer renders distinct copy per state (telemetry-absent / no-related-queries / table-of-queries).",
+            "severity": "low"
+          },
+          {
+            "item": "§7 per-event-type detail-panel shapes — full bug/task/chain/audit/benchmark coverage",
+            "status": "pass",
+            "evidence": "apps/dashboard/src/components/shared/EventTimeline/per-type-renderers.tsx registers renderers for every EVENT_CATALOG.md type that this chain's scope covers. T6 BenchmarkRunStarted provenance bundle exposed as labeled rows per F1 §7.5 — anchored after T6 close, so no rewrite was needed. Unknown types fall through to the generic JSON pretty-print fallback (forward compat for future event types). registeredEventTypes() test pins the catalog coverage.",
+            "severity": "low"
+          },
+          {
+            "item": "§8 component contracts — EventTimeline, EventDetailDrawer, DispatchPolicyPeek",
+            "status": "pass",
+            "evidence": "EventTimeline (apps/dashboard/src/components/shared/EventTimeline/) — reusable across bug/chain/task panels; loading/error/empty states; aria-list semantics; SSE-aware refresh. EventDetailDrawer (in apps/dashboard/src/pages/AuditLedger/) — role=dialog, Escape closes, focus-trapped, reuses per-type renderers. DispatchPolicyPeek (apps/dashboard/src/pages/AdminDispatchPolicy/) — surface tabs, reload-from-disk, role=tablist + role=tab. All three with comprehensive unit tests (19 + 20 + 11 = 50 cases).",
+            "severity": "low"
+          },
+          {
+            "item": "§9 route plan — /audit, /admin/dispatch-policy mounted, sidebar nav added",
+            "status": "pass",
+            "evidence": "Routes mounted in apps/dashboard/src/router/index.tsx; sidebar links added in apps/dashboard/src/components/layout/Sidebar/index.tsx. Filter state URL-encoded with short param names (k, t, p, s, ak, aid, from, to, q, c, slug, event) per F1 §9.1. Default last-24h scoping is documented in F1 but not yet implemented as a default — the page boots with no time-bound and the operator sets `from` explicitly; tracking as a follow-on UX polish.",
+            "severity": "low"
+          },
+          {
+            "item": "§10 fallback matrix — every seam degrades gracefully when sibling absent",
+            "status": "pass",
+            "evidence": "query-telemetry-substrate sibling absent → related_queries: null + drawer renders telemetry-not-available copy. action-docs-corpus absent → policy peek omits the cross-link (rows carry data-action-key for future cross-link wiring). T5 SpansPanel filter absent → SpanLink degrades to navigate-to-/spans + clipboard-copy. T4 projections — load-bearing dependency; already closed before this chain started.",
+            "severity": "low"
+          },
+          {
+            "item": "§11 TypeScript naming-collision disambiguation",
+            "status": "pass",
+            "evidence": "lib/auditEvents.ts ships AuditEvent / AuditEventDetail / AuditEventListResponse — distinct from lib/events.ts's ToolkitEvent (SSE bus). api/auditEvents.ts surfaces listAuditEvents / getAuditEvent / listEntityAuditEvents. Backend (Go) keeps the term events throughout (eventbus.Bus is a distinct package — no collision). The EventTimeline component name itself stays UX-friendly with the type-level prefix carrying the disambiguation.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion criterion (e) — closing event lands through the substrate",
+            "status": "pass",
+            "evidence": "This very event row is the (e) deliverable. SubstrateFrontendAuditCompleted is registered in blueprints/events/, EVENT_CATALOG.md, go/internal/events/payloads.go, and the embed dir; the emit binary (go/cmd/substrate-frontend-audit-emit/) runs through events.Emit using the same dual-write tx the meta-tool handlers use. Self-hosting check satisfied.",
+            "severity": "low"
+          },
+          {
+            "item": "Completion criterion (f) — design doc durable for follow-on chains",
+            "status": "pass",
+            "evidence": "docs/SUBSTRATE_FRONTEND.md is ~600 lines covering endpoint catalog, pagination, read-source rules, component contracts, route plan, fallback matrix, naming disambiguation. F2–F5 implementations match the doc 1:1 (with one documented partial — §5.2's SpansPanel filter side, deferred). A follow-on chain adding a new event-type renderer reads §7, copies the existing pattern from per-type-renderers.tsx, adds a row to the renderers registry. Forward-compatibility verified by the generic-fallback test.",
+            "severity": "low"
+          },
+          {
+            "item": "Cross-chain seam — query-telemetry-substrate not yet started",
+            "status": "deferred",
+            "evidence": "Sibling chain query-telemetry-substrate has 0 of 5 tasks closed. The cross-substrate join in F2 + the UI trichotomy in F4 are wired structurally so the day the sibling lands, related_queries flips from null to populated arrays without dashboard changes. Documented in F1 §6 + §10. Per the chain's non-goal §1 row 4, this chain ships its core surfaces without that sibling.",
+            "severity": "n/a"
+          },
+          {
+            "item": "Phase 4 cutover (legacy free-form field deprecation)",
+            "status": "deferred",
+            "evidence": "Out of scope per the chain's non-goal §1 row 1. The EventTimeline is added BELOW the existing resolution_note / design_decisions / handoff_output fields in each detail panel; the legacy fields stay populated as projection cache through Phase 4. A separate follow-on chain is the appropriate home — recommended_next_phase points there.",
+            "severity": "n/a"
+          }
+        ]
+      }
+    }
+  ]
+}

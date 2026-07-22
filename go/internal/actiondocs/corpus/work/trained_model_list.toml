@@ -1,0 +1,36 @@
+surface = "work"
+action = "trained_model_list"
+purpose = "List trained_model rows. Filter by task or status. Status values: training | evaluating | ab_testing | promoted | retired. The registry under go/internal/ml/ uses this same filter set to resolve load-by-promoted lookups."
+
+[[params]]
+  name = "task"
+  type = "optional_string"
+  required = false
+  description = "Task identifier (e.g. 'source-router', 'cross-encoder-reranker'). Lowercase-kebab."
+
+[[params]]
+  name = "status"
+  type = "optional_string"
+  required = false
+  description = "Lifecycle state filter: training | evaluating | ab_testing | promoted | retired. Invalid values reject with a typed error."
+
+[[params]]
+  name = "verbose"
+  type = "bool"
+  required = false
+  description = "Return full rows (eval_metrics + training_dataset_signature included)."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Default 50; clamped to >= 0."
+
+[[params]]
+  name = "offset"
+  type = "integer"
+  required = false
+  description = "Pagination offset; rows to skip before applying limit."
+
+[[examples]]
+  call = "{\"task\":\"source-router\",\"status\":\"promoted\"}"

@@ -1,0 +1,31 @@
+supported_ops = ["create"]
+
+[schema]
+name = "alpha"
+prefix = "ALPHA"
+output_dir = "notes/alpha"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "markdown"
+prefix = "ALPHA"
+output_dir = "notes/alpha"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[[fields]]
+name = "body"
+type = "string"
+description = "Body of the alpha note."
+
+[[fields]]
+name = "tags"
+type = "optional_string_list"
+description = "Free-form tags."
+
+[[sections]]
+heading = "Body"
+fields = ["body"]
+
+[[sections]]
+heading = "Tags"
+fields = ["tags"]

@@ -1,0 +1,51 @@
+name        = "tiered-context"
+description = "Per-artifact session-loading tier classifier"
+is_deployed = true
+output_enum = ["tier-zero", "tier-one", "tier-two", "tier-three"]
+
+criteria = [
+  "tier-zero: Orientation — ALWAYS-loaded at session start. CLAUDE.md, NOTATION_REFERENCE.md, role identity file (when role invoked), LOCI.md Layer 1.",
+  "tier-one: Task context — loads when a SPECIFIC task is identified. The task file itself; the chain file the task lives in; the role's duty file (when role active and the task is duty-bound).",
+  "tier-two: Protocol — loads when EXECUTION begins. skills/task-closure-protocol, skills/contamination-gate, skills/pre-commit-orchestration. Forge schemas live alongside.",
+  "tier-three: Theory / Reference — loads when a workflow REQUIRES deep context. REFERENCES.md, LOCI.md Layer 2, study files, methodology papers, role-specific project context, large reference docs.",
+]
+
+prompt_template = """You classify an artifact by the tier at which it should be loaded \
+during a session.
+
+- **tier-zero** — Orientation: ALWAYS-loaded at session start. CLAUDE.md, \
+NOTATION_REFERENCE.md, role identity file (when role invoked), \
+LOCI.md Layer 1. Enough to route, not enough to execute.
+- **tier-one** — Task context: loads when a SPECIFIC task is identified. \
+The task file itself; the chain file the task lives in; the role's \
+duty file (when role active and the task is duty-bound).
+- **tier-two** — Protocol: loads when EXECUTION begins. skills/\
+task-closure-protocol, skills/contamination-gate, skills/pre-commit-\
+orchestration. Forge schemas live alongside.
+- **tier-three** — Theory / Reference: loads when a workflow REQUIRES deep \
+context. REFERENCES.md, LOCI.md Layer 2, study files, methodology \
+papers, role-specific project context, large reference docs.
+
+Bias: when uncertain between adjacent tiers, pick the LOWER tier. The \
+skill exists to prevent over-loading; conservative tier assignments \
+preserve token budget."""
+
+[[examples]]
+text      = "Artifact: `CLAUDE.md` at the project root. Describes session-start protocol, ambient skills, document-map pointers, and degraded-mode fallback."
+label     = "tier-zero"
+reasoning = "Session-start orientation; tier-zero always-loads."
+
+[[examples]]
+text      = "Artifact: a specific task file, e.g. `tasks/active/2026-05-10_qwen-rubric-smoke-prep.md`. Loads when the task is identified."
+label     = "tier-one"
+reasoning = "Specific task identified; the file IS task context."
+
+[[examples]]
+text      = "Artifact: `skills/instructions/task-closure-protocol.md`. The closure checklist that fires when a task transitions from active → closed."
+label     = "tier-two"
+reasoning = "Protocol skill that loads when execution begins."
+
+[[examples]]
+text      = "Artifact: `process-docs/SMART_TRAVERSAL_PROTOCOL.md`. The full rubric + tier theory + axis-gap methodology underlying tiered-context-loading. ~1100 lines."
+label     = "tier-three"
+reasoning = "Methodology / reference doc; loads only when a workflow requires the deep methodology."

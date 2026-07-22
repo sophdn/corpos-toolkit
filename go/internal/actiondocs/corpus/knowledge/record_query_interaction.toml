@@ -1,0 +1,33 @@
+surface = "knowledge"
+action = "record_query_interaction"
+purpose = "Record one click-signal (a query_interactions row) against the grounding_events row of a prior search call, identified by that call's span_id. The owned write path for a client that detects click signals from its own transcript (the RAG implicit-feedback loop) — the grounding event is resolved server-side from span_id, so the client only needs the span id off its tool result plus the clicked hit's source_ref. A span with no grounding_event is a soft no-op."
+
+[[params]]
+  name = "span_id"
+  type = "string"
+  required = true
+  description = "The search call's substrate span id (off the tool result), used to resolve its grounding_event."
+
+[[params]]
+  name = "source_ref"
+  type = "string"
+  required = true
+  description = "The clicked/used hit's source ref (e.g. a vault note path)."
+
+[[params]]
+  name = "click_kind"
+  type = "string"
+  required = true
+  description = "One of: followed | cited | mentioned | resolved-from."
+
+[[params]]
+  name = "session_id"
+  type = "string"
+  required = true
+  description = "The session the interaction occurred in."
+
+[[params]]
+  name = "position"
+  type = "integer"
+  required = false
+  description = "1-based rank of the clicked hit in the result list."

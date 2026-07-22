@@ -1,0 +1,64 @@
+surface = "work"
+action = "task_edit"
+purpose = "Edit a task's content fields (problem_statement, acceptance_criteria, context_required, constraints, handoff_output). Pass handoff_output_append to concatenate onto the existing handoff_output (atomic, sized for post-closure addenda — sanity audits, late telemetry) rather than rewriting; mutually exclusive with handoff_output in the same call. Envelope-level validation problems (missing slug, unknown field names, mutually-exclusive combinations) aggregate into a single `errors` list. For richer schema-driven edits, prefer forge_edit on schema=task."
+notes = "forge_edit on a task accepts the same {chain_slug, slug, <fields…>} top-level shape as task_edit (the composite key is synthesized from chain_slug + slug); the structured form on tasks needs key: {chain_slug, slug}."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug — needed because slug is unique only within a chain."
+
+[[params]]
+  name = "problem_statement"
+  type = "optional_string"
+  required = false
+  description = "Rewrite the task's problem statement."
+
+[[params]]
+  name = "acceptance_criteria"
+  type = "optional_string"
+  required = false
+  description = "Rewrite the task's acceptance criteria."
+
+[[params]]
+  name = "context_required"
+  type = "optional_string"
+  required = false
+  description = "Rewrite the task's required-context field."
+
+[[params]]
+  name = "constraints"
+  type = "optional_string"
+  required = false
+  description = "Rewrite the task's constraints field."
+
+[[params]]
+  name = "handoff_output"
+  type = "optional_string"
+  required = false
+  description = "Rewrite the task's handoff_output. Mutually exclusive with handoff_output_append."
+
+[[params]]
+  name = "handoff_output_append"
+  type = "optional_string"
+  required = false
+  description = "Append-mode addendum for handoff_output. Concatenated via SQLite `||`; caller controls leading separator (newline etc.). Mutually exclusive with handoff_output."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

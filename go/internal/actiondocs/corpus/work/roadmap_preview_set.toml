@@ -1,0 +1,9 @@
+surface = "work"
+action = "roadmap_preview_set"
+purpose = "Dry-run roadmap_set: returns added / removed / repositioned / unchanged without applying. Same input shape as roadmap_set."
+
+[[params]]
+  name = "items"
+  type = "object[]"
+  required = true
+  description = "Same shape as roadmap_set.items."

@@ -1,0 +1,5 @@
+Owned filesystem surface — Read/Write/Edit/Grep/Glob/LS plus Move/Remove reimplemented as toolkit-server actions so the agent reads, searches, lists, AND mutates the tree through surfaces we own rather than the substrate-blind harness tools. The DEFAULT of every navigation action is byte-for-byte faithful to its harness counterpart (the parity floor that gates the deny-list swap); substrate-native capability (outline/provenance reads, knowledge-aware grep, convention-aware glob, orientation ls) layers on as opt-in modes that never change the default. move (mutating, rationale-gated) relocates a path and remove (destructive, rationale-gated) deletes one — both pure Go, so they work in the distroless container without shelling out to mv/rm.
+
+Actions (alphabetical): edit, glob, grep, ls, move, read, remove, write.
+
+For per-action details (params, aliases, errors, examples, notes), call admin.action_describe(surface="fs", action="<name>"). For surface-wide conventions (the read/write/edit family + its shared read-state precondition, parity-default vs opt-in upgrade modes, the deny-list swap), call admin.action_describe(surface="fs", action="_general").

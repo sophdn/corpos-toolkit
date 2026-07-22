@@ -1,0 +1,29 @@
+[skill]
+name = "bug-read"
+version = "1.0.0"
+description = "Read the full detail of a single bug by slug: problem statement, acceptance criteria, constraints, source, resolution note, and routed chain/task pointers."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "read bug",
+    "bug detail",
+    "bug slug",
+    "full bug",
+    "investigate bug",
+    "what does this bug say",
+    "bug problem statement",
+    "bug resolution note",
+    "routed chain pointer",
+    "routed task pointer",
+    "bug acceptance criteria",
+    "what is this bug about",
+]
+when_not = [
+    "listing bugs — use bug_list for index/filter queries",
+    "resolving or reopening a bug — use bug_resolve or bug_reopen",
+    "searching across bugs by surface or severity without a known slug",
+]
+
+[instructions]
+path = "action-manifests/instructions/bug-read.md"

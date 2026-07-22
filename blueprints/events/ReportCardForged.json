@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ReportCardForged.json",
+  "title": "ReportCardForged payload",
+  "description": "Emitted by forge(schema_name='report-card', ...) on every successful create. Sister event to RetrospectiveForged — the report-card is a fresh sub-agent's external grade post-chain-closure, distinct from the chain author's self-retrospective. Same payload shape so consumers that join chain-closure with chain-grading have a uniform projection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["chain_slug", "file_path", "section_count"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The chain this report-card grades. Matches the slug in proj_chain_status."
+    },
+    "chain_id": {
+      "type": ["integer", "null"],
+      "description": "Numeric chain id resolved from chain_slug at create time."
+    },
+    "file_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path to the written report-card doc (e.g. docs/PARSE_CONTEXT_LEAN_ORIENTING_REPORT_CARD_2026-05-23.md)."
+    },
+    "section_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of skeleton sections the caller populated with non-empty bodies. The schema has 4 skeleton sections + a catch-all (additional_sections); 0 = skeleton-only; 4 = every skeleton section filled."
+    }
+  }
+}

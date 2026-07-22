@@ -1,0 +1,50 @@
+surface = "work"
+action = "bug_list"
+purpose = "List bugs. Compact projection by default. Requires a project OR at least one filter; pass all=true to confirm a full-table dump."
+
+[[params]]
+  name = "status"
+  type = "optional_string"
+  required = false
+  description = "open / fixed / wontfix / routed / dup. Alias: state."
+
+[[params]]
+  name = "severity"
+  type = "optional_string"
+  required = false
+  description = "low / medium / high."
+
+[[params]]
+  name = "surface"
+  type = "optional_string"
+  required = false
+  description = "Comma-separated surface tags; match-any."
+
+[[params]]
+  name = "since"
+  type = "optional_string"
+  required = false
+  description = "ISO timestamp; surfaces bugs updated since."
+
+[[params]]
+  name = "verbose"
+  type = "bool"
+  required = false
+  description = "Return full bodies including problem_statement."
+
+[[params]]
+  name = "all"
+  type = "bool"
+  required = false
+  description = "Confirm a full-table dump when no project / filter passed."
+
+[[param_aliases]]
+  from = "state"
+  to = "status"
+
+[[errors]]
+  condition = "no project AND no filter"
+  message = "bug_list requires a project OR at least one filter (status, severity, surface, since); pass all=true to confirm a full-table dump."
+
+[[examples]]
+  call = "{\"status\":\"open\"}"

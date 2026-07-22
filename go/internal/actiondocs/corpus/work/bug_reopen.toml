@@ -1,0 +1,24 @@
+surface = "work"
+action = "bug_reopen"
+purpose = "Re-open a previously-resolved bug."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Bug id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+
+[[examples]]
+  call = "{\"slug\":\"my-bug\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

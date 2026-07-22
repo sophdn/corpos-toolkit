@@ -1,0 +1,238 @@
+{
+  "arc_review_audit": {
+    "call_shape": "Accepted params: since (string), correction_window_hours (int64). Example: {\"since\":\"2026-05-13T00:00:00Z\",\"correction_window_hours\":24}.",
+    "identifier_required_error": "arc_review_audit requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: since (string), correction_window_hours (int64). Example: {\"since\":\"2026-05-13T00:00:00Z\",\"correction_window_hours\":24}."
+  },
+  "batch": {
+    "call_shape": "Accepted params: ops (object[])*, continue_on_error (bool), batch_rationale (string) [*=required]. Example: {\"ops\":[{\"op\":\"task_complete\",\"params\":{\"task_id\":123,\"commit_sha\":\"abc1234\"},\"rationale\":\"T1 deliverable landed\"},{\"op\":\"task_start\",\"params\":{\"task_id\":124},\"rationale\":\"T2 picked up\"}],\"continue_on_error\":false}.",
+    "identifier_required_error": "batch requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: ops (object[])*, continue_on_error (bool), batch_rationale (string) [*=required]. Example: {\"ops\":[{\"op\":\"task_complete\",\"params\":{\"task_id\":123,\"commit_sha\":\"abc1234\"},\"rationale\":\"T1 deliverable landed\"},{\"op\":\"task_start\",\"params\":{\"task_id\":124},\"rationale\":\"T2 picked up\"}],\"continue_on_error\":false}."
+  },
+  "bug_list": {
+    "call_shape": "Accepted params: status (string), state (string), severity (string), surface (string), since (string), verbose (bool), all (bool). Example: {\"status\":\"open\"}.",
+    "identifier_required_error": "bug_list requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: status (string), state (string), severity (string), surface (string), since (string), verbose (bool), all (bool). Example: {\"status\":\"open\"}."
+  },
+  "bug_read": {
+    "call_shape": "Accepted params: id (int64), slug (string). Example: {\"id\":1333}.",
+    "identifier_required_error": "bug_read requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string). Example: {\"id\":1333}."
+  },
+  "bug_reopen": {
+    "call_shape": "Accepted params: id (int64), slug (string). Example: {\"slug\":\"my-bug\"}.",
+    "identifier_required_error": "bug_reopen requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string). Example: {\"slug\":\"my-bug\"}."
+  },
+  "bug_resolve": {
+    "call_shape": "Accepted params: id (int64), slug (string), resolution_kind (string), kind (string), resolution_note (string), notes (string), resolution_summary (string), summary (string), commit_sha (string), sha (string), routed_chain_slug (string), routed_task_slug (string), routed_suggestion_slug (string). Example: {\"slug\":\"my-bug\",\"commit_sha\":\"abc1234\",\"resolution_note\":\"Fixed by adding X\"}.",
+    "identifier_required_error": "bug_resolve requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), resolution_kind (string), kind (string), resolution_note (string), notes (string), resolution_summary (string), summary (string), commit_sha (string), sha (string), routed_chain_slug (string), routed_task_slug (string), routed_suggestion_slug (string). Example: {\"slug\":\"my-bug\",\"commit_sha\":\"abc1234\",\"resolution_note\":\"Fixed by adding X\"}."
+  },
+  "bug_stamp_sha": {
+    "call_shape": "Accepted params: id (int64), slug (string), commit_sha (string)*, sha (string) [*=required]. Example: {\"slug\":\"my-bug\",\"sha\":\"abc1234\"}.",
+    "identifier_required_error": "bug_stamp_sha requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), commit_sha (string)*, sha (string) [*=required]. Example: {\"slug\":\"my-bug\",\"sha\":\"abc1234\"}."
+  },
+  "chain_close": {
+    "call_shape": "Accepted params: id (int64), chain_id (int64), slug (string), chain (string), chain_slug (string), closure_summary (string). Example: {\"slug\":\"agent-first-substrate\",\"closure_summary\":\"All 8 tasks closed; retrospective at docs/...\"}.",
+    "identifier_required_error": "chain_close requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), chain_id (int64), slug (string), chain (string), chain_slug (string), closure_summary (string). Example: {\"slug\":\"agent-first-substrate\",\"closure_summary\":\"All 8 tasks closed; retrospective at docs/...\"}."
+  },
+  "chain_dep_add": {
+    "call_shape": "Accepted params: dependent_chain (string)*, prerequisite_chain (string)*, reason (string) [*=required]. Example: {\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\",\"reason\":\"needs the domain types\"}.",
+    "identifier_required_error": "chain_dep_add requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: dependent_chain (string)*, prerequisite_chain (string)*, reason (string) [*=required]. Example: {\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\",\"reason\":\"needs the domain types\"}."
+  },
+  "chain_dep_list": {
+    "call_shape": "Accepted params: chain (string)* [*=required]. Example: {\"chain\":\"http-api\"}.",
+    "identifier_required_error": "chain_dep_list requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: chain (string)* [*=required]. Example: {\"chain\":\"http-api\"}."
+  },
+  "chain_dep_remove": {
+    "call_shape": "Accepted params: dependent_chain (string)*, prerequisite_chain (string)* [*=required]. Example: {\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\"}.",
+    "identifier_required_error": "chain_dep_remove requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: dependent_chain (string)*, prerequisite_chain (string)* [*=required]. Example: {\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\"}."
+  },
+  "chain_find": {
+    "call_shape": "Accepted params: pattern (string), project (string). Example: {\"pattern\":\"substrate\"}.",
+    "identifier_required_error": "chain_find requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: pattern (string), project (string). Example: {\"pattern\":\"substrate\"}."
+  },
+  "chain_state": {
+    "call_shape": "Accepted params: slug (string), chain (string), chain_slug (string), id (int64), chain_id (int64). Example: {\"slug\":\"agent-first-substrate\"}.",
+    "identifier_required_error": "chain_state requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: slug (string), chain (string), chain_slug (string), id (int64), chain_id (int64). Example: {\"slug\":\"agent-first-substrate\"}."
+  },
+  "chain_status": {
+    "call_shape": "Accepted params: slug (string), chain (string), chain_slug (string). Example: {\"slug\":\"agent-first-substrate\"}.",
+    "identifier_required_error": "chain_status requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: slug (string), chain (string), chain_slug (string). Example: {\"slug\":\"agent-first-substrate\"}."
+  },
+  "emit_commit_landed": {
+    "call_shape": "Accepted params: commit_sha (string)*, branch (string), files_changed_count (int64), author (string), subject (string) [*=required]. Example: {\"commit_sha\":\"abc123...\",\"branch\":\"main\",\"files_changed_count\":3}.",
+    "identifier_required_error": "emit_commit_landed requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: commit_sha (string)*, branch (string), files_changed_count (int64), author (string), subject (string) [*=required]. Example: {\"commit_sha\":\"abc123...\",\"branch\":\"main\",\"files_changed_count\":3}."
+  },
+  "event_schema": {
+    "call_shape": "Accepted params: type (string). Example: {\"type\":\"BugResolved\"}.",
+    "identifier_required_error": "event_schema requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: type (string). Example: {\"type\":\"BugResolved\"}."
+  },
+  "forge": {
+    "call_shape": "Accepted params: schema_name (string)*, kind (string), slug (string)*, project (string), fields (object) [*=required].",
+    "identifier_required_error": "forge requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: schema_name (string)*, kind (string), slug (string)*, project (string), fields (object) [*=required]."
+  },
+  "forge_delete": {
+    "call_shape": "Accepted params: schema_name (string)*, slug (string)*, chain_slug (string) [*=required].",
+    "identifier_required_error": "forge_delete requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: schema_name (string)*, slug (string)*, chain_slug (string) [*=required]."
+  },
+  "forge_edit": {
+    "call_shape": "Accepted params: schema_name (string)*, kind (string), slug (string)*, chain_slug (string), project (string), fields (object) [*=required].",
+    "identifier_required_error": "forge_edit requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: schema_name (string)*, kind (string), slug (string)*, chain_slug (string), project (string), fields (object) [*=required]."
+  },
+  "forge_schema": {
+    "call_shape": "Accepted params: schema_name (string)* [*=required]. Example: {\"schema_name\":\"task\"}.",
+    "identifier_required_error": "forge_schema requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: schema_name (string)* [*=required]. Example: {\"schema_name\":\"task\"}."
+  },
+  "forge_schemas": {
+    "call_shape": "Takes no params.",
+    "identifier_required_error": "forge_schemas requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Takes no params."
+  },
+  "lifecycle_step": {
+    "call_shape": "Accepted params: close_task_slug (string)*, close_commit_sha (string), close_handoff_output (string), close_rationale (string)*, next_task_slug (string)*, next_rationale (string)* [*=required]. Example: {\"close_task_slug\":\"T2-work-batch\",\"close_commit_sha\":\"ae702417\",\"close_handoff_output\":\"work.batch landed with true ACID rollback\",\"close_rationale\":\"T2 acceptance criteria all met\",\"next_task_slug\":\"T3-work-lifecycle-step\",\"next_rationale\":\"T3 sugar over batch is the natural next step\"}.",
+    "identifier_required_error": "lifecycle_step requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: close_task_slug (string)*, close_commit_sha (string), close_handoff_output (string), close_rationale (string)*, next_task_slug (string)*, next_rationale (string)* [*=required]. Example: {\"close_task_slug\":\"T2-work-batch\",\"close_commit_sha\":\"ae702417\",\"close_handoff_output\":\"work.batch landed with true ACID rollback\",\"close_rationale\":\"T2 acceptance criteria all met\",\"next_task_slug\":\"T3-work-lifecycle-step\",\"next_rationale\":\"T3 sugar over batch is the natural next step\"}."
+  },
+  "pending_decisions_claim": {
+    "call_shape": "Accepted params: session_id (string)*, limit (int64) [*=required]. Example: {\"session_id\":\"sess-123\",\"limit\":10}.",
+    "identifier_required_error": "pending_decisions_claim requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: session_id (string)*, limit (int64) [*=required]. Example: {\"session_id\":\"sess-123\",\"limit\":10}."
+  },
+  "recent_activity": {
+    "call_shape": "Accepted params: since (string), days (int64), limit (int64). Example: {\"days\":2}.",
+    "identifier_required_error": "recent_activity requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: since (string), days (int64), limit (int64). Example: {\"days\":2}."
+  },
+  "record": {
+    "call_shape": "Accepted params: events (object[])*, strict_all_or_nothing (bool), dry_run (bool) [*=required]. Example: {\"rationale\":\"filing observed friction\",\"events\":[{\"type\":\"BugReported\",\"entity_slug\":\"my-bug\",\"payload\":{\"title\":\"x\",\"problem_statement\":\"y\"}}]}.",
+    "identifier_required_error": "record requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: events (object[])*, strict_all_or_nothing (bool), dry_run (bool) [*=required]. Example: {\"rationale\":\"filing observed friction\",\"events\":[{\"type\":\"BugReported\",\"entity_slug\":\"my-bug\",\"payload\":{\"title\":\"x\",\"problem_statement\":\"y\"}}]}."
+  },
+  "review_arc_for_filing": {
+    "call_shape": "Accepted params: session_id (string)*, transcript_path (string)*, triggers (string[]), fired_at (string), user_turns_since_review (int64) [*=required]. Example: {\"session_id\":\"sess-123\",\"transcript_path\":\"/home/u/.claude/projects/.../session.jsonl\",\"triggers\":[\"user_shape_done\"]}.",
+    "identifier_required_error": "review_arc_for_filing requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: session_id (string)*, transcript_path (string)*, triggers (string[]), fired_at (string), user_turns_since_review (int64) [*=required]. Example: {\"session_id\":\"sess-123\",\"transcript_path\":\"/home/u/.claude/projects/.../session.jsonl\",\"triggers\":[\"user_shape_done\"]}."
+  },
+  "roadmap_diff": {
+    "call_shape": "Takes no params. Example: {}.",
+    "identifier_required_error": "roadmap_diff requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Takes no params. Example: {}."
+  },
+  "roadmap_insert": {
+    "call_shape": "Accepted params: ref_kind (string)*, ref_slug (string)*, position (int64), note (string) [*=required]. Example: {\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"foundation\"}.",
+    "identifier_required_error": "roadmap_insert requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: ref_kind (string)*, ref_slug (string)*, position (int64), note (string) [*=required]. Example: {\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"foundation\"}."
+  },
+  "roadmap_list": {
+    "call_shape": "Accepted params: project (string). Example: {}.",
+    "identifier_required_error": "roadmap_list requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: project (string). Example: {}."
+  },
+  "roadmap_mark_reassessed": {
+    "call_shape": "Takes no params. Example: {}.",
+    "identifier_required_error": "roadmap_mark_reassessed requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Takes no params. Example: {}."
+  },
+  "roadmap_plan": {
+    "call_shape": "Takes no params. Example: {}.",
+    "identifier_required_error": "roadmap_plan requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Takes no params. Example: {}."
+  },
+  "roadmap_preview_set": {
+    "call_shape": "Accepted params: items (object[])* [*=required].",
+    "identifier_required_error": "roadmap_preview_set requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: items (object[])* [*=required]."
+  },
+  "roadmap_set": {
+    "call_shape": "Accepted params: items (object[])* [*=required]. Example: {\"items\":[{\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"Phase A\"},{\"ref_kind\":\"chain\",\"ref_slug\":\"query-telemetry-substrate\",\"position\":2,\"note\":\"Phase B\"}]}.",
+    "identifier_required_error": "roadmap_set requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: items (object[])* [*=required]. Example: {\"items\":[{\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"Phase A\"},{\"ref_kind\":\"chain\",\"ref_slug\":\"query-telemetry-substrate\",\"position\":2,\"note\":\"Phase B\"}]}."
+  },
+  "roadmap_update": {
+    "call_shape": "Accepted params: position (int64)*, note (string), ref_kind (string), ref_slug (string) [*=required]. Example: {\"position\":10,\"note\":\"Updated note text\"}.",
+    "identifier_required_error": "roadmap_update requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: position (int64)*, note (string), ref_kind (string), ref_slug (string) [*=required]. Example: {\"position\":10,\"note\":\"Updated note text\"}."
+  },
+  "suggestion_list": {
+    "call_shape": "Accepted params: status (string), state (string), priority (string), surface (string), since (string), verbose (bool), all (bool). Example: {\"status\":\"open\"}.",
+    "identifier_required_error": "suggestion_list requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: status (string), state (string), priority (string), surface (string), since (string), verbose (bool), all (bool). Example: {\"status\":\"open\"}."
+  },
+  "suggestion_read": {
+    "call_shape": "Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64). Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\"}.",
+    "identifier_required_error": "suggestion_read requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64). Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\"}."
+  },
+  "suggestion_reopen": {
+    "call_shape": "Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64). Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\"}.",
+    "identifier_required_error": "suggestion_reopen requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64). Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\"}."
+  },
+  "suggestion_resolve": {
+    "call_shape": "Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64), resolution_kind (string), kind (string), resolution_note (string), notes (string), resolution_summary (string), summary (string), commit_sha (string), sha (string), routed_chain_slug (string), routed_task_slug (string), routed_bug_slug (string). Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"kind\":\"adopted\",\"routed_chain_slug\":\"fts5-on-roadmap-list\"}.",
+    "identifier_required_error": "suggestion_resolve requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64), resolution_kind (string), kind (string), resolution_note (string), notes (string), resolution_summary (string), summary (string), commit_sha (string), sha (string), routed_chain_slug (string), routed_task_slug (string), routed_bug_slug (string). Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"kind\":\"adopted\",\"routed_chain_slug\":\"fts5-on-roadmap-list\"}."
+  },
+  "suggestion_stamp_sha": {
+    "call_shape": "Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64), commit_sha (string)*, sha (string) [*=required]. Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"sha\":\"abc1234\"}.",
+    "identifier_required_error": "suggestion_stamp_sha requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), suggestion_slug (string), suggestion_id (int64), commit_sha (string)*, sha (string) [*=required]. Example: {\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"sha\":\"abc1234\"}."
+  },
+  "sweep_unauthored_staged": {
+    "call_shape": "Accepted params: session_id (string)* [*=required]. Example: {\"session_id\":\"sess-123\"}.",
+    "identifier_required_error": "sweep_unauthored_staged requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: session_id (string)* [*=required]. Example: {\"session_id\":\"sess-123\"}."
+  },
+  "task_block": {
+    "call_shape": "Accepted params: id (int64), task_id (int64), slug (string), task_slug (string), chain_slug (string), blocker_id (int64), blocker_slug (string), blocker_chain_slug (string), reason (string). Example: {\"slug\":\"telemetry-cleanup\",\"chain_slug\":\"telemetry-substrate-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\",\"reason\":\"deferred until foundation closes\"}.",
+    "identifier_required_error": "task_block requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), task_id (int64), slug (string), task_slug (string), chain_slug (string), blocker_id (int64), blocker_slug (string), blocker_chain_slug (string), reason (string). Example: {\"slug\":\"telemetry-cleanup\",\"chain_slug\":\"telemetry-substrate-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\",\"reason\":\"deferred until foundation closes\"}."
+  },
+  "task_blockers": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"slug\":\"interactions-and-resolutions-tables\",\"chain_slug\":\"query-telemetry-substrate\"}.",
+    "identifier_required_error": "task_blockers requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"slug\":\"interactions-and-resolutions-tables\",\"chain_slug\":\"query-telemetry-substrate\"}."
+  },
+  "task_cancel": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}.",
+    "identifier_required_error": "task_cancel requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}."
+  },
+  "task_complete": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string), commit_sha (string), sha (string). Example: {\"id\":6326,\"commit_sha\":\"abc1234\"}.",
+    "identifier_required_error": "task_complete requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string), commit_sha (string), sha (string). Example: {\"id\":6326,\"commit_sha\":\"abc1234\"}."
+  },
+  "task_edit": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string), problem_statement (string), acceptance_criteria (string), context_required (string), constraints (string), handoff_output (string), handoff_output_append (string).",
+    "identifier_required_error": "task_edit requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string), problem_statement (string), acceptance_criteria (string), context_required (string), constraints (string), handoff_output (string), handoff_output_append (string)."
+  },
+  "task_list": {
+    "call_shape": "Accepted params: status (string), state (string), since (string), verbose (bool), all (bool), limit (int64), offset (int64), chain (string), chain_slug (string). Example: {\"status\":\"open\"}.",
+    "identifier_required_error": "task_list requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: status (string), state (string), since (string), verbose (bool), all (bool), limit (int64), offset (int64), chain (string), chain_slug (string). Example: {\"status\":\"open\"}."
+  },
+  "task_read": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"slug\":\"design-telemetry-substrate\",\"chain_slug\":\"query-telemetry-substrate\"}.",
+    "identifier_required_error": "task_read requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"slug\":\"design-telemetry-substrate\",\"chain_slug\":\"query-telemetry-substrate\"}."
+  },
+  "task_reopen": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}.",
+    "identifier_required_error": "task_reopen requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}."
+  },
+  "task_search": {
+    "call_shape": "Accepted params: chain (string), chain_id (int64), pattern (string), verbose (bool). Example: {\"chain\":\"agent-first-substrate\",\"verbose\":true}.",
+    "identifier_required_error": "task_search requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: chain (string), chain_id (int64), pattern (string), verbose (bool). Example: {\"chain\":\"agent-first-substrate\",\"verbose\":true}."
+  },
+  "task_stamp_sha": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string), commit_sha (string)*, sha (string), handoff_output (string) [*=required]. Example: {\"id\":6326,\"sha\":\"abc1234\"}.",
+    "identifier_required_error": "task_stamp_sha requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string), commit_sha (string)*, sha (string), handoff_output (string) [*=required]. Example: {\"id\":6326,\"sha\":\"abc1234\"}."
+  },
+  "task_start": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}.",
+    "identifier_required_error": "task_start requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}."
+  },
+  "task_unblock": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string), blocker_slug (string)*, blocker_chain_slug (string) [*=required]. Example: {\"slug\":\"telemetry-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\"}.",
+    "identifier_required_error": "task_unblock requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string), blocker_slug (string)*, blocker_chain_slug (string) [*=required]. Example: {\"slug\":\"telemetry-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\"}."
+  },
+  "task_unstart": {
+    "call_shape": "Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}.",
+    "identifier_required_error": "task_unstart requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug` with `chain_slug`. Accepted params: id (int64), slug (string), chain_slug (string). Example: {\"id\":6326}."
+  },
+  "trained_model_list": {
+    "call_shape": "Accepted params: task (string), status (string), verbose (bool), limit (int64), offset (int64). Example: {\"task\":\"source-router\",\"status\":\"promoted\"}.",
+    "identifier_required_error": "trained_model_list requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: task (string), status (string), verbose (bool), limit (int64), offset (int64). Example: {\"task\":\"source-router\",\"status\":\"promoted\"}."
+  },
+  "trained_model_promote": {
+    "call_shape": "Accepted params: id (int64), slug (string), force (bool). Example: {\"slug\":\"source-router-v1\"}.",
+    "identifier_required_error": "trained_model_promote requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), force (bool). Example: {\"slug\":\"source-router-v1\"}."
+  },
+  "trained_model_retire": {
+    "call_shape": "Accepted params: id (int64), slug (string), reason (string). Example: {\"slug\":\"source-router-v1\",\"reason\":\"superseded by v2\"}.",
+    "identifier_required_error": "trained_model_retire requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: id (int64), slug (string), reason (string). Example: {\"slug\":\"source-router-v1\",\"reason\":\"superseded by v2\"}."
+  },
+  "where_we_left_off": {
+    "call_shape": "Takes no params.",
+    "identifier_required_error": "where_we_left_off requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Takes no params."
+  },
+  "work_actions": {
+    "call_shape": "Takes no params. Example: {}.",
+    "identifier_required_error": "work_actions requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Takes no params. Example: {}."
+  },
+  "work_summary": {
+    "call_shape": "Accepted params: project (string), by_project (bool). Example: {\"by_project\":true}.",
+    "identifier_required_error": "work_summary requires an identifier: pass `id` as an integer (preferred, globally unique), e.g. {\"id\":6326}; or `slug`. Accepted params: project (string), by_project (bool). Example: {\"by_project\":true}."
+  }
+}

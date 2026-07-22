@@ -1,0 +1,45 @@
+name        = "docstring-drift"
+description = "Docstring-drift detection rubric"
+is_deployed = true
+output_enum = ["matches", "doesn't_match", "unclear"]
+
+criteria = [
+  "matches: the docstring describes behavior that no longer accurately reflects the current function body (wrong types, missing/renamed params, incorrect return shape, stale behavior claims).",
+  "doesn't_match: the docstring still accurately describes the function's current external behavior and interface. Implementation details are NOT part of the docstring contract.",
+  "unclear: insufficient information to determine whether drift occurred. Purely intent-level prose, partial snippet, or internal refactor with no external impact.",
+]
+
+prompt_template = """You are given a code snippet showing a function in its current state. \
+Decide whether the docstring has drifted from the current function body.
+
+- **matches** — the docstring describes behavior that no longer accurately \
+reflects the current function body: wrong types, missing or renamed \
+parameters, incorrect return shape, stale behavior claims, or side effects \
+the doc claims the code no longer performs.
+- **doesn't_match** — the docstring still accurately describes the \
+function's current external behavior and interface. Implementation \
+details (local variable names, internal optimization strategies, loop \
+structure) are NOT part of the docstring contract.
+- **unclear** — insufficient information to determine whether drift \
+occurred: the docstring covers an abstraction level that makes \
+drift ambiguous (e.g. purely intent-level prose with no concrete \
+type claims), only part of the function is shown, or the snippet \
+describes an internal refactor with no external impact.
+
+**Bias toward `doesn't_match` when uncertain** — flagging healthy \
+docstrings creates noise in the review process."""
+
+[[examples]]
+text      = "/// Parses the config string and returns a `HashMap<String, String>`.\nfn parse_config(input: &str) -> Result<HashMap<String, String>, ConfigError> {\n    let map = tokenize(input)?;\n    Ok(map)\n}"
+label     = "matches"
+reasoning = "Docstring says '→ HashMap' but current signature is '→ Result<HashMap, ConfigError>'. Return type mismatch."
+
+[[examples]]
+text      = "/// Loads an entry from the vault by path. Returns `None` if not found.\nfn load_entry(path: &Path) -> Option<VaultEntry> {\n    if !path.exists() {\n        return None;\n    }\n    parse_vault_entry(path).ok()\n}"
+label     = "doesn't_match"
+reasoning = "Docstring accurately describes the interface: Option return, None on missing. Body changed internals only."
+
+[[examples]]
+text      = "/// Classifies the input text. May return `unclear` when evidence is sparse.\nfn classify(text: &str) -> Label {\n    dispatch_classify(text).unwrap_or(Label::Unclear)\n}"
+label     = "unclear"
+reasoning = "Docstring covers an abstraction level where it's ambiguous whether any drift occurred from a partial snippet."

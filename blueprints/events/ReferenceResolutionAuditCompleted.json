@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ReferenceResolutionAuditCompleted.json",
+  "title": "ReferenceResolutionAuditCompleted payload",
+  "description": "Emitted by the chain reference-resolution-substrate T8 retrospective to record that the reference-resolution layer (detector + resolver registry + resolve_references action + telemetry integration + hook supersession + harness-reminder interception) has been verified against the chain's completion criteria. Third audit-event in the substrate trilogy (after ArchitectureAuditCompleted from agent-first-substrate and TelemetryAuditCompleted from query-telemetry-substrate); the closing audit lands through the write-side events ledger as the self-hosting proof of the cross-substrate seam. Findings are keyed to docs/REFERENCE_RESOLUTION.md sections and the chain's eight completion-condition items.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the audit source-doc the findings were keyed against — typically docs/REFERENCE_RESOLUTION.md (T1 design + per-task implementation notes) + the retrospective doc at docs/REFERENCE_RESOLUTION_RETROSPECTIVE_<date>.md."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome — what landed, what was deferred, which downstream chains become buildable."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the next phase of work (e.g. 'Pick up ml-capability-substrate chain T1-T4'). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per audit checklist item. Severity uses the audit-convention enum (low / medium / high / critical); use n/a for informational findings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Audit checklist item identifier and short description."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = criterion satisfied; fail = criterion not satisfied (must file follow-on); partial = satisfied with documented gap; deferred = explicitly out of scope for this chain."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence supporting status — SQL query result, test name, commit SHA, doc pointer, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

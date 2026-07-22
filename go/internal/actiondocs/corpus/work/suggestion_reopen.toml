@@ -1,0 +1,32 @@
+surface = "work"
+action = "suggestion_reopen"
+purpose = "Re-open a previously-resolved suggestion."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Suggestion id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+
+[[param_aliases]]
+  from = "suggestion_slug"
+  to = "slug"
+
+[[param_aliases]]
+  from = "suggestion_id"
+  to = "id"
+
+[[examples]]
+  call = "{\"slug\":\"add-fts5-coverage-to-roadmap-list\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

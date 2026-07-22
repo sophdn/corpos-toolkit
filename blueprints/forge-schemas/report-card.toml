@@ -1,0 +1,83 @@
+# Report-card schema — post-chain third-party grade.
+#
+# Sister artifact to the retrospective: the retro is the chain author's
+# self-reflection; the report-card is a FRESH sub-agent's external
+# grade against the chain's acceptance criteria with an independent
+# reproduction step. Predecessor: docs/REFERENCE_RESOLUTION_REPORT_CARD_
+# 2026-05-18.md + docs/PARSE_CONTEXT_LEAN_ORIENTING_REPORT_CARD_2026-05-23.md.
+#
+# Why distinct from retrospective.toml (chain decision 3): the section
+# skeletons differ enough that one parameterized schema would invite
+# the parameter-overloading trap from the 2026-05-20 vault decision
+# (kind being a reserved alias for schema_name). Two schemas, two
+# event types, two distinct lifecycle positions — keep them apart.
+
+supported_ops = ["create", "update"]
+
+[schema]
+name = "report-card"
+prefix = ""
+output_dir = "docs"
+filename_pattern = "{chain_slug_upper}_REPORT_CARD_{date}.md"
+
+[storage]
+target = "markdown"
+prefix = ""
+output_dir = "docs"
+filename_pattern = "{chain_slug_upper}_REPORT_CARD_{date}.md"
+
+[[fields]]
+name = "chain_slug"
+type = "string"
+description = "The chain this report-card grades. Required — the file path encodes the chain via the kebab→SCREAMING_SNAKE_CASE transform on this slug. Rejected with chain_not_found if the slug doesn't resolve to a chain in the project's chains table."
+render_as = "frontmatter"
+
+[[fields]]
+name = "title"
+type = "optional_string"
+description = "Display title for the H1. Defaults to '<chain_slug> — Report Card' when omitted."
+
+[[fields]]
+name = "per_task_grades"
+type = "optional_string"
+description = "Section: per-task A / B / incomplete grades with a one-sentence rationale. Typically rendered as a 3-column table (Task | Grade | Rationale) or a bullet list per task. The grader is a fresh sub-agent reading the chain's per-task handoffs + commit anchors without the chain author's context."
+
+[[fields]]
+name = "independent_reproduction"
+type = "optional_string"
+description = "Section: the fresh sub-agent's hands-on reproduction of ONE of the chain's new primitives on a live call. Captures the call, the actual response, and whether the result matched the chain's acceptance criterion. The reproduction is the load-bearing part of the report-card — without it the grades are paper-only."
+
+[[fields]]
+name = "overall_verdict"
+type = "optional_string"
+description = "Section: one-paragraph verdict integrating the per-task grades + the reproduction outcome. Ends with a SHIP / DEFER / RE-RUN recommendation. SHIP = chain closure stands; DEFER = mark a specific follow-on chain candidate; RE-RUN = the chain didn't actually deliver what its completion_condition claims."
+
+[[fields]]
+name = "measurement"
+type = "optional_string"
+description = "Section: the chain's signature post-completion measurement. For work-batching-and-forge-templates: 'forging THIS chain's retro + report card via the new forge(retrospective)/forge(report-card) primitives took N calls vs the M calls the predecessor chain's retro/report-card took via Write + Edit.' For other chains: whatever single-number summary the chain text named in its completion_condition."
+
+[[fields]]
+name = "additional_sections"
+type = "optional_string"
+description = "Catch-all verbatim markdown appended after the skeleton sections. For chain-specific observations the skeleton doesn't predict (e.g. 'Most actionable observation + most concrete blocker' from the parse-context report-card). Write your own ## Heading + body here; no schema enforcement."
+
+[[sections]]
+heading = "Per-task grades"
+fields = ["per_task_grades"]
+
+[[sections]]
+heading = "Independent reproduction"
+fields = ["independent_reproduction"]
+
+[[sections]]
+heading = "Overall verdict"
+fields = ["overall_verdict"]
+
+[[sections]]
+heading = "Measurement"
+fields = ["measurement"]
+
+[[sections]]
+heading = "Additional sections"
+fields = ["additional_sections"]

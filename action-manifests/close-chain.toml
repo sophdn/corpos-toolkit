@@ -1,0 +1,28 @@
+[skill]
+name = "close-chain"
+version = "1.0.0"
+description = "Mark a chain done — terminal write in the chain lifecycle. Every task in the chain must already be in a terminal state (closed or cancelled); the all-tasks-terminal guard runs atomically with the status flip."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "close the chain",
+    "close this chain",
+    "mark chain done",
+    "mark chain closed",
+    "wrap up the chain",
+    "chain is done",
+    "chain complete",
+    "finish the chain",
+    "finalize the chain",
+    "close_chain",
+]
+when_not = [
+    "tasks remain open in the chain — close or cancel them first",
+    "the chain is just paused — leave it open; close_chain is terminal",
+    "moving the chain's design doc — work-server doesn't carry that bookkeeping; manage docs separately",
+    "abandoning the whole chain — cancel its individual tasks first, then close",
+]
+
+[instructions]
+path = "action-manifests/instructions/close-chain.md"

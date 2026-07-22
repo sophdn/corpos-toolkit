@@ -1,0 +1,13 @@
+surface = "knowledge"
+action = "_general"
+purpose = "Library entries, kiwix search, vault retrieval, unified knowledge index, and curation lifecycle. Pass 'project' to scope (vault/knowledge actions are cross-project)."
+
+notes = """
+The vault_search and knowledge_search actions are cross-project by default — the vault and unified knowledge index live outside any single project's data. library_* actions are project-scoped: each project's library is independent.
+
+Curation actions (curation_promote, curation_reject, curation_bulk_action) emit substrate events (CurationCandidatePromoted / CurationCandidateRejected) visible in AuditLedger.
+
+ENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). Mutating actions on this surface require a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / <6-char rationales with `error: "rationale_required"`. Actions on this surface that require rationale: library_add, library_update, library_retire. Read actions (vault_search, knowledge_search, library_get, library_find, kiwix_search, parse_context, resolve_references, curation_*, etc.) do NOT require rationale.
+
+kiwix_search is the local-first lookup reflex: 371 GB of indexed offline DevDocs (Rust, Python, JS/TS, Postgres, Redis, SQLite, Node, MDN, etc.), the Rust Book, StackExchange snapshots, and Wikipedia. Reach for it BEFORE web search or guessing a function signature — authoritative, offline, faster.
+"""

@@ -1,0 +1,24 @@
+surface = "work"
+action = "trained_model_promote"
+purpose = "Flip a trained_model row to status='promoted'. Expects current status='ab_testing' (the A/B harness has accumulated promotion-gate evidence). Pass {\"force\": true} to override from any state — that path is audited via the work-surface rationale envelope."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "trained_model row id (preferred — globally unique)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Slug of the trained_model row (convention: <task>-<version>)."
+
+[[params]]
+  name = "force"
+  type = "bool"
+  required = false
+  description = "Skip the ab_testing-state precondition. Audited override."
+
+[[examples]]
+  call = "{\"slug\":\"source-router-v1\"}"

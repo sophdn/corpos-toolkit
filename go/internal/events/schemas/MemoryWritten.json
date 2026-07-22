@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/MemoryWritten.json",
+  "title": "MemoryWritten payload",
+  "description": "Emitted when a new auto-memory entry is filed via forge(schema_name='memory', ...). Carries the create-time field values + the resolved vault path + a body-length measure. Consumed by the arc-close-filing-review telemetry pipeline (counts memory writes per session for filing-precision tracking) and the future trained-arc-close-filing-classifier corpus per docs/MEMORY_SUBSTRATE.md §7. The memory entry's entity reference (and project_id) lives in the envelope.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "kind", "description", "vault_path", "body_length_bytes"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Kebab-case slug — same as the filename (`<name>.md`) and the frontmatter `name:` field."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["user", "feedback", "project", "reference"],
+      "description": "Closed taxonomy per docs/MEMORY_SUBSTRATE.md §1. Drives the vault subdir (memory/<kind>/<name>.md). user = about the user (cross-project semantics); feedback = guidance from corrections + confirmations; project = ongoing work / decisions / incidents; reference = pointers to external systems."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-line description from the entry's frontmatter. Used by MEMORY.md index rebuilds (T3) and surfaced in parse_context candidate listings."
+    },
+    "source": {
+      "type": ["string", "null"],
+      "description": "Provenance — e.g. `arc-close-filing-review` (substrate-side fire via the Stop hook), `manual` (user-authored via direct forge call), `migration` (T4's one-shot harness-dir migration). Optional; absent for entries written without a provenance tag."
+    },
+    "observed_first": {
+      "type": ["string", "null"],
+      "description": "ISO date (YYYY-MM-DD) the pattern first surfaced. Optional. Used by the future recurrence-merging path."
+    },
+    "vault_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute path of the entry on disk. Resolved at write time from the schema's filename_pattern; lets downstream consumers verify the entry without re-deriving the path."
+    },
+    "body_length_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Byte length of the body field (markdown, frontmatter excluded). Lets the telemetry pipeline filter trivial/empty entries without re-reading the file."
+    }
+  }
+}

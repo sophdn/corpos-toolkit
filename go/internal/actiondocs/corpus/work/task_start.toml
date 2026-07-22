@@ -1,0 +1,30 @@
+surface = "work"
+action = "task_start"
+purpose = "Transition a task to status=active."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug."
+
+[[examples]]
+  call = "{\"id\":6326}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

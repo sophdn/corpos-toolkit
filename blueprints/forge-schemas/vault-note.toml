@@ -1,0 +1,92 @@
+# Vault-note schema — long-form vault entries created via forge.
+#
+# Replaces the Write-tool authoring path for new vault entries with a
+# schema-enforced shape that:
+#   1. enforces YAML frontmatter (date / slug / kind / project / tags)
+#   2. routes the file to the right subdir under ~/.claude/vault/ based
+#      on the kind enum (see vaultNoteSubdir in go/internal/forge/create.go)
+#   3. auto-indexes into knowledge_pointers + FTS5 on create via the
+#      existing IndexUpsertNotifier (extended for vault-note in chain
+#      task 3, extend-indexsync-for-vault-note)
+#
+# Direct Write/Edit of ~/.claude/vault/*.md remains supported; this
+# schema is the preferred path for NEW entries, not the exclusive one.
+#
+# CROSS-PROJECT BY DESIGN. The `cross_project = true` flag in [schema]
+# exempts this schema from the forge dispatcher's project-required gate
+# and from the auto-injection of top-level `project` into a same-named
+# schema field (the trap bug 1433 documented; chain 601 closure).
+#
+# Two parameters carry two distinct concerns:
+#   - `scope` (schema field, optional): routing input. Empty/absent =
+#     cross-project bucket. Non-empty for learnings only (decisions
+#     and reference notes ignore `scope` for routing — they always
+#     route to top-level vault/decisions/ + vault/reference/).
+#   - top-level `project` (dispatcher input, optional): DB attribution.
+#     Decides the knowledge_pointer's project_id. Defaults to `vault`
+#     sentinel when empty.
+#
+# Layout convention: see task.toml for the shape-registry ordering
+# rules (top-level scalars → [schema] → [storage] → [[fields]] →
+# [[sections]]).
+supported_ops = ["create", "update"]
+
+[schema]
+name = "vault-note"
+prefix = ""
+output_dir = "vault"
+filename_pattern = "{subdir}/{date}_{slug}.md"
+cross_project = true
+
+[storage]
+target = "markdown"
+prefix = ""
+output_dir = "vault"
+filename_pattern = "{subdir}/{date}_{slug}.md"
+
+[[fields]]
+# Named `note_kind` (not `kind`) because top-level `kind` is a reserved
+# alias for `schema_name` on the forge sugar shape, so a field literally
+# named `kind` would be silently stripped on sugar-shape calls. The
+# nested-`fields:` shape accepts `kind` fine, but the sugar shape is
+# the more common authoring path — better to disambiguate at the
+# schema field name level than to demand the nested shape.
+name = "note_kind"
+type = "string"
+description = "Vault subdir routing. Accepted values: `decision` (architectural choice + rationale, cross-project), `learning` (dated pattern or gotcha, scoped by project), `reference` (durable how-to docs, cross-project). Each kind has slightly different retrieval semantics; the value drives the subdir under ~/.claude/vault/."
+enum_values = ["decision", "learning", "reference"]
+render_as = "frontmatter"
+
+[[fields]]
+name = "title"
+type = "string"
+description = "Display title — one sentence describing what the note establishes / teaches / references. Rendered as the file's first ## section."
+
+[[fields]]
+name = "body"
+type = "string"
+description = "Long-form markdown body. The substantive content of the note. Rendered as the file's ## Body section. For multi-paragraph content, separate paragraphs with blank lines as usual."
+
+[[fields]]
+name = "scope"
+type = "optional_string"
+description = "Routing input for vault-subdir placement. Optional; empty or absent routes to the cross-project bucket. For kind=learning, non-empty values route to learnings/<scope>/ (e.g. scope=mcp-servers → learnings/mcp-servers/). For kind=decision and kind=reference, this field is ignored: decisions always route to vault/decisions/ and reference always routes to vault/reference/, both cross-project. Free-form string — accepts any subdir name (project slugs like mcp-servers, but non-project buckets like meta/ or scratch/ aren't valid here, since scope only routes learnings)."
+
+[[fields]]
+name = "tags"
+type = "optional_string"
+description = "Comma-delimited tags for the surface field on the resulting knowledge_pointer. Convention: `surface,subsystem,paper-cut`-style tags so vault_search's surface filter narrows correctly."
+
+[[fields]]
+name = "topic"
+type = "optional_string"
+description = "Optional kebab-topic naming the subject area for decisions and reference notes — used for human-skim discovery in directory listings. Free-form kebab-case string; not used as a vault_search filter today. SKILL `vault-filing-discipline` §Frontmatter prescribes this for decisions and reference; learnings typically omit it."
+render_as = "frontmatter"
+
+[[sections]]
+heading = "Title"
+fields = ["title"]
+
+[[sections]]
+heading = "Body"
+fields = ["body"]

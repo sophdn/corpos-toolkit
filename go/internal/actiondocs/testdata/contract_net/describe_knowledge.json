@@ -1,0 +1,543 @@
+{
+  "_general": {
+    "surface": "knowledge",
+    "action": "_general",
+    "purpose": "Library entries, kiwix search, vault retrieval, unified knowledge index, and curation lifecycle. Pass 'project' to scope (vault/knowledge actions are cross-project).",
+    "notes": "The vault_search and knowledge_search actions are cross-project by default — the vault and unified knowledge index live outside any single project's data. library_* actions are project-scoped: each project's library is independent.\n\nCuration actions (curation_promote, curation_reject, curation_bulk_action) emit substrate events (CurationCandidatePromoted / CurationCandidateRejected) visible in AuditLedger.\n\nENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). Mutating actions on this surface require a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / \u003c6-char rationales with `error: \"rationale_required\"`. Actions on this surface that require rationale: library_add, library_update, library_retire. Read actions (vault_search, knowledge_search, library_get, library_find, kiwix_search, parse_context, resolve_references, curation_*, etc.) do NOT require rationale.\n\nkiwix_search is the local-first lookup reflex: 371 GB of indexed offline DevDocs (Rust, Python, JS/TS, Postgres, Redis, SQLite, Node, MDN, etc.), the Rust Book, StackExchange snapshots, and Wikipedia. Reach for it BEFORE web search or guessing a function signature — authoritative, offline, faster.\n"
+  },
+  "curation_bulk_action": {
+    "surface": "knowledge",
+    "action": "curation_bulk_action",
+    "purpose": "Apply promote/reject to all matching candidates. Filter must include at least one of {origin, unscored_only} to prevent whole-project nukes. Emits CurationCandidatePromoted / CurationCandidateRejected substrate events visible in AuditLedger.",
+    "params": [
+      {
+        "name": "filter",
+        "type": "object",
+        "required": true,
+        "description": "Match criteria for which candidates to act on. Must include at least one of {origin, unscored_only}."
+      },
+      {
+        "name": "action",
+        "type": "string",
+        "required": true,
+        "description": "promote or reject."
+      },
+      {
+        "name": "reason",
+        "type": "optional_string",
+        "required": false,
+        "description": "Required when action=reject; supplies the rejection reason for every affected candidate."
+      },
+      {
+        "name": "dry_run",
+        "type": "bool",
+        "required": false,
+        "description": "When true, return what would be done without mutating."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "required": false,
+        "description": "Cap the number of candidates touched. Defaults to 100."
+      }
+    ],
+    "errors": [
+      {
+        "condition": "empty filter",
+        "message": "curation_bulk_action requires a filter containing at least one of {origin, unscored_only} — prevents accidental whole-project nukes."
+      }
+    ]
+  },
+  "curation_list": {
+    "surface": "knowledge",
+    "action": "curation_list",
+    "purpose": "List pending curation_candidates for the project (compact projection).",
+    "params": [
+      {
+        "name": "origin",
+        "type": "optional_string",
+        "required": false,
+        "description": "Filter by candidate origin."
+      },
+      {
+        "name": "scored",
+        "type": "bool",
+        "required": false,
+        "description": "Filter by whether the candidate has been scored."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "required": false,
+        "description": "Result limit. Defaults to 50."
+      }
+    ]
+  },
+  "curation_promote": {
+    "surface": "knowledge",
+    "action": "curation_promote",
+    "purpose": "Promote a pending candidate to a knowledge_pointer. Emits a CurationCandidatePromoted substrate event visible in AuditLedger. Optional overrides refine metadata at promotion time.",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "required": true,
+        "description": "The candidate id."
+      },
+      {
+        "name": "override_question",
+        "type": "optional_string",
+        "required": false,
+        "description": "Override the candidate's question at promotion time."
+      },
+      {
+        "name": "override_invoke_when",
+        "type": "optional_string",
+        "required": false,
+        "description": "Override the candidate's invoke_when at promotion time."
+      },
+      {
+        "name": "override_description",
+        "type": "optional_string",
+        "required": false,
+        "description": "Override the candidate's description at promotion time."
+      }
+    ]
+  },
+  "curation_read": {
+    "surface": "knowledge",
+    "action": "curation_read",
+    "purpose": "Return the full candidate body for one curation_candidate.",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "required": true,
+        "description": "The candidate id."
+      }
+    ]
+  },
+  "curation_reject": {
+    "surface": "knowledge",
+    "action": "curation_reject",
+    "purpose": "Mark a candidate rejected. Emits a CurationCandidateRejected substrate event visible in AuditLedger. Reason is REQUIRED and non-empty.",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "required": true,
+        "description": "The candidate id."
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "required": true,
+        "description": "Why the candidate is being rejected. REQUIRED and non-empty."
+      }
+    ],
+    "errors": [
+      {
+        "condition": "missing or empty reason",
+        "message": "curation_reject requires a non-empty reason; rejection without rationale is not accepted."
+      }
+    ]
+  },
+  "kiwix_fetch": {
+    "surface": "knowledge",
+    "action": "kiwix_fetch",
+    "purpose": "Fetch a specific page from a Kiwix ZIM archive by path. Companion to kiwix_search — search finds the path, fetch returns the body.",
+    "params": [
+      {
+        "name": "zim_id",
+        "type": "string",
+        "required": true,
+        "description": "The versioned ZIM identifier."
+      },
+      {
+        "name": "path",
+        "type": "string",
+        "required": true,
+        "description": "The page path within the ZIM."
+      }
+    ]
+  },
+  "kiwix_list_books": {
+    "surface": "knowledge",
+    "action": "kiwix_list_books",
+    "purpose": "Enumerate the available ZIM archives on the local Kiwix instance. Use this when you don't know which zim_id to query."
+  },
+  "kiwix_search": {
+    "surface": "knowledge",
+    "action": "kiwix_search",
+    "purpose": "Query the local Kiwix instance for matching pages in a chosen ZIM archive — 371 GB of offline DevDocs (Rust, Python, JS/TS, Postgres, Redis, SQLite, Node, MDN, etc.), the Rust Book, StackExchange snapshots, and Wikipedia. Reach for this BEFORE web search or guessing a function signature: authoritative, offline, faster.",
+    "params": [
+      {
+        "name": "zim_id",
+        "type": "string",
+        "required": true,
+        "description": "The versioned ZIM identifier (e.g. devdocs_en_rust_2026-04). Call kiwix_list_books to enumerate available ZIMs when you don't know which to query."
+      },
+      {
+        "name": "pattern",
+        "type": "string",
+        "required": true,
+        "description": "Search pattern."
+      }
+    ]
+  },
+  "knowledge_report_miss": {
+    "surface": "knowledge",
+    "action": "knowledge_report_miss",
+    "purpose": "When a followed pointer turns out to be wrong or stale, call this to increment negative_feedback_count and optionally set staleness_hint. Takes pointer_id from knowledge_search results.",
+    "params": [
+      {
+        "name": "pointer_id",
+        "type": "integer",
+        "required": true,
+        "description": "The pointer_id from a knowledge_search result."
+      },
+      {
+        "name": "staleness_reason",
+        "type": "optional_string",
+        "required": false,
+        "description": "Optional reason describing why the pointer was stale (used as staleness_hint)."
+      }
+    ]
+  },
+  "knowledge_search": {
+    "surface": "knowledge",
+    "action": "knowledge_search",
+    "purpose": "Unified FTS5+Qwen retrieval over all indexed knowledge sources (vault, kiwix, tasks, chains, library, bugs); returns ranked hits with id, source_type, source_ref, question, invoke_when, quality_score. Reach for this when picking up an unfamiliar problem area BEFORE web search or guessing — the index points to the most likely existing answer across every surface this server knows about.",
+    "params": [
+      {
+        "name": "query",
+        "type": "string",
+        "required": true,
+        "description": "Free-text search query."
+      },
+      {
+        "name": "top_k",
+        "type": "integer",
+        "required": false,
+        "description": "Number of top results to return. Defaults to 5."
+      }
+    ]
+  },
+  "library_add": {
+    "surface": "knowledge",
+    "action": "library_add",
+    "purpose": "Add a new entry to the project's library catalogue. Mutates the library state.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  "library_cross_reference": {
+    "surface": "knowledge",
+    "action": "library_cross_reference",
+    "purpose": "Create or list cross-reference edges between library entries — the relational view of the catalogue."
+  },
+  "library_find": {
+    "surface": "knowledge",
+    "action": "library_find",
+    "purpose": "Free-text find across the project's library entries. Entry point for catalogue lookup when you don't know the slug.",
+    "params": [
+      {
+        "name": "query",
+        "type": "string",
+        "required": true,
+        "description": "Free-text search query."
+      }
+    ]
+  },
+  "library_get": {
+    "surface": "knowledge",
+    "action": "library_get",
+    "purpose": "Return one library entry by slug. The single-row read for the project's knowledge catalogue.",
+    "params": [
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "Library entry slug."
+      }
+    ]
+  },
+  "library_list_active": {
+    "surface": "knowledge",
+    "action": "library_list_active",
+    "purpose": "List every active library entry in the project's catalogue. Retired entries are excluded; use a different enumeration if you want the full set."
+  },
+  "library_list_dewey": {
+    "surface": "knowledge",
+    "action": "library_list_dewey",
+    "purpose": "Enumerate library entries grouped by Dewey code — the structural classification view of the project's catalogue."
+  },
+  "library_list_sections": {
+    "surface": "knowledge",
+    "action": "library_list_sections",
+    "purpose": "Enumerate library entries grouped by section — the section taxonomy view of the project's catalogue."
+  },
+  "library_retire": {
+    "surface": "knowledge",
+    "action": "library_retire",
+    "purpose": "Mark a library entry retired — removes it from library_list_active enumerations while preserving the row for history. Inverse of library_add for stale entries.",
+    "params": [
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "The library entry's slug."
+      }
+    ],
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  "library_update": {
+    "surface": "knowledge",
+    "action": "library_update",
+    "purpose": "Update an existing library entry's fields. Mutates the library state.",
+    "params": [
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "The library entry's slug."
+      }
+    ],
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  "memory_read": {
+    "surface": "knowledge",
+    "action": "memory_read",
+    "purpose": "Return the materialized memory digest for a project — the owned memory-read path. Aggregates every user-kind entry (fanned out to all projects) plus the feedback/project/reference entries scoped to the project, as a bullet digest (memory_markdown) plus structured entries. The read side of the memory organ for a session-start context injection; pairs with the record action that writes entries to the vault.",
+    "params": [
+      {
+        "name": "project",
+        "type": "string",
+        "required": true,
+        "description": "Project slug to scope project/feedback/reference entries to; user-kind entries are always included."
+      }
+    ]
+  },
+  "parse_context": {
+    "surface": "knowledge",
+    "action": "parse_context",
+    "purpose": "Canonical orienting call. Resolve every reference-shape token in a user message AND surface domain-conditional context (skills, memory entries, vault notes, kiwix hits, disciplines triggered by message shape) in one unified envelope. parse_context is the agent's first call on every user prompt (modulo the discernment skill's skip rules: short conversational acknowledgments, slash-commands, pure continuations). Replaces the prior pattern of per-shape direct calls (chain_find, task_search, vault_search, kiwix_search, the available-skills list, …) — one round-trip surfaces everything potentially relevant.",
+    "params": [
+      {
+        "name": "message_text",
+        "type": "string",
+        "required": true,
+        "description": "The user message (or any agent-facing text) to scan for unresolved references and domain-conditional context. Empty string returns an empty References list and zero resolver calls."
+      },
+      {
+        "name": "session_id",
+        "type": "optional_string",
+        "required": false,
+        "description": "Session identifier for the filter-cache. Defaults to the span's trace ID when omitted (the substrate stamps it from the request context). Pass explicitly when calling outside an MCP session (smoke harness, scripts)."
+      },
+      {
+        "name": "top_k_per_shape",
+        "type": "integer",
+        "required": false,
+        "description": "Cap on candidates each resolver returns after dispatcher post-processing. Defaults to 5."
+      },
+      {
+        "name": "include_no_hits",
+        "type": "bool",
+        "required": false,
+        "description": "When true, references that resolved to no_hit stay in the References list (with recommended_action = acknowledge_no_hit_and_ask) instead of collapsing into the NoHitTokens slice. Default false."
+      },
+      {
+        "name": "total_budget_ms",
+        "type": "integer",
+        "required": false,
+        "description": "Dispatcher wall-clock cap for the whole call, in milliseconds. Defaults to 2000 (2s) today; budget rises to 4000 (4s) when the broader resolver set lands. When the budget trips, truncated_by_budget=true is set on the response envelope; resolvers not reached surface ErrTotalBudgetExceeded as partial_failures."
+      },
+      {
+        "name": "cache_policy_override",
+        "type": "optional_string",
+        "required": false,
+        "description": "Force a cache policy for this call. Accepted values: 'fresh' (skip cache lookup, write fresh; useful when callers know they want bypass), 'cache_only' (return cached hits only, no fresh resolution). Default unset — substrate uses per-resolver policy from the design's §3.3 matrix."
+      },
+      {
+        "name": "inline_skill_bodies",
+        "type": "bool",
+        "required": false,
+        "description": "Chain 602. Per-request override of the TOOLKIT_PARSE_CONTEXT_INLINE_BODIES env var that gates skill-body inlining. When true (and a skill_trigger or discipline_skill ref resolves at single_exact), the envelope carries body_inlined / body_truncated / body_summary / body_bytes on the ref. Default unset → use env-var setting (default OFF during rollout). Pass false to force-disable for one call."
+      },
+      {
+        "name": "inline_budget_bytes",
+        "type": "integer",
+        "required": false,
+        "description": "Chain 602. Overrides the default 20 KB envelope budget for inlined skill bodies. Zero or unset uses the default. The per-skill cap (8 KB) is not caller-tunable; raising the envelope budget is enough."
+      }
+    ],
+    "errors": [
+      {
+        "condition": "registry not configured",
+        "message": "Returned when the server started without the refresolve registry wired (degraded mode). Returns {error: 'registry not configured'} on the response envelope instead of a Go error."
+      }
+    ],
+    "examples": [
+      {
+        "description": "Basic call — orient on a shape-heavy user message.",
+        "call": "{\"action\":\"parse_context\",\"params\":{\"message_text\":\"please finish T8 and T9 in reference-resolution-substrate; T7 is blocked\"}}"
+      },
+      {
+        "description": "Tighter budget when calling parse_context on a latency-sensitive path.",
+        "call": "{\"action\":\"parse_context\",\"params\":{\"message_text\":\"look up budget-trip\",\"total_budget_ms\":500}}"
+      },
+      {
+        "description": "Force a fresh resolve, bypassing the session cache.",
+        "call": "{\"action\":\"parse_context\",\"params\":{\"message_text\":\"recheck T8 status\",\"cache_policy_override\":\"fresh\"}}"
+      }
+    ],
+    "notes": "Shape coverage:\n\n  • chain_slug / task_slug / bug_slug → DB row in the corresponding table\n  • path → filesystem under RepoRoot (file or directory)\n  • skill_name → skills/\u003cname\u003e/ directories\n  • tool_name → action-manifests/*.toml basenames\n  • forge_schema → blueprints/forge-schemas/*.toml basenames\n  • project_name → KnownProjects catalog\n  • library_entry → library_index.slug or title\n  • domain_term → vault_search via Qwen rubric classifier\n  • external_technical → kiwix_search + (when wired) kiwix_bridge resolver\n  • friction_shape → bug-filing suggestion (supersedes the friction-filing-reminder Stop hook for in-message detection)\n  • skill_trigger → skills/_manifest.toml trigger keywords (T5 follow-on)\n  • memory_entry → MEMORY.md index entries (T5 follow-on)\n  • vault_candidate → vault_search bridge with domain-condition gate (T5 follow-on)\n  • kiwix_bridge → kiwix_search bridge for external-technical terms (T5 follow-on)\n  • discipline_skill → discipline-skill bodies whose trigger condition fires on the message (T5 follow-on)\n\nConfidence tier semantics (see docs/REFERENCE_RESOLUTION.md §4):\n\n  • single_exact → recommended_action=use_directly; PresentedAs is the canonical attribution string.\n  • fuzzy_multi → recommended_action=ask_user_to_disambiguate; PresentedAs enumerates the top candidates.\n  • weak_domain → recommended_action=mention_as_possibly_relevant; PresentedAs hedges with the top hit and score.\n  • no_hit → recommended_action=acknowledge_no_hit_and_ask; PresentedAs says the token didn't resolve.\n\nEach resolved reference carries a grounding_event_id. Every call emits one grounding_events row per detected reference with query_source='reference_resolution'.\n\nFilter cache: per-session, keyed by (session_id, token, shape) with per-resolver policies (see docs/PARSE_CONTEXT.md §3.3 + §4). The cache_hits and cache_misses fields on the response envelope distinguish cached re-calls from fresh resolution. T5 follow-on phase wires the cache; the shell exposes the envelope fields with zero values until then.\n\n`resolve_references` is a soft alias of `parse_context` — both dispatch into the same handler core, so existing callers continue to work without modification. New callers prefer parse_context.\n\nHistory: shipped as a back-compat-preserving alias by chain reference-resolution-migration T5 (Phase 1). Follow-on phases: cache layer, then per-resolver shape additions (skill_trigger, memory_entry, vault_candidate, kiwix_bridge, discipline_skill).\n"
+  },
+  "record_query_interaction": {
+    "surface": "knowledge",
+    "action": "record_query_interaction",
+    "purpose": "Record one click-signal (a query_interactions row) against the grounding_events row of a prior search call, identified by that call's span_id. The owned write path for a client that detects click signals from its own transcript (the RAG implicit-feedback loop) — the grounding event is resolved server-side from span_id, so the client only needs the span id off its tool result plus the clicked hit's source_ref. A span with no grounding_event is a soft no-op.",
+    "params": [
+      {
+        "name": "span_id",
+        "type": "string",
+        "required": true,
+        "description": "The search call's substrate span id (off the tool result), used to resolve its grounding_event."
+      },
+      {
+        "name": "source_ref",
+        "type": "string",
+        "required": true,
+        "description": "The clicked/used hit's source ref (e.g. a vault note path)."
+      },
+      {
+        "name": "click_kind",
+        "type": "string",
+        "required": true,
+        "description": "One of: followed | cited | mentioned | resolved-from."
+      },
+      {
+        "name": "session_id",
+        "type": "string",
+        "required": true,
+        "description": "The session the interaction occurred in."
+      },
+      {
+        "name": "position",
+        "type": "integer",
+        "required": false,
+        "description": "1-based rank of the clicked hit in the result list."
+      }
+    ]
+  },
+  "resolve_references": {
+    "surface": "knowledge",
+    "action": "resolve_references",
+    "purpose": "Soft alias of parse_context (the canonical orienting call). Resolves every reference-shape token in a user message in one round-trip — chain/task/bug slugs, paths, skill names, project names, tool names, forge schemas, library entries, domain terms, external-technical terms, friction shapes. Returns per-reference shape + confidence tier + recommended_action + PresentedAs. New callers should prefer parse_context (which adds skills/memory/vault/kiwix/discipline coverage and a filter cache); existing callers keep working unchanged.",
+    "params": [
+      {
+        "name": "message_text",
+        "type": "string",
+        "required": true,
+        "description": "The user message (or any agent-facing text) to scan for unresolved references. Empty string returns an empty References list and zero resolver calls."
+      },
+      {
+        "name": "top_k_per_shape",
+        "type": "integer",
+        "required": false,
+        "description": "Cap on candidates each resolver returns after dispatcher post-processing. Defaults to 5."
+      },
+      {
+        "name": "include_no_hits",
+        "type": "bool",
+        "required": false,
+        "description": "When true, references that resolved to no_hit stay in the References list (with recommended_action = acknowledge_no_hit_and_ask) instead of collapsing into the NoHitTokens slice. Default false."
+      },
+      {
+        "name": "total_budget_ms",
+        "type": "integer",
+        "required": false,
+        "description": "Dispatcher wall-clock cap for the whole call, in milliseconds. Defaults to 2000 (2s). When the budget trips, truncated_by_budget=true is set on the response envelope; resolvers not reached surface ErrTotalBudgetExceeded as partial_failures."
+      }
+    ],
+    "errors": [
+      {
+        "condition": "registry not configured",
+        "message": "Returned when the server started without the refresolve registry wired (degraded mode). Returns {error: 'registry not configured'} on the response envelope instead of a Go error."
+      }
+    ],
+    "examples": [
+      {
+        "description": "Basic call — detect every shape in a mixed message.",
+        "call": "{\"action\":\"resolve_references\",\"params\":{\"message_text\":\"Working on reference-resolution-substrate and considering the Tripolar Invariant alongside docs/REFERENCE_RESOLUTION.md\"}}"
+      },
+      {
+        "description": "Tighter budget for latency-sensitive contexts. Default budget is 2000ms — pass a smaller value when you want to fail fast on slow resolvers (vault rerank, kiwix index).",
+        "call": "{\"action\":\"resolve_references\",\"params\":{\"message_text\":\"look up budget-trip\",\"total_budget_ms\":500}}"
+      },
+      {
+        "description": "Keep no_hit references inline so the agent can acknowledge each one explicitly — useful when authoring a response that names everything the user mentioned.",
+        "call": "{\"action\":\"resolve_references\",\"params\":{\"message_text\":\"compare the alpha-spec and beta-spec proposals\",\"include_no_hits\":true}}"
+      }
+    ],
+    "notes": "Shape coverage and which catalog each shape resolves against:\n\n  • chain_slug / task_slug / bug_slug → DB row in the corresponding table\n  • path → filesystem under RepoRoot (file or directory)\n  • skill_name → skills/*.toml basenames\n  • tool_name → action-manifests/*.toml basenames\n  • forge_schema → blueprints/forge-schemas/*.toml basenames\n  • project_name → KnownProjects catalog\n  • library_entry → library_index.slug (case-sensitive) OR title (case-insensitive)\n  • domain_term → vault_search via Qwen rubric classifier (when configured)\n  • external_technical → kiwix_search\n  • friction_shape → a synthetic 'binding' suggesting a bug-filing call; supersedes the friction-filing-reminder Stop hook for in-message detection\n\nConfidence tier semantics (see docs/REFERENCE_RESOLUTION.md §4):\n\n  • single_exact → recommended_action=use_directly; PresentedAs is the canonical attribution string.\n  • fuzzy_multi → recommended_action=ask_user_to_disambiguate; PresentedAs enumerates the top candidates.\n  • weak_domain → recommended_action=mention_as_possibly_relevant; PresentedAs hedges with the top hit and score.\n  • no_hit → recommended_action=acknowledge_no_hit_and_ask; PresentedAs says the token didn't resolve.\n\nEach resolved reference also carries a grounding_event_id (T5). Every call emits one grounding_events row per detected reference with query_source='reference_resolution' so downstream telemetry (query_interactions, retrieval-success scoring) attributes the work to the resolver layer rather than the underlying per-shape tools.\n\nThe v1 reference-resolution skill (action-manifests/resolve-references.toml + .md) teaches the trigger discipline and presentation conventions; this MCP action is the mechanism the skill delegates to. Call this action directly when authoring an agent loop that needs reference binding without invoking the skill.\n\nDefault total_budget_ms is 2000. Pre-bug-1410, truncated_by_budget only fired on caller-supplied budgets; the handler now applies defaults locally so the flag fires on the default 2s ceiling too.\n\nHistory: shipped by chain reference-resolution-substrate T4 (commit 8a88a0e); T5 added grounding-events emission; T6 added the friction_shape detector + supersession of the Stop-hook reminder. This action-docs chunk was backfilled when bug `resolve-references-missing-from-action-docs-corpus` flagged that the action was invisible to admin.action_describe despite being live in the dispatch table. Reference-resolution-migration T5 demoted it to a soft alias of parse_context; both dispatch into the same handler core.\n"
+  },
+  "vault_read": {
+    "surface": "knowledge",
+    "action": "vault_read",
+    "purpose": "Return the note content + parsed frontmatter for one vault note. The path comes from vault_search results.",
+    "params": [
+      {
+        "name": "path",
+        "type": "string",
+        "required": true,
+        "description": "Vault note path, as returned by vault_search."
+      }
+    ]
+  },
+  "vault_search": {
+    "surface": "knowledge",
+    "action": "vault_search",
+    "purpose": "Rank notes from ~/.claude/vault/ via local Qwen2.5-32B over the full path list. Call this when picking up a task in a domain you've worked in before, BEFORE assuming you remember the prior decisions; the agent's vault is the canonical store of cross-session decisions/learnings/reference.",
+    "params": [
+      {
+        "name": "query",
+        "type": "string",
+        "required": true,
+        "description": "Free-text search query."
+      },
+      {
+        "name": "top_k",
+        "type": "integer",
+        "required": false,
+        "description": "Number of top results to return. Defaults to 5."
+      }
+    ]
+  }
+}

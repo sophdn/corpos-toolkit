@@ -1,0 +1,7 @@
+{
+  "ok cool": "{\"intent\":{\"confidence\":0,\"detected_via\":\"default\",\"shape\":\"none\"},\"references\":[],\"resolver_calls_made\":0}",
+  "summarize the recent changes": "{\"intent\":{\"confidence\":1,\"detected_via\":\"pattern\",\"shape\":\"summarize\"},\"references\":[],\"resolver_calls_made\":0}",
+  "thanks": "{\"intent\":{\"confidence\":0,\"detected_via\":\"default\",\"shape\":\"none\"},\"references\":[],\"resolver_calls_made\":0}",
+  "that's a good point about the cache invalidation": "{\"intent\":{\"confidence\":0,\"detected_via\":\"default\",\"shape\":\"none\"},\"references\":[],\"resolver_calls_made\":0}",
+  "what does the fold hook do?": "{\"intent\":{\"confidence\":1,\"detected_via\":\"pattern\",\"shape\":\"explain\"},\"references\":[],\"resolver_calls_made\":0}"
+}

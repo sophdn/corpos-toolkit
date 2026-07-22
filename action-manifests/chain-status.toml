@@ -1,0 +1,30 @@
+[skill]
+name = "chain-status"
+version = "1.0.0"
+description = "Get a project-wide summary of all chains: slug, status, task counts, and last-updated timestamp. Use when you need an overview before drilling into a specific chain."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "how many chains are there",
+    "overview of all chains",
+    "list all chains",
+    "which chains are open",
+    "which chains are closed",
+    "chain summary",
+    "project chain overview",
+    "how many tasks are closed across chains",
+    "what chains exist",
+    "chain progress overview",
+    "show all chains",
+    "what is the overall status",
+]
+when_not = [
+    "reading a specific chain's task table — use get_chain_state for per-chain detail",
+    "fuzzy-matching chains by name — use find_chain",
+    "reading a specific task's content — use read_task",
+    "searching task content by keyword — use search_task_content",
+]
+
+[instructions]
+path = "action-manifests/instructions/chain-status.md"

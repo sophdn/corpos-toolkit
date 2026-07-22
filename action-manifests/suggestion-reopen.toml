@@ -1,0 +1,22 @@
+[skill]
+name = "suggestion-reopen"
+version = "1.0.0"
+description = "Reopen a previously-resolved suggestion, returning it to the open state. Clears resolution_kind / resolution_note / routed_* / resolved_at and emits a SuggestionReopened event carrying a snapshot of the resolution being reversed."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "reopen suggestion",
+    "suggestion reopened",
+    "undo suggestion resolution",
+    "flip suggestion back to open",
+    "suggestion_reopen",
+]
+when_not = [
+    "the suggestion is already open — suggestion_reopen rejects already-open rows",
+    "the suggestion was rejected at decision time — consider whether reopening conflicts with the rejection rationale before flipping",
+    "reopening a bug — use bug_reopen (separate entity)",
+]
+
+[instructions]
+path = "action-manifests/instructions/suggestion-reopen.md"

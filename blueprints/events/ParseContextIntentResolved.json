@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ParseContextIntentResolved.json",
+  "title": "ParseContextIntentResolved payload",
+  "description": "Emitted by the parse_context handler on every call that ran the directive-intent detector (chain parse-context-lean-orienting T5). T10's fire-rate, detection-path mix, and latency measurements consume this event. message_hash is a SHA-256 truncation so downstream analytics can dedupe identical re-resolutions without retaining the raw user prompt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent_shape", "detection_path"],
+  "properties": {
+    "intent_shape": {
+      "type": "string",
+      "enum": ["verify", "implement", "fix", "audit", "explain", "summarize", "status", "list", "none"],
+      "description": "The resolved intent shape from DetectIntent. Closed set per PARSE_CONTEXT.md §13.2 — emitting an out-of-set value is rejected at the schema layer."
+    },
+    "detection_path": {
+      "type": "string",
+      "enum": ["pattern", "rubric", "hybrid", "default"],
+      "description": "Which detection mechanism produced the shape. 'pattern' = the pure-regex fast path; 'rubric' = Qwen rubric fallback (T4 §13.5 opt-in, not shipped today); 'hybrid' = both fired and combined; 'default' = no detector matched and IntentNone is the fallback."
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock cost of the intent-detection pass in milliseconds. Sub-millisecond on the pattern path; meaningful when the rubric path lands. T10's latency regression dashboard reads this directly."
+    },
+    "fallback_to_none": {
+      "type": "boolean",
+      "description": "True when the detector ran but no shape matched (IntentNone returned as default). Distinguishes 'detector evaluated and abstained' from 'detector evaluated and decided X' for T10's fire-rate accounting."
+    },
+    "message_hash": {
+      "type": "string",
+      "description": "SHA-256 hex of the message text, truncated to 16 chars. Stable identifier for dedup analytics; deliberately not the raw prompt to avoid retaining PII / sensitive content beyond the live envelope."
+    }
+  }
+}

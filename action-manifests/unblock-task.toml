@@ -1,0 +1,31 @@
+# Canonical Go action: work.task_unblock (see go/internal/actiondocs/corpus/work/task_unblock.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "unblock-task"
+version = "1.0.0"
+description = "Remove a blocking dependency edge between two tasks. If no other blockers remain, the blocked task's status resets from blocked back to pending so it becomes pickable again."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "unblock the task",
+    "unblock this task",
+    "remove the blocker",
+    "blocker resolved",
+    "blocker landed",
+    "drop the dependency",
+    "task is no longer blocked",
+    "clear the dependency",
+    "unblock_task",
+]
+when_not = [
+    "the dependency is still real — leave the block in place",
+    "the task is genuinely abandoned — use cancel_task instead",
+    "the task is closed — closure stands; unblock would no-op the status flip anyway",
+    "moving a task between chains — use move_task instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/unblock-task.md"

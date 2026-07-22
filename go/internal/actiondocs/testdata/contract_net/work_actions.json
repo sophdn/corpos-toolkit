@@ -1,0 +1,2166 @@
+[
+  {
+    "name": "chain_status",
+    "description": "List all open chains with their task counts (no slug), or one chain's summary by slug. Open chains only — a closed or unknown slug returns chain_not_found. Use chain_state for full per-chain detail, or chain_find to search by name pattern.",
+    "params": [
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug. Omit to list ALL open chains; pass a slug to return just that chain's summary (the chain must be open — a closed or unknown slug returns chain_not_found)."
+      },
+      {
+        "name": "chain",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      }
+    ],
+    "example": "{\"slug\":\"agent-first-substrate\"}"
+  },
+  {
+    "name": "chain_state",
+    "description": "Return a chain's full state including all tasks (verbose). Identify by `slug` (or its aliases `chain` / `chain_slug`) OR by the numeric `id` (or `chain_id`) — the id form lets a chain_find → chain_state pivot skip the slug round-trip.",
+    "params": [
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug. Required unless an id form (id / chain_id) is supplied."
+      },
+      {
+        "name": "chain",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Chain id — the numeric PK chain_find surfaces. Resolves the chain directly; use instead of slug. A slug accidentally passed here (or in chain_id) is tolerated — routed to the slug resolver instead of erroring."
+      },
+      {
+        "name": "chain_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id (accepts a numeric id or, tolerantly, a slug).",
+        "alias_of": "id"
+      }
+    ],
+    "example": "{\"slug\":\"agent-first-substrate\"}"
+  },
+  {
+    "name": "chain_find",
+    "description": "Search or LIST chains. With a `pattern` (or alias query/text/q/slug) it substring-matches the slug; OMIT the pattern to list chains (optionally project-scoped). Unlike chain_status, closed/cancelled chains are included. Returns compact rows.",
+    "params": [
+      {
+        "name": "pattern",
+        "type": "string",
+        "required": false,
+        "description": "Substring to match against the slug (case-insensitive). Omit to list all chains. Aliases: query, text, q, slug."
+      },
+      {
+        "name": "project",
+        "type": "string",
+        "required": false,
+        "description": "Optional project to scope the list/search to. Omit for cross-project (the default). Falls back to the dispatch envelope project when set there."
+      }
+    ],
+    "example": "{\"pattern\":\"substrate\"}"
+  },
+  {
+    "name": "chain_close",
+    "description": "Close a chain, optionally with a closure summary.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Chain id (preferred — globally unique)."
+      },
+      {
+        "name": "chain_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id.",
+        "alias_of": "id"
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      },
+      {
+        "name": "chain",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "closure_summary",
+        "type": "string",
+        "required": false,
+        "description": "Free-form closing note for the chain."
+      }
+    ],
+    "example": "{\"slug\":\"agent-first-substrate\",\"closure_summary\":\"All 8 tasks closed; retrospective at docs/...\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_read",
+    "description": "Return a task's full content. Identify by `id` (preferred — globally unique) OR `slug` + `chain_slug`.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id. Preferred when known — slug alone is not globally unique."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug to disambiguate."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug. Required when identifying by slug."
+      }
+    ],
+    "example": "{\"slug\":\"design-telemetry-substrate\",\"chain_slug\":\"query-telemetry-substrate\"}",
+    "notes": "task_read accepts {slug} or {id} (bug 1329 parity)."
+  },
+  {
+    "name": "task_search",
+    "description": "Search tasks by slug/title pattern. Returns compact rows. With `chain` filter, pattern is optional and results return in position order.",
+    "params": [
+      {
+        "name": "chain",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug to scope to. Alias: chain_slug."
+      },
+      {
+        "name": "chain_id",
+        "type": "int64",
+        "required": false,
+        "description": "Numeric chain PK to scope to (resolved to the slug) — the same chain handle chain_state accepts, so a chain_find result works on either action. A slug accidentally passed here is tolerated (routed to the chain slug)."
+      },
+      {
+        "name": "pattern",
+        "type": "string",
+        "required": false,
+        "description": "Substring to match (case-insensitive). Aliases: query, text, q."
+      },
+      {
+        "name": "verbose",
+        "type": "bool",
+        "required": false,
+        "description": "Return full Task records instead of compact rows."
+      }
+    ],
+    "example": "{\"chain\":\"agent-first-substrate\",\"verbose\":true}"
+  },
+  {
+    "name": "task_list",
+    "description": "List tasks across chains (the cross-cutting open-task verb). With NO params, returns every task (bounded by the default limit of 50); cross-project when no project is set, project-scoped when one is. Use `status:\"open\"` for the non-terminal set (pending+active+blocked). For a single chain's tasks in position order, or a title/slug substring search, use task_search instead.",
+    "params": [
+      {
+        "name": "status",
+        "type": "string",
+        "required": false,
+        "description": "Filter by task status. `open` is a convenience alias for the non-terminal set (NOT closed/cancelled — i.e. pending+active+blocked); pending / active / blocked / closed / cancelled match exactly. Omit for all statuses. Alias: state."
+      },
+      {
+        "name": "state",
+        "type": "string",
+        "required": false,
+        "description": "Alias of status.",
+        "alias_of": "status"
+      },
+      {
+        "name": "since",
+        "type": "string",
+        "required": false,
+        "description": "ISO timestamp; only tasks created at or after this time (t.created_at \u003e=)."
+      },
+      {
+        "name": "verbose",
+        "type": "bool",
+        "required": false,
+        "description": "Accepted for shape parity with bug_list/suggestion_list; currently a no-op (task_list has one compact projection)."
+      },
+      {
+        "name": "all",
+        "type": "bool",
+        "required": false,
+        "description": "Legacy no-op, accepted for shape parity."
+      },
+      {
+        "name": "limit",
+        "type": "int64",
+        "required": false,
+        "description": "Max rows (default 50)."
+      },
+      {
+        "name": "offset",
+        "type": "int64",
+        "required": false,
+        "description": "Row offset for pagination."
+      },
+      {
+        "name": "chain",
+        "type": "string",
+        "required": false,
+        "description": "Optional chain slug to narrow the list to one chain. Alias: chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of chain.",
+        "alias_of": "chain"
+      }
+    ],
+    "example": "{\"status\":\"open\"}",
+    "see_also": "task_search"
+  },
+  {
+    "name": "task_start",
+    "description": "Transition a task to status=active.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      }
+    ],
+    "example": "{\"id\":6326}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_complete",
+    "description": "Transition a task to status=closed with a closure note + optional commit SHA.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      },
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": false,
+        "description": "SHA the work landed in. Accepts 'unversioned' for non-repo fixes (see skill:bug-filing-discipline §Unversioned-artifact exception)."
+      },
+      {
+        "name": "sha",
+        "type": "string",
+        "required": false,
+        "description": "Alias of commit_sha.",
+        "alias_of": "commit_sha"
+      }
+    ],
+    "example": "{\"id\":6326,\"commit_sha\":\"abc1234\"}",
+    "notes": "Companion task_stamp_sha(slug, commit_sha) stamps a commit SHA on an already-closed task — mirrors bug_stamp_sha for when the SHA wasn't available at task_complete time; rejects non-closed tasks.\n\nPost-close side effects: (1) structural task_blockers edges pointing AT the closing task are deleted; any task whose last structural blocker was just removed flips from 'blocked' to 'pending' automatically (cleanupBlockersAfterClose). (2) Prose-only-blocked tasks in the same chain — tasks with status='blocked' but NO structural task_blockers rows — also flip to 'pending' automatically (sweepProseOnlyBlockedAfterClose). This handles the chain-authoring pattern where 'X blocks Y' is recorded in design_decisions prose without a structural task_block call. Each swept task emits its own TaskTransitioned event so the audit ledger captures the state change. The sweep does NOT fire on task_cancel — cancelled tasks weren't completed in the satisfies-prose-dep sense.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_cancel",
+    "description": "Transition a task to status=cancelled.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      }
+    ],
+    "example": "{\"id\":6326}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_reopen",
+    "description": "Reopen a closed or cancelled task, returning it to status=pending (the backlog) so it becomes pickup-eligible again. Use task_start to then move it to active.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      }
+    ],
+    "example": "{\"id\":6326}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_unstart",
+    "description": "Revert an in-flight task from status=active back to status=pending. Use for the mid-flight pause/revert case (multi-session cold-pickup, context-budget exhaustion) where task_start was called but the work paused without landing.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      }
+    ],
+    "example": "{\"id\":6326}"
+  },
+  {
+    "name": "task_stamp_sha",
+    "description": "Stamp a commit SHA on a task. On an already-closed task this records a late-discovered SHA. On a PENDING or ACTIVE task it ATOMICALLY CLOSES the task and stamps the SHA in one call (the stamp verb signals 'this commit captures the closure'); pass handoff_output to record the closure note in that same call. Blocked/cancelled tasks are rejected — reopen/unblock first.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      },
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": true,
+        "description": "SHA to stamp. Alias: sha. Accepts 'unversioned' for non-repo fixes."
+      },
+      {
+        "name": "sha",
+        "type": "string",
+        "required": false,
+        "description": "Alias of commit_sha.",
+        "alias_of": "commit_sha"
+      },
+      {
+        "name": "handoff_output",
+        "type": "string",
+        "required": false,
+        "description": "Closure note recorded when this stamp closes a pending/active task (rides into the same TaskCompleted as the SHA, so 'stamp + record handoff + close' is one call — no follow-up task_complete, which would error closed→closed). Rejected on an already-closed task: stamp the SHA, then attach the handoff via task_edit(handoff_output=…)."
+      }
+    ],
+    "example": "{\"id\":6326,\"sha\":\"abc1234\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_block",
+    "description": "Add a blocker to a task: the blocked task waits until the blocker resolves. Cross-chain blockers work by passing blocker_chain_slug alongside blocker_slug.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Blocked task id (preferred)."
+      },
+      {
+        "name": "task_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id.",
+        "alias_of": "id"
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Blocked task slug. Pair with chain_slug."
+      },
+      {
+        "name": "task_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug of the blocked task."
+      },
+      {
+        "name": "blocker_id",
+        "type": "int64",
+        "required": false,
+        "description": "Blocker task id (preferred)."
+      },
+      {
+        "name": "blocker_slug",
+        "type": "string",
+        "required": false,
+        "description": "Blocker task slug. Pair with blocker_chain_slug for cross-chain blockers."
+      },
+      {
+        "name": "blocker_chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug of the blocker task. Required when blocker lives in a different chain than the blocked task."
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "required": false,
+        "description": "Free-form note explaining why the blocker applies."
+      }
+    ],
+    "example": "{\"slug\":\"telemetry-cleanup\",\"chain_slug\":\"telemetry-substrate-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\",\"reason\":\"deferred until foundation closes\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_unblock",
+    "description": "Remove a previously-set blocker from a task.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Blocked task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Blocked task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug of the blocked task."
+      },
+      {
+        "name": "blocker_slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the blocker to remove."
+      },
+      {
+        "name": "blocker_chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug for cross-chain blockers."
+      }
+    ],
+    "example": "{\"slug\":\"telemetry-cleanup\",\"blocker_slug\":\"chain-retrospective\",\"blocker_chain_slug\":\"agent-first-substrate\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "task_blockers",
+    "description": "List the structural task_blockers edges pointing at a task. Both intra-chain AND cross-chain edges surface — any task_block call that wrote an edge (whether or not blocker_chain_slug pointed at the same chain as the blocked task) appears in the response. Each entry's chain_slug field names the BLOCKER's chain, so callers can tell intra- from cross-chain at a glance. If a task has status='blocked' with NO structural edge at all (intra or cross), the response includes one synthetic entry with kind='status_only' — that's the prose-only signal: the chain's design_decisions records a wait that no task_block call ever made structural. Bug 1413 corrected this description from an earlier text that claimed cross-chain edges were not tracked; the underlying SQL has always returned them, only the docs lagged.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred — id-by-default flows like chain_state → task_blockers avoid the extra slug lookup)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug."
+      }
+    ],
+    "example": "{\"slug\":\"interactions-and-resolutions-tables\",\"chain_slug\":\"query-telemetry-substrate\"}",
+    "notes": "Reports structural intra-chain task_blockers edges only. When a task carries status='blocked' but has no structural edges, the result includes a synthetic blocker entry of kind='status_only' (per bug 1379 fix at 0b8c29e) — that signals either a cross-chain prose wait OR a state that's about to be cleaned up by a sibling task_complete's auto-sweep (cleanupBlockersAfterClose for structural edges, sweepProseOnlyBlockedAfterClose for prose-only entries). After bug task-complete-doesnt-auto-unblock-intra-chain-prose-deps's fix, the prose-only intra-chain case auto-resolves on the next task_complete in the chain; status_only sentinels are now most often cross-chain prose waits."
+  },
+  {
+    "name": "task_edit",
+    "description": "Edit a task's content fields (problem_statement, acceptance_criteria, context_required, constraints, handoff_output). Pass handoff_output_append to concatenate onto the existing handoff_output (atomic, sized for post-closure addenda — sanity audits, late telemetry) rather than rewriting; mutually exclusive with handoff_output in the same call. Envelope-level validation problems (missing slug, unknown field names, mutually-exclusive combinations) aggregate into a single `errors` list. For richer schema-driven edits, prefer forge_edit on schema=task.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Task id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Task slug. Pair with chain_slug."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Chain slug — needed because slug is unique only within a chain."
+      },
+      {
+        "name": "problem_statement",
+        "type": "string",
+        "required": false,
+        "description": "Rewrite the task's problem statement."
+      },
+      {
+        "name": "acceptance_criteria",
+        "type": "string",
+        "required": false,
+        "description": "Rewrite the task's acceptance criteria."
+      },
+      {
+        "name": "context_required",
+        "type": "string",
+        "required": false,
+        "description": "Rewrite the task's required-context field."
+      },
+      {
+        "name": "constraints",
+        "type": "string",
+        "required": false,
+        "description": "Rewrite the task's constraints field."
+      },
+      {
+        "name": "handoff_output",
+        "type": "string",
+        "required": false,
+        "description": "Rewrite the task's handoff_output. Mutually exclusive with handoff_output_append."
+      },
+      {
+        "name": "handoff_output_append",
+        "type": "string",
+        "required": false,
+        "description": "Append-mode addendum for handoff_output. Concatenated via SQLite `||`; caller controls leading separator (newline etc.). Mutually exclusive with handoff_output."
+      }
+    ],
+    "see_also": "forge_edit",
+    "notes": "forge_edit on a task accepts the same {chain_slug, slug, \u003cfields…\u003e} top-level shape as task_edit (the composite key is synthesized from chain_slug + slug); the structured form on tasks needs key: {chain_slug, slug}.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bug_list",
+    "description": "List bugs. Compact projection by default. Requires a project OR at least one filter; pass all=true to confirm a full-table dump.",
+    "params": [
+      {
+        "name": "status",
+        "type": "string",
+        "required": false,
+        "description": "open / fixed / wontfix / routed / dup. Alias: state."
+      },
+      {
+        "name": "state",
+        "type": "string",
+        "required": false,
+        "description": "Alias of status.",
+        "alias_of": "status"
+      },
+      {
+        "name": "severity",
+        "type": "string",
+        "required": false,
+        "description": "low / medium / high."
+      },
+      {
+        "name": "surface",
+        "type": "string",
+        "required": false,
+        "description": "Comma-separated surface tags; match-any."
+      },
+      {
+        "name": "since",
+        "type": "string",
+        "required": false,
+        "description": "ISO timestamp; surfaces bugs updated since."
+      },
+      {
+        "name": "verbose",
+        "type": "bool",
+        "required": false,
+        "description": "Return full bodies including problem_statement."
+      },
+      {
+        "name": "all",
+        "type": "bool",
+        "required": false,
+        "description": "Confirm a full-table dump when no project / filter passed."
+      }
+    ],
+    "example": "{\"status\":\"open\"}",
+    "errors": [
+      {
+        "condition": "no project AND no filter",
+        "message": "bug_list requires a project OR at least one filter (status, severity, surface, since); pass all=true to confirm a full-table dump."
+      }
+    ]
+  },
+  {
+    "name": "bug_read",
+    "description": "Return a single bug's full content. Identify by id or slug.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Bug id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+      }
+    ],
+    "example": "{\"id\":1333}",
+    "notes": "Numeric id is accepted in place of the slug; the dispatcher resolves either to the same row."
+  },
+  {
+    "name": "bug_resolve",
+    "description": "Resolve a bug (kind=fixed / wontfix / dup / routed). When commit_sha is supplied and kind is omitted, kind defaults to 'fixed' — the dominant 'fix landed in commit X' shape. For routed, supply routed_chain_slug + routed_task_slug.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Bug id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+      },
+      {
+        "name": "resolution_kind",
+        "type": "string",
+        "required": false,
+        "description": "fixed / wontfix / dup / routed. Alias: kind. Defaults to 'fixed' when commit_sha is supplied; required otherwise."
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_kind.",
+        "alias_of": "resolution_kind"
+      },
+      {
+        "name": "resolution_note",
+        "type": "string",
+        "required": false,
+        "description": "Free-form note. For kind=fixed: what changed. For wontfix: reasoning. For dup: target bug slug + note. Aliases: notes, resolution_summary, summary."
+      },
+      {
+        "name": "notes",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_note.",
+        "alias_of": "resolution_note"
+      },
+      {
+        "name": "resolution_summary",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_note.",
+        "alias_of": "resolution_note"
+      },
+      {
+        "name": "summary",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_note.",
+        "alias_of": "resolution_note"
+      },
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": false,
+        "description": "SHA the fix landed in. Required for kind=fixed unless the artifact lives outside any git repo (then 'unversioned'). When set, defaults kind=fixed."
+      },
+      {
+        "name": "sha",
+        "type": "string",
+        "required": false,
+        "description": "Alias of commit_sha.",
+        "alias_of": "commit_sha"
+      },
+      {
+        "name": "routed_chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "When kind=routed, the chain absorbing this bug's work."
+      },
+      {
+        "name": "routed_task_slug",
+        "type": "string",
+        "required": false,
+        "description": "When kind=routed, the specific task in routed_chain_slug."
+      },
+      {
+        "name": "routed_suggestion_slug",
+        "type": "string",
+        "required": false,
+        "description": "When the bug's resolution surfaces a structural improvement worth proposing, the suggestion slug. Symmetric counterpart to suggestion.routed_bug_slug."
+      }
+    ],
+    "example": "{\"slug\":\"my-bug\",\"commit_sha\":\"abc1234\",\"resolution_note\":\"Fixed by adding X\"}",
+    "value_aliases": [
+      {
+        "param": "resolution_kind",
+        "from": "fix",
+        "to": "fixed"
+      },
+      {
+        "param": "resolution_kind",
+        "from": "route",
+        "to": "routed"
+      },
+      {
+        "param": "resolution_kind",
+        "from": "wont_fix",
+        "to": "wontfix"
+      },
+      {
+        "param": "resolution_kind",
+        "from": "duplicate",
+        "to": "dup"
+      },
+      {
+        "param": "resolution_kind",
+        "from": "external",
+        "to": "upstream",
+        "notes": "Also accepts externalized and upstreamed for the same canonical 'upstream' resolution."
+      }
+    ],
+    "errors": [
+      {
+        "condition": "missing resolution_kind",
+        "message": "Returns an explicit error naming all five accepted values."
+      }
+    ],
+    "notes": "'upstream' (added in bug 1330) means \"real, reproducible, traceable to a dependency we don't author; not fixed locally for that reason\" — distinct from wontfix's \"out of scope / working as intended\". Verb-form aliases are normalized to the past-participle enum: fix→fixed, route→routed, wont_fix→wontfix, duplicate→dup, external/externalized/upstreamed→upstream.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bug_reopen",
+    "description": "Re-open a previously-resolved bug.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Bug id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+      }
+    ],
+    "example": "{\"slug\":\"my-bug\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bug_stamp_sha",
+    "description": "Stamp a commit SHA on an already-resolved bug.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Bug id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Bug slug. Either id or slug identifies the bug (bug 1329 parity)."
+      },
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": true,
+        "description": "SHA to stamp. Alias: sha. Accepts 'unversioned'."
+      },
+      {
+        "name": "sha",
+        "type": "string",
+        "required": false,
+        "description": "Alias of commit_sha.",
+        "alias_of": "commit_sha"
+      }
+    ],
+    "example": "{\"slug\":\"my-bug\",\"sha\":\"abc1234\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "suggestion_list",
+    "description": "List suggestions. Compact projection by default; pass verbose=true for full bodies including problem_statement. Requires a project OR at least one filter; pass all=true to confirm a full-table dump.",
+    "params": [
+      {
+        "name": "status",
+        "type": "string",
+        "required": false,
+        "description": "open / adopted / deferred / rejected. Alias: state."
+      },
+      {
+        "name": "state",
+        "type": "string",
+        "required": false,
+        "description": "Alias of status.",
+        "alias_of": "status"
+      },
+      {
+        "name": "priority",
+        "type": "string",
+        "required": false,
+        "description": "low / medium / high."
+      },
+      {
+        "name": "surface",
+        "type": "string",
+        "required": false,
+        "description": "Comma-separated surface tags; match-any."
+      },
+      {
+        "name": "since",
+        "type": "string",
+        "required": false,
+        "description": "ISO timestamp; surfaces suggestions updated since."
+      },
+      {
+        "name": "verbose",
+        "type": "bool",
+        "required": false,
+        "description": "Return full bodies including problem_statement."
+      },
+      {
+        "name": "all",
+        "type": "bool",
+        "required": false,
+        "description": "Confirm a full-table dump when no project / filter passed."
+      }
+    ],
+    "example": "{\"status\":\"open\"}",
+    "errors": [
+      {
+        "condition": "no project AND no filter",
+        "message": "suggestion_list requires a project OR at least one filter (status, priority, surface, since); pass all=true to confirm a full-table dump."
+      }
+    ]
+  },
+  {
+    "name": "suggestion_read",
+    "description": "Return a single suggestion's full content. Identify by id or slug.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Suggestion id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+      },
+      {
+        "name": "suggestion_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "suggestion_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id.",
+        "alias_of": "id"
+      }
+    ],
+    "example": "{\"slug\":\"add-fts5-coverage-to-roadmap-list\"}",
+    "notes": "Numeric id is accepted in place of the slug; the dispatcher resolves either to the same row."
+  },
+  {
+    "name": "suggestion_resolve",
+    "description": "Resolve a suggestion (kind=adopted / deferred / rejected — distinct vocabulary from bug_resolve's fixed/wontfix/etc.). When commit_sha is supplied and kind is omitted, kind defaults to 'adopted'. For adopted with routing, supply routed_chain_slug + routed_task_slug (and routed_bug_slug when the adoption uncovers a concrete fix tracked as a bug).",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Suggestion id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+      },
+      {
+        "name": "suggestion_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "suggestion_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id.",
+        "alias_of": "id"
+      },
+      {
+        "name": "resolution_kind",
+        "type": "string",
+        "required": false,
+        "description": "adopted / deferred / rejected. Alias: kind. Defaults to 'adopted' when commit_sha is supplied; required otherwise."
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_kind.",
+        "alias_of": "resolution_kind"
+      },
+      {
+        "name": "resolution_note",
+        "type": "string",
+        "required": false,
+        "description": "Free-form note. For kind=adopted: what shipped (or the chain+task that will). For kind=deferred: why-not-now + revisit signal. For kind=rejected: reasoning. Aliases: notes, resolution_summary, summary."
+      },
+      {
+        "name": "notes",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_note.",
+        "alias_of": "resolution_note"
+      },
+      {
+        "name": "resolution_summary",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_note.",
+        "alias_of": "resolution_note"
+      },
+      {
+        "name": "summary",
+        "type": "string",
+        "required": false,
+        "description": "Alias of resolution_note.",
+        "alias_of": "resolution_note"
+      },
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": false,
+        "description": "SHA the work landed in. Accepts 'sha' as alias and 'unversioned' for artifacts outside any git repo. When set, defaults kind=adopted."
+      },
+      {
+        "name": "sha",
+        "type": "string",
+        "required": false,
+        "description": "Alias of commit_sha.",
+        "alias_of": "commit_sha"
+      },
+      {
+        "name": "routed_chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "When kind=adopted, the chain absorbing the work."
+      },
+      {
+        "name": "routed_task_slug",
+        "type": "string",
+        "required": false,
+        "description": "When kind=adopted, the specific task in routed_chain_slug."
+      },
+      {
+        "name": "routed_bug_slug",
+        "type": "string",
+        "required": false,
+        "description": "When kind=adopted and the adoption uncovers a concrete fix tracked as a bug, the bug slug. Symmetric counterpart to bug.routed_suggestion_slug — bidirectional bug↔suggestion routing."
+      }
+    ],
+    "example": "{\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"kind\":\"adopted\",\"routed_chain_slug\":\"fts5-on-roadmap-list\"}",
+    "value_aliases": [
+      {
+        "param": "resolution_kind",
+        "from": "adopt",
+        "to": "adopted"
+      },
+      {
+        "param": "resolution_kind",
+        "from": "defer",
+        "to": "deferred"
+      },
+      {
+        "param": "resolution_kind",
+        "from": "reject",
+        "to": "rejected"
+      }
+    ],
+    "errors": [
+      {
+        "condition": "missing resolution_kind (and no commit_sha to default from)",
+        "message": "Returns an explicit error naming all three accepted values."
+      },
+      {
+        "condition": "bug-side kind supplied (fixed, wontfix, upstream, dup, routed)",
+        "message": "Rejected with an error naming the suggestion-side vocabulary — adopted/deferred/rejected."
+      }
+    ],
+    "notes": "The suggestion-side vocabulary (adopted/deferred/rejected) is deliberately distinct from the bug-side (fixed/wontfix/upstream/dup/routed). adopted + routed_chain_slug + resolved_commit_sha is the canonical 'this shipped' shape — there is no separate `implemented` kind. routed_bug_slug exists for the bidirectional bug↔suggestion routing introduced in chain agent-suggestion-box (a suggestion's adoption can name the bug filed for the implementing work).",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "suggestion_reopen",
+    "description": "Re-open a previously-resolved suggestion.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Suggestion id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+      },
+      {
+        "name": "suggestion_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "suggestion_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id.",
+        "alias_of": "id"
+      }
+    ],
+    "example": "{\"slug\":\"add-fts5-coverage-to-roadmap-list\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "suggestion_stamp_sha",
+    "description": "Stamp a commit SHA on an already-resolved suggestion — for when the implementing work landed after suggestion_resolve. Mirrors bug_stamp_sha / task_stamp_sha.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "Suggestion id (preferred)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Suggestion slug. Either id or slug identifies the suggestion (bug 1329 parity)."
+      },
+      {
+        "name": "suggestion_slug",
+        "type": "string",
+        "required": false,
+        "description": "Alias of slug.",
+        "alias_of": "slug"
+      },
+      {
+        "name": "suggestion_id",
+        "type": "int64",
+        "required": false,
+        "description": "Alias of id.",
+        "alias_of": "id"
+      },
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": true,
+        "description": "SHA to stamp. Alias: sha. Accepts 'unversioned'."
+      },
+      {
+        "name": "sha",
+        "type": "string",
+        "required": false,
+        "description": "Alias of commit_sha.",
+        "alias_of": "commit_sha"
+      }
+    ],
+    "example": "{\"slug\":\"add-fts5-coverage-to-roadmap-list\",\"sha\":\"abc1234\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "trained_model_list",
+    "description": "List trained_model rows. Filter by task or status. Status values: training | evaluating | ab_testing | promoted | retired. The registry under go/internal/ml/ uses this same filter set to resolve load-by-promoted lookups.",
+    "params": [
+      {
+        "name": "task",
+        "type": "string",
+        "required": false,
+        "description": "Task identifier (e.g. 'source-router', 'cross-encoder-reranker'). Lowercase-kebab."
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "required": false,
+        "description": "Lifecycle state filter: training | evaluating | ab_testing | promoted | retired. Invalid values reject with a typed error."
+      },
+      {
+        "name": "verbose",
+        "type": "bool",
+        "required": false,
+        "description": "Return full rows (eval_metrics + training_dataset_signature included)."
+      },
+      {
+        "name": "limit",
+        "type": "int64",
+        "required": false,
+        "description": "Default 50; clamped to \u003e= 0."
+      },
+      {
+        "name": "offset",
+        "type": "int64",
+        "required": false,
+        "description": "Pagination offset; rows to skip before applying limit."
+      }
+    ],
+    "example": "{\"task\":\"source-router\",\"status\":\"promoted\"}"
+  },
+  {
+    "name": "trained_model_promote",
+    "description": "Flip a trained_model row to status='promoted'. Expects current status='ab_testing' (the A/B harness has accumulated promotion-gate evidence). Pass {\"force\": true} to override from any state — that path is audited via the work-surface rationale envelope.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "trained_model row id (preferred — globally unique)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Slug of the trained_model row (convention: \u003ctask\u003e-\u003cversion\u003e)."
+      },
+      {
+        "name": "force",
+        "type": "bool",
+        "required": false,
+        "description": "Skip the ab_testing-state precondition. Audited override."
+      }
+    ],
+    "example": "{\"slug\":\"source-router-v1\"}"
+  },
+  {
+    "name": "trained_model_retire",
+    "description": "Flip a trained_model row to status='retired' from any prior state. Optional reason merges into eval_metrics.retirement_reason for in-row lifecycle metadata.",
+    "params": [
+      {
+        "name": "id",
+        "type": "int64",
+        "required": false,
+        "description": "trained_model row id (preferred — globally unique)."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": false,
+        "description": "Slug of the trained_model row."
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "required": false,
+        "description": "Free-form note explaining retirement; merged into eval_metrics.retirement_reason."
+      }
+    ],
+    "example": "{\"slug\":\"source-router-v1\",\"reason\":\"superseded by v2\"}"
+  },
+  {
+    "name": "recent_activity",
+    "description": "Resume briefing — answers \"where did we leave off?\". Reads the append-only events ledger as a time-ordered timeline (cross-project by default; pass `project` to scope), plus an in_flight section (currently-active tasks) and a recent_closures section (chains closed / tasks completed). Cross-status by construction, so closed chains and landed commits are visible — unlike chain_status, which lists only open chains and cannot answer recency.",
+    "params": [
+      {
+        "name": "since",
+        "type": "string",
+        "required": false,
+        "description": "ISO-8601 lower bound on event ts. Overrides `days`. Compared lexically against the ledger's RFC-3339 timestamps."
+      },
+      {
+        "name": "days",
+        "type": "int64",
+        "required": false,
+        "description": "Convenience window: events from the last N days. Ignored when `since` is set. Defaults to 7."
+      },
+      {
+        "name": "limit",
+        "type": "int64",
+        "required": false,
+        "description": "Caps the timeline and recent_closures sections (each). Default 30."
+      }
+    ],
+    "example": "{\"days\":2}",
+    "see_also": "chain_status, roadmap_list",
+    "notes": "Read-only — no rationale required. Scope is CROSS-PROJECT by default; pass a top-level `project` to scope to one project.\n\nThis is the durable fix for the open-only chain_status recency gap: chain_status (no slug) returns only OPEN chains, so its newest entry is not the newest activity — closed chains and CommitLanded events are absent. recent_activity reads the events ledger directly (migration 032), so every lifecycle event is in scope.\n\nSections: `in_flight` = active tasks + their chains (what's mid-stream now); `recent_closures` = ChainClosed / TaskCompleted / TaskCancelled in the window; `timeline` = the raw recent events, newest first, each with a one-line summary derived from the event type + payload + rationale."
+  },
+  {
+    "name": "where_we_left_off",
+    "description": "Alias of recent_activity — both names route to the same resume-briefing handler.",
+    "params": []
+  },
+  {
+    "name": "chain_dep_add",
+    "description": "Add a chain-level dependency edge: the dependent chain depends on (must come after) the prerequisite chain. Edges drive roadmap_plan's computed order, so declaring a dependency once is how you shape the roadmap — no manual position-setting. Rejects self-edges, cross-project pairs, unknown chains, and duplicates.",
+    "params": [
+      {
+        "name": "dependent_chain",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the chain that depends on / comes after the prerequisite. Alias: dependent."
+      },
+      {
+        "name": "prerequisite_chain",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the chain that must come first. Aliases: prerequisite, depends_on."
+      },
+      {
+        "name": "reason",
+        "type": "string",
+        "required": false,
+        "description": "Why the dependency exists — the human-readable half of the 'why this order' answer (e.g. 'needs the typed core before the HTTP layer')."
+      }
+    ],
+    "example": "{\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\",\"reason\":\"needs the domain types\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "chain_dep_remove",
+    "description": "Remove a chain-level dependency edge (dependent → prerequisite). Use to break a cycle roadmap_plan reports, or when a prerequisite no longer gates the dependent.",
+    "params": [
+      {
+        "name": "dependent_chain",
+        "type": "string",
+        "required": true,
+        "description": "Dependent chain slug. Alias: dependent."
+      },
+      {
+        "name": "prerequisite_chain",
+        "type": "string",
+        "required": true,
+        "description": "Prerequisite chain slug. Aliases: prerequisite, depends_on."
+      }
+    ],
+    "example": "{\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "chain_dep_list",
+    "description": "List a chain's dependency edges: its prerequisites (what it depends on) and its dependents (what depends on it), each with the edge's reason. Read-only.",
+    "params": [
+      {
+        "name": "chain",
+        "type": "string",
+        "required": true,
+        "description": "Chain slug to list edges for. Alias: chain_slug."
+      }
+    ],
+    "example": "{\"chain\":\"http-api\"}"
+  },
+  {
+    "name": "roadmap_plan",
+    "description": "Computed roadmap — open chains in dependency topological order, derived from chain_deps edges (cross-project by default; pass `project` to scope). Each entry is tagged ready (no open prerequisites — actionable now) or blocked, and carries its depends_on (the gating prerequisite edges + reasons): the 'why this order' the manual roadmap never had. Self-maintaining — closing a prerequisite promotes its dependents to ready on the next call. Read-only.",
+    "params": [],
+    "example": "{}",
+    "see_also": "chain_dep_add, roadmap_list",
+    "notes": "Order is recomputed on every call from the edge graph, so it never needs manual position-setting. Among chains that are simultaneously ready, the tiebreak is manual roadmap position (roadmap_set/insert) ascending, then created_at, then slug — so a manual position still nudges priority without owning the whole order.\n\nA dependency cycle is reported, not hung: the response carries `error` plus a `cycle` list naming the chains in the cycle, and `order` holds the chains that could be placed before the cycle. Break the cycle with chain_dep_remove.\n\nOnly edges between two open chains gate ordering; a closed prerequisite is treated as satisfied and dropped."
+  },
+  {
+    "name": "roadmap_list",
+    "description": "List the roadmap (cross-project by default; pass `project` to scope). Returns entries sorted by position, plus their open/closed status from the underlying chain/task.",
+    "params": [
+      {
+        "name": "project",
+        "type": "string",
+        "required": false,
+        "description": "Project id to scope to (top-level param, not in `params`)."
+      }
+    ],
+    "example": "{}",
+    "notes": "Default scope is CROSS-PROJECT. Pass a top-level `project` to scope to one project's rows.\n\nReturned `status` reflects the underlying chain/task's status at query time (read via proj_chain_status / proj_current_tasks). In practice every returned row has status='open' because closed chains are pruned from proj_roadmap_view by the ChainClosed projection fold (internal/projections/roadmap.go), and cancelled/completed tasks are pruned by the TaskCancelled / TaskCompleted folds. There is no roadmap-side status filter because there is nothing to filter against — the live roadmap holds only open work.\n\nThe result is every proj_roadmap_view row for the requested scope; the action does NOT silently truncate. If the caller expects a row and doesn't see it, the row is genuinely absent from proj_roadmap_view (never inserted, or removed when its underlying chain/task closed) — not hidden by a default filter.\n\nEmpty result marshals as `[]` not `null` (RoadmapListEntries.MarshalJSON)."
+  },
+  {
+    "name": "roadmap_set",
+    "description": "Replace a project's roadmap atomically with the supplied items. Each item carries an optional explicit Position; omitted Position defaults to the 1-based array index. Duplicate positions within one call are rejected.",
+    "params": [
+      {
+        "name": "items",
+        "type": "object[]",
+        "required": true,
+        "description": "List of {ref_kind: 'chain'|'task', ref_slug: string, note?: string, position?: int64} entries."
+      }
+    ],
+    "example": "{\"items\":[{\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"Phase A\"},{\"ref_kind\":\"chain\",\"ref_slug\":\"query-telemetry-substrate\",\"position\":2,\"note\":\"Phase B\"}]}",
+    "errors": [
+      {
+        "condition": "partial item submission",
+        "message": "Item fields omitted in a roadmap_set call are CLEARED (notes set to empty, etc). This is intentional full-replace semantics; if you want partial-update, use roadmap_update."
+      }
+    ],
+    "notes": "Fixes the silent-clobber footgun documented in bug roadmap-set-clobbers-notes-on-partial-item-submission.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "roadmap_preview_set",
+    "description": "Dry-run roadmap_set: returns added / removed / repositioned / unchanged without applying. Same input shape as roadmap_set.",
+    "params": [
+      {
+        "name": "items",
+        "type": "object[]",
+        "required": true,
+        "description": "Same shape as roadmap_set.items."
+      }
+    ],
+    "see_also": "roadmap_set"
+  },
+  {
+    "name": "roadmap_insert",
+    "description": "Insert one entry at the supplied position (project-scoped). Shifts existing entries with position \u003e= target down by one within the same project. Returns an error if the ref is already on the roadmap (use roadmap_set with an explicit position to reposition).",
+    "params": [
+      {
+        "name": "ref_kind",
+        "type": "string",
+        "required": true,
+        "description": "chain or task."
+      },
+      {
+        "name": "ref_slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the chain or task."
+      },
+      {
+        "name": "position",
+        "type": "int64",
+        "required": false,
+        "description": "Target position (1-indexed). Defaults to append-at-end. Clamps to 1..currentMax+1."
+      },
+      {
+        "name": "note",
+        "type": "string",
+        "required": false,
+        "description": "Free-text note attached to the entry."
+      }
+    ],
+    "example": "{\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"foundation\"}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "roadmap_update",
+    "description": "PATCH one roadmap entry at the given (project, position). Only fields explicitly supplied are changed; everything else is preserved. Fixes the silent-clobber footgun in roadmap_set where omitted fields got cleared. To change which ref a position points at, supply ref_kind AND ref_slug together; supplying only one returns an error.",
+    "params": [
+      {
+        "name": "position",
+        "type": "int64",
+        "required": true,
+        "description": "1-indexed per-project position identifying the row to update."
+      },
+      {
+        "name": "note",
+        "type": "string",
+        "required": false,
+        "description": "New note. Empty string clears the existing note. Absent (nil) leaves the note unchanged."
+      },
+      {
+        "name": "ref_kind",
+        "type": "string",
+        "required": false,
+        "description": "New ref_kind (chain or task). Must be supplied together with ref_slug."
+      },
+      {
+        "name": "ref_slug",
+        "type": "string",
+        "required": false,
+        "description": "New ref_slug. Must be supplied together with ref_kind."
+      }
+    ],
+    "example": "{\"position\":10,\"note\":\"Updated note text\"}",
+    "see_also": "roadmap_set",
+    "notes": "Fixes the silent-clobber footgun documented in bug roadmap-set-clobbers-notes-on-partial-item-submission."
+  },
+  {
+    "name": "roadmap_diff",
+    "description": "Surface pending/active chains and tasks that arrived after the last reassessed_at timestamp and aren't yet on the roadmap.",
+    "params": [],
+    "example": "{}"
+  },
+  {
+    "name": "roadmap_mark_reassessed",
+    "description": "Bump the last_reassessed_at marker to now. Use after a roadmap review to acknowledge that diff items have been considered.",
+    "params": [],
+    "example": "{}",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "forge",
+    "description": "DEPRECATED (chain 311 T7 Stage 5 — prefer `record`): create a new artifact for a registered schema. The forge create surface now routes through the construct umbrella and is mirrored by `record` with a forge-shaped sugar mode — `record({schema_name, slug, fields})` (op defaults to create). forge still works identically and is archived at Stage 6. For per-schema field details + call envelope, use forge_schema(schema_name='\u003cname\u003e').",
+    "params": [
+      {
+        "name": "schema_name",
+        "type": "string",
+        "required": true,
+        "description": "Schema to forge. Alias: kind."
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "required": false,
+        "description": "Alias of schema_name.",
+        "alias_of": "schema_name"
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug for the new artifact. May be auto-derived from `title` for schemas that have a title field."
+      },
+      {
+        "name": "project",
+        "type": "string",
+        "required": false,
+        "description": "Top-level envelope param (not inside fields) scoping the create to a project. Required for project-scoped schemas (chain, task, bug, suggestion) unless the server resolver derives it from CWD or --default-project."
+      },
+      {
+        "name": "fields",
+        "type": "object",
+        "required": false,
+        "description": "Field payload. May also be passed as top-level sugar keys instead of nested fields object."
+      }
+    ],
+    "see_also": "forge_schema, forge_schemas",
+    "notes": "forge accepts two equivalent param shapes — structured {schema_name, slug, fields: {\u003cname\u003e: \u003cvalue\u003e, ...}} OR sugar {schema_name, slug, \u003cfield-name\u003e: \u003cvalue\u003e, ...} (matches forge_edit's sugar form). Reserved control words (slug/date/project/commit_sha) are excluded from the sugar pass so they aren't mis-collected as field values.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "forge_edit",
+    "description": "DEPRECATED (chain 311 T7 Stage 5 — prefer `record`): update an existing artifact. Mirrored by `record({schema_name, slug, fields, op:\"update\"})`. forge_edit still works identically and is archived at Stage 6. For task schema, chain_slug is required at the top level (slug isn't globally unique). See forge_schema(schema_name='\u003cname\u003e') for the per-schema call_envelopes.",
+    "params": [
+      {
+        "name": "schema_name",
+        "type": "string",
+        "required": true,
+        "description": "Schema to edit."
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "required": false,
+        "description": "Alias of schema_name.",
+        "alias_of": "schema_name"
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the artifact to edit."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Required for task schema (disambiguates the row)."
+      },
+      {
+        "name": "project",
+        "type": "string",
+        "required": false,
+        "description": "Top-level envelope param (not inside fields) scoping the edit to a project. Resolved from CWD or --default-project when omitted."
+      },
+      {
+        "name": "fields",
+        "type": "object",
+        "required": false,
+        "description": "Updated field values. May also be passed as top-level sugar keys."
+      }
+    ],
+    "see_also": "forge_schema, forge_schemas",
+    "notes": "forge_edit on a task accepts the same {chain_slug, slug, \u003cfields…\u003e} top-level shape as task_edit (the composite key is synthesized from chain_slug + slug); the structured form on tasks needs key: {chain_slug, slug}.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "forge_delete",
+    "description": "DEPRECATED (chain 311 T7 Stage 5 — prefer `record`): delete an artifact for schemas that support deletion. Mirrored by `record({schema_name, slug, op:\"delete\"})`. forge_delete still works identically and is archived at Stage 6. Same key shape as forge_edit.",
+    "params": [
+      {
+        "name": "schema_name",
+        "type": "string",
+        "required": true,
+        "description": "Schema of the artifact to delete."
+      },
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the artifact to delete."
+      },
+      {
+        "name": "chain_slug",
+        "type": "string",
+        "required": false,
+        "description": "Required for task schema."
+      }
+    ],
+    "see_also": "forge_schema, forge_schemas",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "forge_schemas",
+    "description": "List all registered schemas (name, supported_ops, source_file).",
+    "params": [],
+    "see_also": "forge_schema"
+  },
+  {
+    "name": "forge_schema",
+    "description": "Return a schema's full field list AND per-supported-op call envelopes (which params go at top level vs inside `fields` for create / update / delete).",
+    "params": [
+      {
+        "name": "schema_name",
+        "type": "string",
+        "required": true,
+        "description": "Schema to describe. Alias: name."
+      }
+    ],
+    "example": "{\"schema_name\":\"task\"}"
+  },
+  {
+    "name": "work_actions",
+    "description": "Return this catalog: every registered work-surface action with its parameter spec + example. Self-referential entry so the catalog is fully discoverable from itself.",
+    "params": [],
+    "example": "{}",
+    "notes": "Filed via bug action-docs-corpus-t3-spec-gaps-on-prose-less-actions-and-orphans — work_actions was registered in work.BuildTable but not named in workDescription's Actions: list, so chain action-docs-corpus T3 produced no chunk for it. This chunk closes that orphan; admin.action_describe(surface=\"work\", action=\"work_actions\") now resolves.\n\nThe handler lives in go/internal/work/actions_discovery.go (HandleWorkActions). The catalog itself is the static `actionSpecs` slice in the same file — each entry carries name, description, params, example. Updating the catalog is a manual edit to that slice; the lint to keep it in sync with the dispatch.Table is at go/internal/work/actions_discovery_test.go."
+  },
+  {
+    "name": "work_summary",
+    "description": "One-call open-work portfolio rollup: open_bugs, open_chains, non-terminal task counts (pending/active/blocked), and open_suggestions. Cross-project by default; pass `project` to scope, or `by_project:true` for a per-project breakdown alongside the totals. Read-only — collapses the four separate list verbs into a single resume-briefing read.",
+    "params": [
+      {
+        "name": "project",
+        "type": "string",
+        "required": false,
+        "description": "Optional project to scope the rollup to. Omit for cross-project totals."
+      },
+      {
+        "name": "by_project",
+        "type": "bool",
+        "required": false,
+        "description": "When true, adds a `projects` array with the same counts grouped per project, alongside the top-level totals."
+      }
+    ],
+    "example": "{\"by_project\":true}"
+  },
+  {
+    "name": "batch",
+    "description": "Execute a list of allowlisted mutating work-surface ops inside a single outer write tx. Per-op rationale required (rejected pre-execution if missing). Default mode aborts on first error and rolls back the whole batch; pass `continue_on_error: true` to commit each op independently and report per-op outcomes. v1 allowlist: task_complete, task_start, bug_resolve, forge_edit. Cross-op read-after-write within a batch flows through the outer tx for the tx-aware reads (resolveTaskChain, lookupChainProject, taskHasStructuralBlockers).",
+    "params": [
+      {
+        "name": "ops",
+        "type": "object[]",
+        "required": true,
+        "description": "List of {op, params, rationale} triples. op is the work-surface action name; params is the action's normal params object; rationale is the per-op 'why'. All three are required on every entry."
+      },
+      {
+        "name": "continue_on_error",
+        "type": "bool",
+        "required": false,
+        "description": "Default false (abort-on-first-error with outer-tx rollback). True runs every op regardless; failures land in per-op status without rollback."
+      },
+      {
+        "name": "batch_rationale",
+        "type": "string",
+        "required": false,
+        "description": "Optional 'why these ops were grouped' note, recorded on the BatchExecuted event payload distinct from the envelope-level rationale ('why this MCP call')."
+      }
+    ],
+    "example": "{\"ops\":[{\"op\":\"task_complete\",\"params\":{\"task_id\":123,\"commit_sha\":\"abc1234\"},\"rationale\":\"T1 deliverable landed\"},{\"op\":\"task_start\",\"params\":{\"task_id\":124},\"rationale\":\"T2 picked up\"}],\"continue_on_error\":false}",
+    "notes": "Current allowlist: task_complete, task_start, bug_resolve, forge_edit, chain_close, forge. Other mutating actions reject pre-execution with NotAllowlisted error_kind. Expanding the allowlist requires adding the action to batchAllowlist + a tx-aware dispatch entry in batchDispatchInTx (go/internal/work/batch.go). chain_close enables the canonical chain-finalize (batch([task_complete, chain_close])). forge (create) is scoped to schema_name in {bug, suggestion, task}; other schemas reject pre-dispatch with a scope error.\n\nCreating a chain WITH its tasks: do NOT batch forge(chain) + forge(task) ops — chain is not batch-creatable, so a forge(chain) op rejects and (abort-on-first-error) rolls back the whole batch. Use forge(chain, tasks=[{full-object task entries}]) directly, which creates the chain and all its tasks atomically in one call. work.batch's forge(task) support is for ADDING tasks to an already-existing chain in bulk; createTaskInTx computes position = MAX+1 through the outer tx, so a run of batched tasks gets sequential positions rather than all colliding on the same slot.\n\nRollback semantics: default abort-on-first-error uses the outer write tx — prior ops UNDONE on rollback. Reads in tx-aware handlers (resolveTaskChain, lookupChainProject, taskHasStructuralBlockers) flow through the outer tx via the queryer interface so op2's reads see op1's pending writes; this closes the auto-clear-blocked-then-start path that bit the first refactor pass.\n\nEvent emit: each sub-op emits its existing event type unchanged (TaskCompleted, TaskStarted, BugResolved, etc.) with the per-op rationale on envelope.rationale. One additional BatchExecuted event emits per batch carrying the per-op outcomes; rolled-back batches produce zero events (the BatchExecuted record would be inside the same rolled-back tx).",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Envelope-level rationale is the 'why this MCP call' grain — separate from each op's per-op rationale (enforced by the HandleBatch validator). Both grains record on the BatchExecuted event payload.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ],
+    "returns": {
+      "shape": "BatchResult",
+      "description": "Per-op outcomes plus the batch-level envelope: ok, op_count, succeeded, failed, continue_on_error, rolled_back, batch_event_id, ops[]. Each ops[] entry carries position, action, ok, rationale, and either event_id (on commit) or error_kind+error_message (on failure). When rolled_back=true, ok=true entries lose their event_id (the cascade events were rolled back with the outer tx)."
+    }
+  },
+  {
+    "name": "lifecycle_step",
+    "description": "Sugar over work.batch for the chain-task handoff seam: close T_n with sha + handoff_output + close_rationale AND start T_n+1 with next_rationale, all in one MCP round-trip. Builds a 2-op batch envelope and emits a composite TaskHandoff event after the underlying batch commits. Same-chain invariant — close_task_slug and next_task_slug MUST belong to the same chain (cross-chain handoffs reject pre-dispatch with both chain slugs named). For cross-chain handoffs use work.batch directly with explicit per-op chain_slug params.",
+    "params": [
+      {
+        "name": "close_task_slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the task to close. Inferred chain_slug comes from this task's parent chain."
+      },
+      {
+        "name": "close_commit_sha",
+        "type": "string",
+        "required": false,
+        "description": "Closing commit SHA. Optional (matches task_complete's gate). Accepts the literal sentinel 'unversioned'."
+      },
+      {
+        "name": "close_handoff_output",
+        "type": "string",
+        "required": false,
+        "description": "What artifacts the closing task produces for the next task. Operational color distinct from rationale."
+      },
+      {
+        "name": "close_rationale",
+        "type": "string",
+        "required": true,
+        "description": "Per-op rationale for the task_complete sub-op ('why this counts as done')."
+      },
+      {
+        "name": "next_task_slug",
+        "type": "string",
+        "required": true,
+        "description": "Slug of the next task to start. Must belong to the same chain as close_task_slug."
+      },
+      {
+        "name": "next_rationale",
+        "type": "string",
+        "required": true,
+        "description": "Per-op rationale for the task_start sub-op ('why pick this up next')."
+      }
+    ],
+    "example": "{\"close_task_slug\":\"T2-work-batch\",\"close_commit_sha\":\"ae702417\",\"close_handoff_output\":\"work.batch landed with true ACID rollback\",\"close_rationale\":\"T2 acceptance criteria all met\",\"next_task_slug\":\"T3-work-lifecycle-step\",\"next_rationale\":\"T3 sugar over batch is the natural next step\"}",
+    "notes": "Same-chain invariant: close_task_slug uniquely identifies a chain via proj_current_tasks.chain_id. next_task_slug is looked up the same way; if it resolves to a different chain, the call rejects pre-dispatch with a clear error naming both chain slugs. Slug ambiguity (same slug across multiple chains) also rejects with the chains named so the caller can switch to work.batch with explicit chain_slug params per op.\n\nEvent fan-out: each lifecycle_step call produces FOUR events in the ledger — TaskCompleted (cascade), TaskTransitioned (cascade, pending→active), BatchExecuted (from the underlying work.batch), and TaskHandoff (composite). Listeners that want the affordance-level \"one event per chain-task seam\" view subscribe to TaskHandoff; listeners on the individual lifecycle events continue to receive them unchanged. The fan-out is intentional per the T1 design audit Decision 2 tightening — composite IN ADDITION to per-op, not in lieu of.\n\nZERO-duplicated-logic contract (T3 chain constraint): the handler is envelope construction + same-chain validation + HandleBatch dispatch + composite emit only. No re-implementation of task lifecycle logic. If a future change ever adds chain-state-mutation logic to lifecycle_step.go that isn't sugar over batch, that's a contract violation — refactor.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Envelope-level rationale is the 'why this MCP call' grain. The per-op close_rationale and next_rationale are separately required by HandleLifecycleStep at the validation gate; together all three land on the events ledger.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ],
+    "returns": {
+      "shape": "LifecycleStepResult",
+      "description": "Envelope: ok, chain_slug (inferred from the closing task), close_event_id (cascade TaskCompleted event id), start_event_id (cascade TaskTransitioned event id), handoff_event_id (composite TaskHandoff event id), batch (the underlying BatchResult for full traceability). Error field populated on cross-chain rejection, missing rationale, batch rollback, or TaskHandoff emit failure (the secondary-effect case where the batch committed but the composite event emit failed)."
+    }
+  },
+  {
+    "name": "record",
+    "description": "The canonical write surface (the v2 successor to forge; chain 311 T7 Stage 5). TWO input modes: (1) FORGE-SHAPED SUGAR — {schema_name|kind, slug, fields[, op]} where op ∈ create|update|delete (default create) — the one-call ergonomics of the (now-deprecated) forge / forge_edit / forge_delete actions, routed through the construct umbrella; this is the mode most callers want. (2) RAW EVENTS — {events:[{type, payload, entity}, …]} — a heterogeneous, timestamped array of TYPED events appended directly to the hot local draft (the events ledger), for lifecycle events + multi-event sequences the sugar doesn't cover. In both modes each event is validated against the closed event-type enum (the shared go/internal/events validators — the thin-fast-local tier); valid events append + fold projections in one tx; per-event validation rejections are reported (and become ghosts) without rolling back the valid events (partial-success, default). The expensive tiers (causal, projection-coherence, registry immutability) run on the async CI tail (the canonical registry), never blocking this return.",
+    "params": [
+      {
+        "name": "events",
+        "type": "object[]",
+        "required": true,
+        "description": "Array of {type, payload, entity_slug, entity_kind?, entity_project_id?, entity?, ts?, rationale?, caused_by_event_id?}. DISCOVER type names + payload shapes with the `event_schema` action (no arg = list types; type=\u003cT\u003e = T's payload schema). entity_kind is OPTIONAL — inferred from the event type for well-known types (BugResolved→bug, ChainCreated→chain, TaskCreated→task, …); pass it explicitly only for types it can't infer. The entity may also be given as a nested object `entity:{kind,slug,project_id}` (the canonical envelope shape) instead of the flat entity_* keys. ts is server-authoritative unless a clamped (non-future) RFC3339 caller value is supplied."
+      },
+      {
+        "name": "strict_all_or_nothing",
+        "type": "bool",
+        "required": false,
+        "description": "Default false (partial-success: a rejected event is ghosted, the valid events still commit). True demands all-or-nothing: any rejection rolls back the whole call. A genuine DB/fold error always rolls back regardless."
+      },
+      {
+        "name": "dry_run",
+        "type": "bool",
+        "required": false,
+        "description": "Default false. True validates every event against the thin-fast-local tier and returns the same per-event ok/rejected_reason results WITHOUT appending anything (zero events, zero ghosts) — preview a heterogeneous batch before any of it lands."
+      }
+    ],
+    "example": "{\"rationale\":\"filing observed friction\",\"events\":[{\"type\":\"BugReported\",\"entity_slug\":\"my-bug\",\"payload\":{\"title\":\"x\",\"problem_statement\":\"y\"}}]}",
+    "notes": "Discover event types + payloads via `event_schema` (no arg lists the closed type enum; type=\u003cT\u003e returns T's payload schema). entity_kind is inferred from the event type when omitted; the entity may be flat (entity_kind/entity_slug/entity_project_id) OR nested (entity:{kind,slug,project_id}). The top-level `rationale` (shown in the example) is REQUIRED for agent actors. Partial-success mirrors work.batch; on any rollback ok=true entries lose their event_id. dry_run=true previews without writing. ts is server-set by default; a future caller ts is clamped to now. record is the v2 successor to forge; during the migration both coexist (forge untouched until parity is proven).\n\nCreate a CHAIN WITH TASKS by emitting, in ONE record call and IN ORDER: a ChainCreated event, then one TaskCreated per task (chain comes first so each TaskCreated's fold resolves it). Those are the load-bearing events — the chain + tasks are complete from them alone. ChainAndTasksForged is an OPTIONAL grouping/analytics signal you MAY stack alongside (no projection folds it); emit it only if you want the summary, not because the chain needs it.",
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate. Envelope-level rationale is the 'why this MCP call' grain; each event may also carry its own per-event rationale (recorded on that event's envelope).",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ],
+    "returns": {
+      "shape": "RecordResult",
+      "description": "ok, event_count, recorded, rejected, rolled_back, and results[] (per-event: position, type, entity_slug, ok, event_id on success or rejected_reason on a validation rejection)."
+    }
+  },
+  {
+    "name": "event_schema",
+    "description": "Discover the record(events[]) event-type enum + per-type payload schemas. With NO params, returns the closed set of event type names record accepts. With `type=\u003cT\u003e`, returns T's payload JSON Schema (required fields, properties, descriptions) from the embedded catalog. This is the discovery entry point for constructing record calls — use it instead of reading blueprints/events/*.json. Read-only.",
+    "params": [
+      {
+        "name": "type",
+        "type": "string",
+        "required": false,
+        "description": "Event type to describe (e.g. BugResolved). Omit to list the full registered enum. Aliases: event_type, kind."
+      }
+    ],
+    "example": "{\"type\":\"BugResolved\"}",
+    "notes": "No-arg call lists every registered event type; a typed call returns that type's payload schema. Pair with `record`: event_schema(no arg) to find the type, event_schema(type=T) for its payload shape, then record(events=[{type:T, payload:{…}, entity_slug:…}]). entity_kind is inferred from the type by record for well-known types.",
+    "returns": {
+      "shape": "EventSchemaResult",
+      "description": "Either {types:[…]} (no arg) or {type, schema:\u003cJSON Schema\u003e} (typed). On an unknown type, {error} with a hint to list."
+    }
+  },
+  {
+    "name": "review_arc_for_filing",
+    "description": "Run an arc-close filing review for one session. Reads the transcript snapshot, runs a two-pass Qwen review, returns typed filing decisions partitioned into auto_execute / surface_for_confirm / skip. Debounced per session_id (60s backoff). Fail-open: Qwen-unreachable / parse failure / empty snapshot all return non-error responses with a typed status. See docs/ARC_CLOSE_FILING_REVIEW.md.",
+    "params": [
+      {
+        "name": "session_id",
+        "type": "string",
+        "required": true,
+        "description": "Caller-provided session identifier; the debouncer keys off this."
+      },
+      {
+        "name": "transcript_path",
+        "type": "string",
+        "required": true,
+        "description": "Absolute path to the Claude Code JSONL transcript."
+      },
+      {
+        "name": "triggers",
+        "type": "string[]",
+        "required": false,
+        "description": "Trigger slugs the detector matched (e.g. counter_user_turns_5, user_shape_done)."
+      },
+      {
+        "name": "fired_at",
+        "type": "string",
+        "required": false,
+        "description": "ISO-8601 timestamp the detector emitted the trigger payload at."
+      },
+      {
+        "name": "user_turns_since_review",
+        "type": "int64",
+        "required": false,
+        "description": "Counter value at fire time (telemetry)."
+      }
+    ],
+    "example": "{\"session_id\":\"sess-123\",\"transcript_path\":\"/home/u/.claude/projects/.../session.jsonl\",\"triggers\":[\"user_shape_done\"]}",
+    "errors": [
+      {
+        "condition": "missing session_id or transcript_path",
+        "message": "Returns a non-error response with status='skipped' and a Reason naming the missing field. The action is not a precondition gate; it logs and continues."
+      },
+      {
+        "condition": "debouncer suppression",
+        "message": "status='debounced'. last_fire_at carries the prior fire timestamp; Reason names the elapsed seconds. The agent or harness should NOT retry — the suppression is by design."
+      },
+      {
+        "condition": "Qwen unreachable / llama-server down",
+        "message": "status='qwen_unreachable'. Reason wraps the dispatch error string. The current discipline (parse_context + agent-internalized skill-body firing) keeps working; this action's failure mode is purely additive."
+      }
+    ],
+    "notes": "Wired onto the work meta-tool because the typed forge actions the review's output dispatches to live there. The action does NOT itself execute the decisions — the caller (Claude Code Stop hook or bridge-harness post_turn hook) reads the partition and dispatches forges in-band. Per design Q5: auto_execute contains forge_bug / forge_vault_note / memory_write at confidence ≥ 0.85; surface_for_confirm contains skill_update at any confidence and other actions at confidence 0.50-0.85; skip contains everything below 0.50 plus all nothing_to_file decisions."
+  },
+  {
+    "name": "emit_commit_landed",
+    "description": "Emit a CommitLanded event through the daemon's events substrate. Invoked by the post-commit-restart-advisor (via the commit-landed-emit binary) so the emit lands INSIDE the daemon's process — only that path fires the chained fold hook (SubstrateReviewObserver) that triggers the substrate-side review on every commit. Fail-open: invalid params / schema-validator failure / pool error all return status=skipped with a reason. See docs/EVENT_CATALOG.md §Commit-lifecycle.",
+    "params": [
+      {
+        "name": "commit_sha",
+        "type": "string",
+        "required": true,
+        "description": "Full 40-char hex SHA of the commit that just landed."
+      },
+      {
+        "name": "branch",
+        "type": "string",
+        "required": false,
+        "description": "Branch name; null when HEAD is detached."
+      },
+      {
+        "name": "files_changed_count",
+        "type": "int64",
+        "required": false,
+        "description": "Files-changed count parsed from `git show --stat`."
+      },
+      {
+        "name": "author",
+        "type": "string",
+        "required": false,
+        "description": "Commit author in 'Name \u003cemail\u003e' form."
+      },
+      {
+        "name": "subject",
+        "type": "string",
+        "required": false,
+        "description": "First line of the commit message."
+      }
+    ],
+    "example": "{\"commit_sha\":\"abc123...\",\"branch\":\"main\",\"files_changed_count\":3}"
+  },
+  {
+    "name": "arc_review_audit",
+    "description": "Read-side audit of ArcCloseFilingReviewed events joined with pending_decisions dispatch state and heuristic user-correction signals from subsequent BugReopened / BugEdited / TaskCancelled / BugResolved / ChainEdited events within a configurable window (default 24h). Feeds chain T9 (threshold + Qwen-prompt tuning) and T10 (ML follow-on corpus exports). Read-only. Heuristic correction join is best-effort; the inline heuristic_correction_note field on the response documents the false-positive / false-negative classes so consumers can triage signals manually before treating any as ground truth.",
+    "params": [
+      {
+        "name": "since",
+        "type": "string",
+        "required": false,
+        "description": "ISO-8601 lower bound on review ts (default: 7 days ago)."
+      },
+      {
+        "name": "correction_window_hours",
+        "type": "int64",
+        "required": false,
+        "description": "Look-ahead window for the heuristic correction-signal scan (default 24)."
+      }
+    ],
+    "example": "{\"since\":\"2026-05-13T00:00:00Z\",\"correction_window_hours\":24}"
+  },
+  {
+    "name": "pending_decisions_claim",
+    "description": "Drain pending arc-close filing decisions for the project. Atomically SELECTs the oldest undispatched rows (LIMIT) and UPDATEs dispatched_at + dispatch_session_id in one tx so concurrent claims serialize via SQLite's writer lock (exactly-once dispatch per row). The Stop hook calls this after the session_registry UPSERT, formats each claimed row into a system-reminder block on stdout, and exits. See docs/ARC_CLOSE_FILING_REVIEW_SUBSTRATE_LISTENER.md §Q3.",
+    "params": [
+      {
+        "name": "session_id",
+        "type": "string",
+        "required": true,
+        "description": "Calling session's id; lands on each claimed row as dispatch_session_id."
+      },
+      {
+        "name": "limit",
+        "type": "int64",
+        "required": false,
+        "description": "Max rows to claim in one call (default 10)."
+      }
+    ],
+    "example": "{\"session_id\":\"sess-123\",\"limit\":10}"
+  },
+  {
+    "name": "sweep_unauthored_staged",
+    "description": "Forge the unreviewed-fallback for staged arc-close decisions the in-session agent never authored (chain arc-close-decision-authoring-split T5). Body-heavy decisions (vault-note / memory_write) in the auto-execute band are staged for the agent to author rather than auto-forged with Qwen's draft; if the seat disengages, this captures the retained draft flagged `unreviewed`+`qwen-authored` so capture is never lost. The in-session trigger (reap-on-next-fire) is built into review_arc_for_filing; this is the explicit session-end / skip surface a reaper hook calls. Honors a grace window (TOOLKIT_ARCCLOSE_FALLBACK_GRACE) and suppresses the forge when the agent already authored a matching note.",
+    "params": [
+      {
+        "name": "session_id",
+        "type": "string",
+        "required": true,
+        "description": "Session whose still-staged, past-grace decisions should be swept."
+      }
+    ],
+    "example": "{\"session_id\":\"sess-123\"}"
+  }
+]

@@ -1,0 +1,4 @@
+description = "Missing name field"
+is_deployed = true
+output_enum = ["yes", "no"]
+prompt_template = "classify"

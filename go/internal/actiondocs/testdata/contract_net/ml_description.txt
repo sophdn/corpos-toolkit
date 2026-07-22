@@ -1,0 +1,5 @@
+Trained-model inference. The 'inference' action dispatches through the trained_model registry (see work.trained_model_list) and loads the live ONNX session from go/internal/ml/. Per-task convenience actions (route_query, curation_score, forge_suggest_surfaces, …) register on top of this surface when their model is promoted.
+
+Actions (alphabetical): inference.
+
+For per-action details (params, aliases, errors, examples, notes), call admin.action_describe(surface="ml", action="<name>"). For surface-wide conventions (model resolution by model_id vs task, model_predictions telemetry shape, latency budget, degraded mode), call admin.action_describe(surface="ml", action="_general").

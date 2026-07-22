@@ -1,0 +1,3 @@
+surface = "measure"
+action = "surface_mismatch"
+purpose = "Chunk declares surface=measure but the file lives under work/ — should be rejected."

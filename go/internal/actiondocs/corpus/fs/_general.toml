@@ -1,0 +1,13 @@
+surface = "fs"
+action = "_general"
+purpose = "Owned filesystem navigation. Read/Grep/Glob/LS reimplemented as toolkit-server actions so the agent reads files, searches text, expands globs, and lists directories through surfaces we own rather than the substrate-blind harness tools. The default of every action is byte-for-byte faithful to its harness counterpart; substrate-native capability layers on as opt-in modes."
+
+notes = """
+PARITY FLOOR. The reason to own these tools is NOT to clone them — it is to fit them to our substrate (event log, knowledge_pointers, doc.go intended-use blocks, CODEMAP, projections) which the harness tools are blind to. But parity comes first: each action's DEFAULT output matches the harness tool byte-for-byte, because (a) predictability is itself a feature of an agent tool, and (b) parity is the gate for the deny-list swap — you cannot deny the harness Read/Grep/Glob/LS until the owned versions at least match, or every session regresses below baseline.
+
+OPT-IN UPGRADES. Substrate-native capability is exposed as explicit opt-in params/modes, never as a change to the default: outline/symbol/provenance/oriented reads, knowledge-aware + substrate-ranked grep, convention-aware glob, orientation ls. The common literal call stays predictable and token-cheap; you pay for substrate context only when you ask for it.
+
+DENY-LIST SWAP. Once an action reaches parity and is deployed, the matching harness tool is added to permissions.deny in settings.json so sessions use the owned version exclusively. The swap is the LAST step and depends on the owned binary being live (merged to main + rebuilt), since a denied harness tool with no working replacement leaves the agent with neither.
+
+NON-GOALS. fs does not write, move, or delete files — the agent's Edit/Write and Bash remain the mutation path. It does not own task/bug/vault state (see the work and knowledge surfaces).
+"""

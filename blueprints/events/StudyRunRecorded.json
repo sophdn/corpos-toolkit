@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/StudyRunRecorded.json",
+  "title": "StudyRunRecorded payload",
+  "description": "Emitted once per completed (or failed) corpos-lab behavioral-assay study run, when the run record is POSTed to the toolkit's measure surface (action study_run_record). A study run is machine-emitted, not agent-forged: it is a parent provenance record (assay + study/materials digests + model identity + responses-dir POINTER) plus N child score-grid rows (one per condition×run cell), so it uses dedicated projection tables (proj_study_runs + proj_study_run_scores) rather than the single-flat-row forge/construct storage. This mirrors the benchmark feature (BenchmarkRunCompleted). Cross-cutting entity (entity_kind='study_run', entity_slug=run_id, project_id null in the envelope) — so project_id rides in the payload here for the fold to write the namespaced rows. Raw model responses are NEVER carried here: responses_dir is a filesystem path and materials_hashes are small SHA-256 hex digests, not blobs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "project_id", "name", "assay", "status", "run_at", "rows"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable id for this run — the entity slug and the parent-row primary key. Generated (UUIDv4) by the handler when the caller doesn't supply one."
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Project this run belongs to. Cross-cutting events carry null project_id in the envelope, so it is mirrored here for the fold to populate proj_study_runs.project_id / proj_study_run_scores.project_id."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-facing run name (e.g. 'casg-direct-v3-smoke')."
+    },
+    "assay": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The behavioral assay this run exercised (e.g. 'grounded-glyph-probe'). Primary filter dimension on the dashboard."
+    },
+    "item_id": {
+      "type": "string",
+      "description": "The study item / scenario id (e.g. 'casg-direct')."
+    },
+    "image": {
+      "type": "string",
+      "description": "Container image reference the run executed under (e.g. 'localhost/lab-grounded-glyph-probe:dev')."
+    },
+    "image_digest": {
+      "type": "string",
+      "description": "Immutable image digest (sha256:...) pinning the exact image bytes."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed"],
+      "description": "Terminal status of the run. 'failed' runs set error; the score grid may be partial or empty."
+    },
+    "error": {
+      "type": "string",
+      "description": "Failure detail when status='failed'; empty/absent for completed runs."
+    },
+    "study_digest": {
+      "type": "string",
+      "description": "SHA-256 (hex) digest of study.json — provenance pin for the study definition."
+    },
+    "materials_hashes": {
+      "type": ["object", "null"],
+      "additionalProperties": { "type": "string" },
+      "description": "Map of material filename → SHA-256 hex digest (e.g. {'scenario.md':'<hex>','glyph.md':'<hex>'}). Small hashes, NOT blobs — the raw materials stay on disk."
+    },
+    "model_id": {
+      "type": "string",
+      "description": "Model identifier the run used (e.g. 'Qwen2.5-32B-Instruct-Q4_K_M.gguf')."
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Model version / quantization tag (e.g. 'q4km')."
+    },
+    "responses_dir": {
+      "type": "string",
+      "description": "On-disk POINTER to the raw responses directory. A filesystem path only — the raw response blobs are NEVER persisted into the ledger."
+    },
+    "run_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp (UTC) when the run executed. Stored verbatim as TEXT; the observe surface orders by run_at DESC (lexical == chronological for Z-suffixed RFC 3339)."
+    },
+    "rows": {
+      "type": "array",
+      "description": "The score grid — one entry per condition×run cell. Persisted into proj_study_run_scores as child rows. The controller's nested verdict object is FLATTENED to verdict_kind/verdict_reason before it reaches this payload.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "condition", "run", "verdict_kind", "verdict_reason", "rationale"],
+        "properties": {
+          "item": { "type": "string", "description": "Item / scenario id for this cell (e.g. 'casg-direct')." },
+          "condition": { "type": "string", "description": "Experimental condition for this cell (e.g. 'baseline', 'glyph_only')." },
+          "run": { "type": "integer", "description": "1-based run index within the condition (repeat number)." },
+          "verdict_kind": { "type": "string", "description": "Flattened verdict kind (e.g. 'pass', 'fail')." },
+          "verdict_reason": { "type": "string", "description": "Flattened verdict reason; empty when there is nothing to explain." },
+          "rationale": { "type": "string", "description": "Free-text rationale / trace summary for the cell." }
+        }
+      }
+    }
+  }
+}

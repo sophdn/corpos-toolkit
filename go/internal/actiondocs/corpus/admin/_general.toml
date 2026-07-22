@@ -1,0 +1,9 @@
+surface = "admin"
+action = "_general"
+purpose = "Server administration: project/host CRUD, server health, schema reload, server version, vault retrieval metrics, and the remote-execution surface."
+
+notes = """
+apply_recipe and step_probe are deferred stubs in the current Go server: callers receive a structured deferred-stub envelope identifying the action rather than a real execution. The full port lands when a concrete need (host re-setup) drives it.
+
+ENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). Mutating actions on this surface require a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / <6-char rationales with `error: "rationale_required"`. Actions on this surface that require rationale: project_register, host_register, host_remove, schema_reload. Read-only actions (server_health, server_version, action_describe, host_list, project_list, vault_search_metrics, schema_version) do NOT require rationale.
+"""

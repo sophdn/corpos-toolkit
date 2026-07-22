@@ -1,0 +1,37 @@
+surface = "knowledge"
+action = "curation_bulk_action"
+purpose = "Apply promote/reject to all matching candidates. Filter must include at least one of {origin, unscored_only} to prevent whole-project nukes. Emits CurationCandidatePromoted / CurationCandidateRejected substrate events visible in AuditLedger."
+
+[[params]]
+  name = "filter"
+  type = "object"
+  required = true
+  description = "Match criteria for which candidates to act on. Must include at least one of {origin, unscored_only}."
+
+[[params]]
+  name = "action"
+  type = "string"
+  required = true
+  description = "promote or reject."
+
+[[params]]
+  name = "reason"
+  type = "optional_string"
+  required = false
+  description = "Required when action=reject; supplies the rejection reason for every affected candidate."
+
+[[params]]
+  name = "dry_run"
+  type = "bool"
+  required = false
+  description = "When true, return what would be done without mutating."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Cap the number of candidates touched. Defaults to 100."
+
+[[errors]]
+  condition = "empty filter"
+  message = "curation_bulk_action requires a filter containing at least one of {origin, unscored_only} — prevents accidental whole-project nukes."

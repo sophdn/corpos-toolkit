@@ -1,0 +1,24 @@
+surface = "sys"
+action = "units"
+purpose = "List systemd-user units. Read-only and ungated."
+notes = "Backed by `systemctl --user list-units --type=<type> -o json`. Self-defined. See go/internal/sys/testdata/INTROSPECTION_CONTRACT.md."
+
+[[params]]
+  name = "type"
+  type = "optional_string"
+  required = false
+  description = "Unit type to list (default service)."
+
+[[params]]
+  name = "active_only"
+  type = "bool"
+  required = false
+  description = "Only active units (default false → include inactive via --all)."
+
+[[errors]]
+  condition = "the systemctl tool is not installed"
+  message = "sys.units: systemctl not found on PATH"
+
+[returns]
+  shape = "UnitsResult"
+  description = "units (rows of {unit, load, active, sub, description}) and count."

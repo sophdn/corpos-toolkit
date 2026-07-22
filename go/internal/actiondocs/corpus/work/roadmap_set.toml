@@ -1,0 +1,23 @@
+surface = "work"
+action = "roadmap_set"
+purpose = "Replace a project's roadmap atomically with the supplied items. Each item carries an optional explicit Position; omitted Position defaults to the 1-based array index. Duplicate positions within one call are rejected."
+notes = "Fixes the silent-clobber footgun documented in bug roadmap-set-clobbers-notes-on-partial-item-submission."
+
+[[params]]
+  name = "items"
+  type = "object[]"
+  required = true
+  description = "List of {ref_kind: 'chain'|'task', ref_slug: string, note?: string, position?: int64} entries."
+
+[[errors]]
+  condition = "partial item submission"
+  message = "Item fields omitted in a roadmap_set call are CLEARED (notes set to empty, etc). This is intentional full-replace semantics; if you want partial-update, use roadmap_update."
+
+[[examples]]
+  call = "{\"items\":[{\"ref_kind\":\"chain\",\"ref_slug\":\"agent-first-substrate\",\"position\":1,\"note\":\"Phase A\"},{\"ref_kind\":\"chain\",\"ref_slug\":\"query-telemetry-substrate\",\"position\":2,\"note\":\"Phase B\"}]}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

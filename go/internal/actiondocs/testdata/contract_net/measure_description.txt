@@ -1,0 +1,5 @@
+Benchmark recording/query/replay plus the Qwen-local rubric-classify family. Pass 'project' to scope.
+
+Actions (alphabetical): bench_run, benchmark_query, benchmark_record, benchmark_replay, classify_artifact_review_criterion, classify_artifact_tier, classify_audit_finding_severity, classify_bug_severity, classify_chain_task_proportionality, classify_docstring_drift, classify_pre_commit_failure, classify_retirement_observation, classify_session_routing_trigger, gate_run, gate_trend, study_run_record.
+
+For per-action details (params, aliases, errors, examples, notes), call admin.action_describe(surface="measure", action="<name>"). For surface-wide conventions (shared {label, latency_ms, model_name} result shape, benchmark_results provenance row), call admin.action_describe(surface="measure", action="_general").

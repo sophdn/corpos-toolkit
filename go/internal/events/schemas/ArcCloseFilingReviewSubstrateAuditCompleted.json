@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArcCloseFilingReviewSubstrateAuditCompleted.json",
+  "title": "ArcCloseFilingReviewSubstrateAuditCompleted payload",
+  "description": "Emitted by chain arc-close-filing-review T7 retrospective. Records the substrate audit findings against the chain's completion_condition items (a)-(h). Sister to the substrate-quartet audit events (Architecture / Telemetry / ReferenceResolution / MLCapability) — same Findings array shape with item/status/evidence/severity. The substrate proves itself self-hosting by recording its own closing audit through the same events.Emit path the meta-tool handlers use.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Path(s) to the design + retrospective docs the audit was keyed to. Convention: design doc + retrospective doc joined with ' + '."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-paragraph human-readable closure narrative referencing the per-item findings + the deferred items routed in the retrospective doc."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Optional pointer at the next-chain target this audit recommends; for arc-close-filing-review the natural follow-on is the trained-classifier candidate plus the smart-snapshot-filter candidate, both gated on corpus volume."
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"]
+          },
+          "evidence": { "type": ["string", "null"] },
+          "severity": { "type": ["string", "null"] }
+        }
+      },
+      "description": "One entry per chain-completion-condition item. status discriminates pass / fail / partial / deferred."
+    }
+  }
+}

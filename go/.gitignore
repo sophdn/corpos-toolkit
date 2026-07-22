@@ -1,0 +1,34 @@
+bin/
+
+# Stray binaries from `go build ./cmd/<name>/` invoked from go/ without -o.
+# Go names the output after the package's directory and drops it at go/<name>.
+# Anchored with a leading slash so each entry matches go/<name> only, not the
+# cmd/<name>/ subdir. Completeness is enforced by
+# scripts/test-cmd-gitignore-parity.sh (precommit) — a new cmd/<name>/ without
+# coverage here fails the gate, so this list can't silently drift (bug 736).
+# Glob families (/*-audit-emit, /curate-*) cover whole cmd families in one line.
+/audit-emit
+/*-audit-emit
+/action-docs-corpus-gen
+/arcreview-snapshot-recover
+/backfill-bug-864-gap-events
+/chain-replay-verify
+/codemap-gen
+/corpos-gate
+/commit-landed-emit
+/curate-*
+/event-registry
+/grounding-events-processor
+/parse-context-bench
+/toolkit-proxy
+/toolkit-server
+
+# Go test binaries left by `go test -c ./<pkg>/`. The plain `go test ./...`
+# invocation we use in CI / pre-commit doesn't produce these, but explicit -c
+# runs do and the artifacts persist in the worktree. Ignore them so they don't
+# clutter `git status` and risk an accidental `git add .`.
+*.test
+
+# go-mutesting (make mutest) writes its JSON report to the cwd (go/). It's an
+# on-demand analysis artifact, never committed.
+/report.json

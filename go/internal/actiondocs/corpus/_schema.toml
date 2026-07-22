@@ -1,0 +1,99 @@
+# Per-action documentation schema.
+#
+# One TOML chunk per registered MCP meta-tool action lives at
+# go/internal/actiondocs/corpus/<surface>/<action>.toml. The corpus is
+# go:embed'd into the binary and surfaced through
+# admin.action_describe(surface, action). The chunks replace the inline
+# *Description constants in
+# go/cmd/toolkit-server/main.go (workDescription, measureDescription,
+# knowledgeDescription, adminDescription), which shrink to a one-paragraph
+# TOC pointing at admin.action_describe.
+#
+# This file declares the field set every chunk must satisfy. The loader
+# pattern mirrors blueprints/forge-schemas/ (see ../forge-schemas/bug.toml
+# for the parallel example); the schema shape is action-doc-specific
+# because the artefact being described is a call signature, not a
+# forgeable record.
+#
+# Cross-cutting prose that applies to multiple actions in a surface lives
+# in <surface>/_general.toml — the literal action name "_general" is
+# reserved and the loader treats it as a surface-wide chunk rather than a
+# real action lookup. Use it for surface-level conventions (e.g. "read
+# actions are cross-project by default; pass 'project' to scope") so each
+# per-action chunk can stay self-contained without duplicating prose.
+#
+# The chain's commitment: each chunk is self-contained. No cross-chunk
+# references that force the agent to fetch a second chunk to understand
+# the first. The `notes` field can mention sibling actions, but the
+# per-action `purpose` and `params` must stand on their own.
+
+schema_version = 1
+
+# ── Required scalar fields ────────────────────────────────────────────────
+# Every chunk must declare these three. The loader rejects chunks missing
+# any of them, surfacing the offending file path + reason at startup.
+
+[[fields]]
+name = "surface"
+type = "string"
+required = true
+description = "Meta-tool surface this action lives on. One of {work, measure, knowledge, admin}. Must match the surface the action is registered under in its BuildTable. For _general chunks, the surface still names the meta-tool the cross-cutting prose belongs to."
+
+[[fields]]
+name = "action"
+type = "string"
+required = true
+description = "Action name as registered in the dispatch.Table — e.g. \"bug_resolve\", \"classify_artifact_tier\", \"vault_search\". The reserved literal \"_general\" marks the chunk as surface-wide cross-cutting prose rather than a real action lookup; admin.action_describe surfaces _general chunks but they are excluded from list-by-surface enumerations of real actions."
+
+[[fields]]
+name = "purpose"
+type = "string"
+required = true
+description = "One-paragraph statement of what calling this action gives the caller and when to reach for it. Lead with the result, not the mechanism — the corpus skims well when every purpose answers 'what do I get back?' in its first sentence. For _general chunks, replace the call-signature framing with a one-paragraph statement of the surface's overall remit."
+
+# ── Optional structured fields ────────────────────────────────────────────
+# Populated when the action has the shape; left absent (not present as an
+# empty array) for thinly-documented actions where purpose alone carries
+# the load. Loader treats missing optional fields as empty.
+
+[[fields]]
+name = "params"
+type = "optional_table_array"
+required = false
+description = "Parameter list. Each entry is an inline table: { name = \"\", type = \"\", required = bool, description = \"\", default = \"\" (optional). Top-level params and nested-object params alike are listed flat here; nesting is noted in the param's description prose rather than via sub-arrays. Actions that take no params (e.g. forge_schemas, server_health) omit this field entirely."
+
+[[fields]]
+name = "param_aliases"
+type = "optional_table_array"
+required = false
+description = "Param-NAME aliases — alternate keys the caller can supply that the dispatcher normalizes to the canonical name. Each entry: { from = \"sha\", to = \"commit_sha\", notes = \"\" (optional) }. Distinct from value_aliases: param_aliases rename the KEY (sha→commit_sha), value_aliases rename the VALUE (fix→fixed)."
+
+[[fields]]
+name = "value_aliases"
+type = "optional_table_array"
+required = false
+description = "Value-form normalizations — alternate VALUES the caller can pass for a specific param that the dispatcher folds to one canonical form. Each entry: { param = \"resolution_kind\", from = \"fix\", to = \"fixed\", notes = \"\" (optional) }. Use when a single param accepts multiple verb/noun forms; the `param` key scopes which param the alias applies to so the same `from` literal can mean different things across params."
+
+[[fields]]
+name = "errors"
+type = "optional_table_array"
+required = false
+description = "Documented error conditions the caller can trip with bad input. Each entry: { condition = \"\", message = \"\" } where condition names the trigger (e.g. \"missing resolution_kind\") and message names what the dispatcher returns. Runtime/infra errors (DB down, network failure) are out of scope — only document errors the caller controls by shaping their input."
+
+[[fields]]
+name = "examples"
+type = "optional_table_array"
+required = false
+description = "Call examples. Each entry: { description = \"\", call = \"\" } where `call` is a JSON-shaped string (NOT live-executable code) showing the canonical params payload. Optional; reserve for actions with non-obvious shape choices (e.g. forge's structured-vs-sugar dual form, task_block's blocker_chain_slug for cross-chain blocking)."
+
+[[fields]]
+name = "notes"
+type = "optional_string"
+required = false
+description = "Free-form prose: historical context (which bug introduced an alias, when a sentinel was added), see-also pointers to companion actions, gotchas the bare param list does not telegraph. Each chunk's notes must remain self-contained — quote the relevant context inline rather than telling the reader to fetch a second chunk. Bug numbers, skill references, and event-type names are fine to mention."
+
+[[fields]]
+name = "envelope_requirements"
+type = "optional_table_array"
+required = false
+description = "Envelope-level fields the dispatcher requires alongside `action` / `params` / `project` on the call wire — distinct from `params` which describe the action's payload schema. The canonical example is `rationale`, enforced by the dispatch policy gate for mutating actions. Each entry: { field = \"rationale\", required = true, reason = \"\" (optional), applies_to_actor_kinds = [\"agent\"] (optional) }. Closes the bug 1436 trap where agents reading per-action params missed the envelope-level rationale gate. Mirrors action-manifests/dispatch-policy.toml entries — a parity test (rationale_gate_parity_test.go) asserts every action with requires_rationale=true in policy has a matching envelope_requirements entry here."

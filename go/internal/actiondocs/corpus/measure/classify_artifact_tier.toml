@@ -1,0 +1,10 @@
+surface = "measure"
+action = "classify_artifact_tier"
+purpose = "Dispatches the tiered-context-loading rubric via Qwen — classifies an artifact by the session tier at which it should be loaded; label ∈ {tier-zero, tier-one, tier-two, tier-three} (word-form; digit-suffix form trips a parser bug); writes a benchmark_results row; returns {label, latency_ms, model_name}."
+notes = "Use the word-form labels (tier-zero, tier-one, …); the digit-suffix form (tier-0, tier-1) trips a parser bug."
+
+[[params]]
+  name = "artifact_descriptor"
+  type = "string"
+  required = true
+  description = "The artifact descriptor to classify by tier."

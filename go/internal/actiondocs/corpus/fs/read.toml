@@ -1,0 +1,82 @@
+surface = "fs"
+action = "read"
+purpose = "Read a file (optionally a line range) and return its contents as numbered lines. The owned, substrate-native replacement for the harness Read tool; the default output is byte-for-byte faithful to it (predictability is the parity floor that gates the deny-list swap)."
+notes = "CONTRACT (see go/internal/fs/testdata/parity/OBSERVED_HARNESS_CONTRACT.md): the content is split on newline (leading UTF-8 BOM stripped, trailing \\r stripped), each part numbered 1-based as `<n>\\t<content>` with an UNPADDED line number, joined with newline and NO trailing newline; a file ending in a newline gets a trailing empty numbered line. Whole-file reads over 256 KB throw (byte cap); a ranged read bypasses it. A model-coupled token cap is intentionally NOT part of the contract — this surface is model-agnostic and the byte cap is the only size guard. Streams line by line. SUBSTRATE UPGRADES (opt-in, default stays byte-parity): outline (go/ast signatures), symbol (go/ast declaration resolution), provenance (git blame + substrate events), oriented (doc.go intended-use + knowledge_pointers). Each is an explicit opt-in param; a mode read is a partial/derived view and does NOT record full read-state, so it never satisfies the fs.write/fs.edit precondition. No mode changes the default byte output."
+
+[[params]]
+  name = "file_path"
+  type = "string"
+  required = true
+  description = "Absolute or working-directory-relative path to the file to read."
+
+[[params]]
+  name = "offset"
+  type = "integer"
+  required = false
+  description = "1-based line number to start reading from (default 1). Values < 1 are normalized to 1. Use with limit to page through a large file."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Maximum number of lines to return. Omit (or pass <= 0) to read the WHOLE file, which is then subject to the 256 KB byte cap. A ranged read (limit set) bypasses the byte cap."
+
+[[params]]
+  name = "outline"
+  type = "bool"
+  required = false
+  description = "OPT-IN mode: return a go/ast structural summary (top-level signatures + first doc line, struct/interface bodies collapsed) instead of the full file — measurably smaller, for orientation. Go source only. Attaches the `outline` view."
+
+[[params]]
+  name = "symbol"
+  type = "optional_string"
+  required = false
+  description = "OPT-IN mode: resolve a single named declaration via go/ast and return just its source span (numbered like a normal read). Accepts a top-level name or `Type.Method`. Go source only. Attaches the `symbol` view."
+
+[[params]]
+  name = "provenance"
+  type = "bool"
+  required = false
+  description = "OPT-IN mode: attach intent-annotated mutation history for the read range — git blame over the range (commit subjects are the intent) plus matching substrate events (CommitLanded subjects, owned artifact write/edit rationales). Fail-soft for untracked files. Attaches the `provenance` view."
+
+[[params]]
+  name = "oriented"
+  type = "bool"
+  required = false
+  description = "OPT-IN mode: attach the file's package intended-use block (from doc.go) and related knowledge_pointers. Attaches the `oriented` view."
+
+[[param_aliases]]
+  from = "path"
+  to = "file_path"
+
+[[errors]]
+  condition = "file_path missing or empty"
+  message = "fs.read requires file_path"
+
+[[errors]]
+  condition = "the path does not exist"
+  message = "fs.read: file does not exist: <path>"
+
+[[errors]]
+  condition = "the path is a directory"
+  message = "fs.read: <path> is a directory, not a file"
+
+[[errors]]
+  condition = "the process lacks read permission"
+  message = "fs.read: permission denied: <path>"
+
+[[errors]]
+  condition = "a whole-file read (no limit) of a file larger than 256 KB"
+  message = "fs.read: file content (<size>) exceeds maximum allowed size (256KB). Use offset and limit parameters ..."
+
+[[errors]]
+  condition = "outline/symbol mode on a non-Go file"
+  message = "fs.read: outline mode requires a Go source file (.go): <path>"
+
+[[errors]]
+  condition = "symbol mode with a name that resolves to no declaration"
+  message = "fs.read: symbol <name> not found in <path>"
+
+[returns]
+  shape = "ReadResult"
+  description = "content (the numbered-line text; empty when no lines are selected), file_path, start_line (the 1-based offset), line_count (lines returned), total_lines (lines in the file), and warning (a system-reminder, set verbatim when content is empty: empty file / offset past EOF). An OPT-IN mode additionally attaches exactly one of outline / symbol / provenance / oriented; all are omitted on a default read."

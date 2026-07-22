@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ParseContextStdioDriftSurfaced.json",
+  "title": "ParseContextStdioDriftSurfaced payload",
+  "description": "Emitted by the parse_context handler whenever it evaluates the stdio-drift surface — whether or not it ended up surfacing a Candidate. Lets T10's drift-fire-rate measurement reason about both fire and suppress paths from one event stream. Chain parse-context-lean-orienting T9.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["drift_kind", "bootstrap_path", "suppressed_by_recent_fire"],
+  "properties": {
+    "head_sha": {
+      "type": "string",
+      "description": "The git HEAD SHA at the time of the parse_context call, or empty when `git rev-parse HEAD` was unreachable. Used by T10's drift-rate dashboards to correlate fires against commit cadence."
+    },
+    "stdio_sha": {
+      "type": "string",
+      "description": "The stdio process's reported gitSHA (typically the toolkit-server binary's compile-time main.gitSHA). Empty when the snapshot couldn't observe a per-PID SHA — the drift signal then rests on fd_deleted alone."
+    },
+    "drift_kind": {
+      "type": "string",
+      "enum": ["none", "stdio_fd_pinned", "compile_time_stale", "both"],
+      "description": "The drift classification. 'none' fires when parse_context evaluated drift and found none — the event still emits so T10 can compute a fire-rate denominator."
+    },
+    "bootstrap_path": {
+      "type": "boolean",
+      "description": "True when this is the first parse_context call in the MCP session and the bootstrap surface fired regardless of T5's directive intent. The session-scoped first-fire signal lives in HandlerDeps.DriftFireTracker."
+    },
+    "suppressed_by_recent_fire": {
+      "type": "boolean",
+      "description": "True when drift was detected AND a Candidate would have surfaced, but the per-session fire counter exceeded its threshold (default 3) so the substrate suppressed the surface. The event still emits so T10's measurement can distinguish 'surfaced' from 'detected-but-suppressed'."
+    }
+  }
+}

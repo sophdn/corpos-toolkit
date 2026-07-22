@@ -1,0 +1,41 @@
+surface = "work"
+action = "task_complete"
+purpose = "Transition a task to status=closed with a closure note + optional commit SHA."
+notes = "Companion task_stamp_sha(slug, commit_sha) stamps a commit SHA on an already-closed task — mirrors bug_stamp_sha for when the SHA wasn't available at task_complete time; rejects non-closed tasks.\n\nPost-close side effects: (1) structural task_blockers edges pointing AT the closing task are deleted; any task whose last structural blocker was just removed flips from 'blocked' to 'pending' automatically (cleanupBlockersAfterClose). (2) Prose-only-blocked tasks in the same chain — tasks with status='blocked' but NO structural task_blockers rows — also flip to 'pending' automatically (sweepProseOnlyBlockedAfterClose). This handles the chain-authoring pattern where 'X blocks Y' is recorded in design_decisions prose without a structural task_block call. Each swept task emits its own TaskTransitioned event so the audit ledger captures the state change. The sweep does NOT fire on task_cancel — cancelled tasks weren't completed in the satisfies-prose-dep sense."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id (preferred)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug."
+
+[[params]]
+  name = "commit_sha"
+  type = "optional_string"
+  required = false
+  description = "SHA the work landed in. Accepts 'unversioned' for non-repo fixes (see skill:bug-filing-discipline §Unversioned-artifact exception)."
+
+[[param_aliases]]
+  from = "sha"
+  to = "commit_sha"
+
+[[examples]]
+  call = "{\"id\":6326,\"commit_sha\":\"abc1234\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

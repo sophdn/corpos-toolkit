@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArtifactRemoved.json",
+  "title": "ArtifactRemoved payload",
+  "description": "Emitted (OPT-IN) when fs.remove deletes a path in record mode. Carries the removed path so fs.read provenance mode can record the deletion in a file's mutation history without re-reading the working tree. The default fs.remove does NOT emit. The artifact's entity reference lives in the envelope (entity_kind=artifact, entity_slug=removed absolute path); the removal intent is carried in the event rationale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["file_path", "was_dir"],
+  "properties": {
+    "file_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute path of the removed entry. Matched verbatim by fs.read provenance mode (json_extract(payload,'$.file_path'))."
+    },
+    "was_dir": {
+      "type": "boolean",
+      "description": "True when the removed entry was a directory rather than a file."
+    }
+  }
+}

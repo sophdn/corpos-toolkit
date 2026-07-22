@@ -1,0 +1,49 @@
+name        = "chain-assessment"
+description = "Chain task proportionality rubric"
+is_deployed = true
+output_enum = ["proportionate", "disproportionate", "unclear"]
+
+criteria = [
+  "proportionate: cost is proportional to the value of the answer. The team has bandwidth, prior signal is weak (genuine open question), cost-to-value is reasonable.",
+  "disproportionate: cost is much higher than the value of the answer given the team's actual situation.",
+  "unclear: insufficient context to judge. The task's value depends on team-state information not provided, OR the cost estimate is itself uncertain.",
+]
+
+prompt_template = """You classify ONE chain task's proportionality. The skill's principle: \
+"rigorous in isolation" is not sufficient — a 1-2 week multi-stack \
+build spike is disproportionate if the team already has a settled \
+stack preference. Test rigor-proportionality, not just internal rigor.
+
+The input gives you: the task's problem_statement, acceptance_criteria, \
+estimated effort (when present), AND a brief sketch of team_bandwidth \
++ prior_signal_strength.
+
+Labels:
+
+- **proportionate**: cost is proportional to the value of the answer. \
+The team has bandwidth, prior signal is weak (genuine open question), \
+cost-to-value is reasonable.
+- **disproportionate**: cost is much higher than the value of the answer \
+given the team's actual situation.
+- **unclear**: insufficient context to judge. The task's value depends on \
+team-state information not provided, OR the cost estimate is itself \
+uncertain.
+
+Bias toward **unclear** over guessing. This rubric's grounding is low; \
+a guess based on visible-task-shape alone mis-fires on tasks whose \
+value is in team-context Claude carries but the rubric input doesn't."""
+
+[[examples]]
+text      = "Task: \"Spike a 2-week comparison between three React-Native frameworks (Expo / Tamagui / NativeWind) for the dm-toolkit lab UI.\"\n\nTeam context: solo developer; prior signal is the expo-conventions skill exists with strong opinionation; expo has been the working assumption for 6+ weeks."
+label     = "disproportionate"
+reasoning = "Prior signal strong; team is solo; task is 2 weeks of multi-stack work. Cost much higher than answer value."
+
+[[examples]]
+text      = "Task: \"Author a per-rubric Qwen smoke. Build a gold corpus of 8-12 tuples; run through compose_classify; report verdict. Estimated effort: ~half-day.\"\n\nTeam context: solo developer; prior signal mid (analogous shape baseline exists); on critical-path."
+label     = "proportionate"
+reasoning = "Half-day effort, on critical-path, prior signal mid, no settled answer."
+
+[[examples]]
+text      = "Task: \"Investigate whether the friction_track histogram aggregation should consolidate with other histogram helpers.\"\n\nTeam context: solo developer; prior signal unknown; effort estimate absent."
+label     = "unclear"
+reasoning = "Effort estimate absent; prior signal unknown. Without team's effort tolerance, cost-vs-value can't fire."

@@ -1,0 +1,135 @@
+surface = "measure"
+action = "benchmark_record"
+purpose = "Record a benchmark result row. Captures the provenance bundle (scenario/tool/model identity, timing, outcome flags, optional rubric scores) used by benchmark_replay to reconstruct the run later. project comes from the dispatch envelope, NOT params."
+
+[[params]]
+  name = "scenario_id"
+  type = "string"
+  required = true
+  description = "Scenario identifier the run exercised."
+
+[[params]]
+  name = "tool_name"
+  type = "string"
+  required = true
+  description = "Name of the tool/surface under benchmark."
+
+[[params]]
+  name = "model_name"
+  type = "string"
+  required = true
+  description = "Model that produced the run (e.g. the Qwen-local or Claude-remote id)."
+
+[[params]]
+  name = "run_at"
+  type = "integer"
+  required = true
+  description = "Unix-seconds timestamp of the run. Accepts a JSON integer or boolean (boolean-flavoured INTEGER column)."
+
+[[params]]
+  name = "wall_clock_ms"
+  type = "integer"
+  required = true
+  description = "End-to-end wall-clock latency in milliseconds. Accepts a JSON integer or boolean."
+
+[[params]]
+  name = "invocation_ok"
+  type = "integer"
+  required = true
+  description = "1/0 (or true/false) — whether the invocation itself succeeded (transport/parse OK), independent of answer quality."
+
+[[params]]
+  name = "provenance_id"
+  type = "string"
+  required = true
+  description = "benchmark_provenance(id) joining this result to its replayable provenance row. Required-by-trigger after migration 035 (T6 cutover); a missing value is surfaced as a structured param error rather than a trigger-text failure at INSERT."
+
+[[params]]
+  name = "id"
+  type = "optional_string"
+  required = false
+  description = "benchmark_results UUID. Auto-generated (v4) when omitted."
+
+[[params]]
+  name = "run_id"
+  type = "optional_string"
+  required = false
+  description = "Caller-supplied run grouping id; falls back to the row id when absent."
+
+[[params]]
+  name = "input_tokens"
+  type = "integer"
+  required = false
+  description = "Prompt token count, when measured."
+
+[[params]]
+  name = "output_tokens"
+  type = "integer"
+  required = false
+  description = "Completion token count, when measured."
+
+[[params]]
+  name = "invoked_contextually"
+  type = "integer"
+  required = false
+  description = "1/0 (or true/false) — whether the tool was invoked in-context vs. forced. Defaults to 1 when omitted."
+
+[[params]]
+  name = "args_match"
+  type = "integer"
+  required = false
+  description = "1/0 (or true/false) — whether the extracted args matched the expected args."
+
+[[params]]
+  name = "interpretation_ok"
+  type = "integer"
+  required = false
+  description = "1/0 (or true/false) — whether the model interpreted the task correctly."
+
+[[params]]
+  name = "extracted_args"
+  type = "optional_string"
+  required = false
+  description = "The args the model actually produced (free-form, for diffing against expectations)."
+
+[[params]]
+  name = "detected_tool"
+  type = "optional_string"
+  required = false
+  description = "The tool the model selected, when the scenario tests tool selection."
+
+[[params]]
+  name = "notes"
+  type = "optional_string"
+  required = false
+  description = "Free-form notes about the run."
+
+[[params]]
+  name = "task_shape"
+  type = "optional_string"
+  required = false
+  description = "Task-shape tag for grouping results across scenarios."
+
+[[params]]
+  name = "accuracy_score"
+  type = "float"
+  required = false
+  description = "Optional rubric accuracy score (float, typically 0.0–1.0)."
+
+[[params]]
+  name = "honesty_score"
+  type = "float"
+  required = false
+  description = "Optional rubric honesty score (float, typically 0.0–1.0)."
+
+[[params]]
+  name = "ranking_quality_score"
+  type = "float"
+  required = false
+  description = "Optional ranking-quality score (float, typically 0.0–1.0)."
+
+[[params]]
+  name = "within_budget_score"
+  type = "float"
+  required = false
+  description = "Optional within-budget score (float, typically 0.0–1.0)."

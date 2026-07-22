@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ActionDocsFrontendAuditCompleted.json",
+  "title": "ActionDocsFrontendAuditCompleted payload",
+  "description": "Emitted by the chain action-docs-corpus-frontend AF3 retrospective to record that the dashboard surface serving the per-action documentation corpus (/docs/actions, /docs/actions/<surface>, /docs/actions/<surface>/<action>) has been verified against the chain's design doc and completion criteria. Self-hosting check parallel to SubstrateFrontendAuditCompleted — the frontend that consumes the events ledger uses that same ledger to record its own audit outcome. Findings are keyed to docs/ACTION_DOCS_FRONTEND.md sections and the chain's completion_condition items (a)–(e). See docs/ACTION_DOCS_FRONTEND.md and the chain's completion_condition for context.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the design / contract doc the findings are keyed against — docs/ACTION_DOCS_FRONTEND.md plus the chain's completion_condition items (a)–(e)."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary of the audit outcome covering all completion-criterion sub-items (a)–(e)."
+    },
+    "recommended_next_phase": {
+      "type": ["string", "null"],
+      "description": "Free-text recommendation for the follow-on work (e.g. orphan-from-the-other-side authoring of work.work_actions, the Qwen-mediated action_ask spike re-evaluation, or per-action analytics if usage patterns emerge). Optional."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per design-doc section or completion-criterion item. status uses the same enum as the architecture audit (pass / fail / partial / deferred).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item", "status"],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "Design-doc section identifier and short description (e.g. \"§3 endpoint contract — GET /admin/action-docs\")."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "partial", "deferred"],
+            "description": "pass = contract honored end-to-end; fail = gap (must file follow-on); partial = honored with documented gap; deferred = explicitly out of scope per chain non-goals."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence: test names, file paths, commit SHA, curl output, etc."
+          },
+          "severity": {
+            "type": ["string", "null"],
+            "enum": ["low", "medium", "high", "critical", "n/a", null],
+            "description": "Severity if status is fail/partial. n/a for informational rows."
+          }
+        }
+      }
+    }
+  }
+}

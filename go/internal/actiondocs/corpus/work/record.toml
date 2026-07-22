@@ -1,0 +1,35 @@
+surface = "work"
+action = "record"
+purpose = "The canonical write surface (the v2 successor to forge; chain 311 T7 Stage 5). TWO input modes: (1) FORGE-SHAPED SUGAR — {schema_name|kind, slug, fields[, op]} where op ∈ create|update|delete (default create) — the one-call ergonomics of the (now-deprecated) forge / forge_edit / forge_delete actions, routed through the construct umbrella; this is the mode most callers want. (2) RAW EVENTS — {events:[{type, payload, entity}, …]} — a heterogeneous, timestamped array of TYPED events appended directly to the hot local draft (the events ledger), for lifecycle events + multi-event sequences the sugar doesn't cover. In both modes each event is validated against the closed event-type enum (the shared go/internal/events validators — the thin-fast-local tier); valid events append + fold projections in one tx; per-event validation rejections are reported (and become ghosts) without rolling back the valid events (partial-success, default). The expensive tiers (causal, projection-coherence, registry immutability) run on the async CI tail (the canonical registry), never blocking this return."
+notes = "Discover event types + payloads via `event_schema` (no arg lists the closed type enum; type=<T> returns T's payload schema). entity_kind is inferred from the event type when omitted; the entity may be flat (entity_kind/entity_slug/entity_project_id) OR nested (entity:{kind,slug,project_id}). The top-level `rationale` (shown in the example) is REQUIRED for agent actors. Partial-success mirrors work.batch; on any rollback ok=true entries lose their event_id. dry_run=true previews without writing. ts is server-set by default; a future caller ts is clamped to now. record is the v2 successor to forge; during the migration both coexist (forge untouched until parity is proven).\n\nCreate a CHAIN WITH TASKS by emitting, in ONE record call and IN ORDER: a ChainCreated event, then one TaskCreated per task (chain comes first so each TaskCreated's fold resolves it). Those are the load-bearing events — the chain + tasks are complete from them alone. ChainAndTasksForged is an OPTIONAL grouping/analytics signal you MAY stack alongside (no projection folds it); emit it only if you want the summary, not because the chain needs it."
+
+[[params]]
+  name = "events"
+  type = "object[]"
+  required = true
+  description = "Array of {type, payload, entity_slug, entity_kind?, entity_project_id?, entity?, ts?, rationale?, caused_by_event_id?}. DISCOVER type names + payload shapes with the `event_schema` action (no arg = list types; type=<T> = T's payload schema). entity_kind is OPTIONAL — inferred from the event type for well-known types (BugResolved→bug, ChainCreated→chain, TaskCreated→task, …); pass it explicitly only for types it can't infer. The entity may also be given as a nested object `entity:{kind,slug,project_id}` (the canonical envelope shape) instead of the flat entity_* keys. ts is server-authoritative unless a clamped (non-future) RFC3339 caller value is supplied."
+
+[[params]]
+  name = "strict_all_or_nothing"
+  type = "bool"
+  required = false
+  description = "Default false (partial-success: a rejected event is ghosted, the valid events still commit). True demands all-or-nothing: any rejection rolls back the whole call. A genuine DB/fold error always rolls back regardless."
+
+[[params]]
+  name = "dry_run"
+  type = "bool"
+  required = false
+  description = "Default false. True validates every event against the thin-fast-local tier and returns the same per-event ok/rejected_reason results WITHOUT appending anything (zero events, zero ghosts) — preview a heterogeneous batch before any of it lands."
+
+[[examples]]
+  call = "{\"rationale\":\"filing observed friction\",\"events\":[{\"type\":\"BugReported\",\"entity_slug\":\"my-bug\",\"payload\":{\"title\":\"x\",\"problem_statement\":\"y\"}}]}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate. Envelope-level rationale is the 'why this MCP call' grain; each event may also carry its own per-event rationale (recorded on that event's envelope)."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "RecordResult"
+  description = "ok, event_count, recorded, rejected, rolled_back, and results[] (per-event: position, type, entity_slug, ok, event_id on success or rejected_reason on a validation rejection)."

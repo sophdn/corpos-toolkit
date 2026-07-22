@@ -1,0 +1,23 @@
+supported_ops = ["create"]
+
+[schema]
+name = "gamma"
+prefix = "GAMMA"
+output_dir = "notes/gamma"
+filename_pattern = "{prefix}_{slug}.md"
+
+[storage]
+target = "markdown"
+prefix = "GAMMA"
+output_dir = "notes/gamma"
+filename_pattern = "{prefix}_{slug}.md"
+
+[[fields]]
+name = "slug"
+type = "string"
+description = "Slug."
+pattern = "^[a-z][a-z0-9-]*$"
+
+[[sections]]
+heading = "Slug"
+fields = ["slug"]

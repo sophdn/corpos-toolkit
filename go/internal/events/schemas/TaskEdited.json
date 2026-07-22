@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskEdited.json",
+  "title": "TaskEdited payload",
+  "description": "Emitted when a task's content fields change via task_edit or forge_edit(task) — problem_statement, acceptance_criteria, context_required, constraints, handoff_output, etc. Status transitions DO NOT emit this event (they emit TaskTransitioned / TaskCompleted / TaskCancelled per their semantics). Position changes within a chain emit TaskAssignedToChain. updated_fields carries the list of changed field names; updated_values (added 2026-05-20 via T3 of agent-substrate-crud-retirement, §9.4) carries the post-edit values for each changed column so payload-only fold reconstruction can rebuild proj_current_tasks without re-reading the CRUD row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["updated_fields"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "description": "Chain slug disambiguating which chain's task this event targets, so the fold scopes to one task rather than fanning out across same-slug tasks in the project (bug task-lifecycle-event-folds-fan-out-across-duplicate-task-slugs). Optional: pre-fix events omit it and the fold falls back to the legacy slug+project match."
+    },
+    "updated_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Snake-case names of the task fields that changed in this edit. At least one entry — a no-op edit must not emit this event."
+    },
+    "updated_values": {
+      "type": ["object", "null"],
+      "description": "Added 2026-05-20 via T3 of agent-substrate-crud-retirement (§9.4 audit finding). Map of changed-column-name → new value. Keys mirror updated_fields exactly; values carry the post-edit content for each column so the projection fold can reconstruct proj_current_tasks from payload alone (T5's contract). Optional for backward compatibility with pre-T3 events; once T5 lands, every new event carries this.",
+      "additionalProperties": true
+    }
+  }
+}

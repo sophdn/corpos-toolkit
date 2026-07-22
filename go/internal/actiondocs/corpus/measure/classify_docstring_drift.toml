@@ -1,0 +1,10 @@
+surface = "measure"
+action = "classify_docstring_drift"
+purpose = "Dispatches the docstring-drift detection rubric via Qwen — given a function body and its doc comment, decides whether the docstring has drifted; label ∈ {matches, doesn't_match, unclear}; matches=drift detected, doesn't_match=still accurate, unclear=insufficient evidence (use as fallback trigger); writes a benchmark_results row; returns {label, latency_ms, model_name}."
+notes = "Label semantics are counter-intuitive: matches = drift DETECTED, doesn't_match = doc STILL ACCURATE, unclear = insufficient evidence (use as fallback trigger)."
+
+[[params]]
+  name = "function_snippet"
+  type = "string"
+  required = true
+  description = "The function body plus its doc comment to check for drift."

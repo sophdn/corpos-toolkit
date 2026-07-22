@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ConventionAuditCompleted.json",
+  "title": "ConventionAuditCompleted payload",
+  "description": "Emitted by a chain retrospective that verified the agent-facing conventions against an audit doc (e.g. AGENT_AUDIT_CONVENTIONS.md). Findings array carries one entry per axis the audit doc defines; each entry records the axis's status plus the two costs the convention audit weighs (agent impact, human cost). See AGENT_AUDIT_CONVENTIONS.md §14 for the canonical output shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["audit_doc", "summary", "findings"],
+  "properties": {
+    "audit_doc": {
+      "type": "string",
+      "description": "Pointer to the convention audit source-doc the findings were keyed against."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One- or two-paragraph executive summary across all axes."
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per audit axis. Status uses the convention enum (honored / partial / absent); use n/a for informational axes that don't apply.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["axis", "status"],
+        "properties": {
+          "axis": {
+            "type": "string",
+            "description": "Convention axis name from the audit doc (e.g. \"rationale at dispatch boundary\", \"events as source of truth\")."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["honored", "partial", "absent", "n/a"],
+            "description": "honored = convention fully realised; partial = convention realised in some surfaces but not all; absent = convention not realised; n/a = axis doesn't apply to this substrate."
+          },
+          "evidence": {
+            "type": ["string", "null"],
+            "description": "Concrete evidence supporting the status — file path, SQL query result, commit SHA, doc pointer."
+          },
+          "agent_impact": {
+            "type": ["string", "null"],
+            "description": "How this axis shapes agent behaviour — what the agent can or cannot do as a result."
+          },
+          "human_cost": {
+            "type": ["string", "null"],
+            "description": "How this axis affects humans operating the substrate — friction, ergonomics, comprehension cost."
+          }
+        }
+      }
+    }
+  }
+}

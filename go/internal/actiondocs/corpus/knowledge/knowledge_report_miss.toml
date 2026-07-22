@@ -1,0 +1,15 @@
+surface = "knowledge"
+action = "knowledge_report_miss"
+purpose = "When a followed pointer turns out to be wrong or stale, call this to increment negative_feedback_count and optionally set staleness_hint. Takes pointer_id from knowledge_search results."
+
+[[params]]
+  name = "pointer_id"
+  type = "integer"
+  required = true
+  description = "The pointer_id from a knowledge_search result."
+
+[[params]]
+  name = "staleness_reason"
+  type = "optional_string"
+  required = false
+  description = "Optional reason describing why the pointer was stale (used as staleness_hint)."

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArtifactWritten.json",
+  "title": "ArtifactWritten payload",
+  "description": "Emitted (OPT-IN) when fs.write commits a file in record mode. Carries the file path + write measures so fs.read provenance mode can fold per-write intent into a file's mutation history without re-reading the working tree. The default fs.write does NOT emit — this is the write half of the write->read provenance loop. The artifact's entity reference lives in the envelope (entity_kind=artifact, entity_slug=absolute path); the write intent is carried in the event rationale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["file_path", "bytes_written", "line_count", "created"],
+  "properties": {
+    "file_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Absolute path of the file written. Matched verbatim by fs.read provenance mode (json_extract(payload,'$.file_path'))."
+    },
+    "bytes_written": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Byte length of the new file content."
+    },
+    "line_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Line count of the new file content (newline-terminated lines plus a trailing unterminated line)."
+    },
+    "created": {
+      "type": "boolean",
+      "description": "True when the file did not exist before the write (a create rather than an overwrite)."
+    }
+  }
+}

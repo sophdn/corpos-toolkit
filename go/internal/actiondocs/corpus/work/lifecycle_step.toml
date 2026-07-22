@@ -1,0 +1,53 @@
+surface = "work"
+action = "lifecycle_step"
+purpose = "Sugar over work.batch for the chain-task handoff seam: close T_n with sha + handoff_output + close_rationale AND start T_n+1 with next_rationale, all in one MCP round-trip. Builds a 2-op batch envelope and emits a composite TaskHandoff event after the underlying batch commits. Same-chain invariant — close_task_slug and next_task_slug MUST belong to the same chain (cross-chain handoffs reject pre-dispatch with both chain slugs named). For cross-chain handoffs use work.batch directly with explicit per-op chain_slug params."
+notes = "Same-chain invariant: close_task_slug uniquely identifies a chain via proj_current_tasks.chain_id. next_task_slug is looked up the same way; if it resolves to a different chain, the call rejects pre-dispatch with a clear error naming both chain slugs. Slug ambiguity (same slug across multiple chains) also rejects with the chains named so the caller can switch to work.batch with explicit chain_slug params per op.\n\nEvent fan-out: each lifecycle_step call produces FOUR events in the ledger — TaskCompleted (cascade), TaskTransitioned (cascade, pending→active), BatchExecuted (from the underlying work.batch), and TaskHandoff (composite). Listeners that want the affordance-level \"one event per chain-task seam\" view subscribe to TaskHandoff; listeners on the individual lifecycle events continue to receive them unchanged. The fan-out is intentional per the T1 design audit Decision 2 tightening — composite IN ADDITION to per-op, not in lieu of.\n\nZERO-duplicated-logic contract (T3 chain constraint): the handler is envelope construction + same-chain validation + HandleBatch dispatch + composite emit only. No re-implementation of task lifecycle logic. If a future change ever adds chain-state-mutation logic to lifecycle_step.go that isn't sugar over batch, that's a contract violation — refactor."
+
+[[params]]
+  name = "close_task_slug"
+  type = "string"
+  required = true
+  description = "Slug of the task to close. Inferred chain_slug comes from this task's parent chain."
+
+[[params]]
+  name = "close_commit_sha"
+  type = "optional_string"
+  required = false
+  description = "Closing commit SHA. Optional (matches task_complete's gate). Accepts the literal sentinel 'unversioned'."
+
+[[params]]
+  name = "close_handoff_output"
+  type = "optional_string"
+  required = false
+  description = "What artifacts the closing task produces for the next task. Operational color distinct from rationale."
+
+[[params]]
+  name = "close_rationale"
+  type = "string"
+  required = true
+  description = "Per-op rationale for the task_complete sub-op ('why this counts as done')."
+
+[[params]]
+  name = "next_task_slug"
+  type = "string"
+  required = true
+  description = "Slug of the next task to start. Must belong to the same chain as close_task_slug."
+
+[[params]]
+  name = "next_rationale"
+  type = "string"
+  required = true
+  description = "Per-op rationale for the task_start sub-op ('why pick this up next')."
+
+[[examples]]
+  call = "{\"close_task_slug\":\"T2-work-batch\",\"close_commit_sha\":\"ae702417\",\"close_handoff_output\":\"work.batch landed with true ACID rollback\",\"close_rationale\":\"T2 acceptance criteria all met\",\"next_task_slug\":\"T3-work-lifecycle-step\",\"next_rationale\":\"T3 sugar over batch is the natural next step\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Envelope-level rationale is the 'why this MCP call' grain. The per-op close_rationale and next_rationale are separately required by HandleLifecycleStep at the validation gate; together all three land on the events ledger."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "LifecycleStepResult"
+  description = "Envelope: ok, chain_slug (inferred from the closing task), close_event_id (cascade TaskCompleted event id), start_event_id (cascade TaskTransitioned event id), handoff_event_id (composite TaskHandoff event id), batch (the underlying BatchResult for full traceability). Error field populated on cross-chain rejection, missing rationale, batch rollback, or TaskHandoff emit failure (the secondary-effect case where the batch committed but the composite event emit failed)."

@@ -1,0 +1,15 @@
+surface = "knowledge"
+action = "vault_search"
+purpose = "Rank notes from ~/.claude/vault/ via local Qwen2.5-32B over the full path list. Call this when picking up a task in a domain you've worked in before, BEFORE assuming you remember the prior decisions; the agent's vault is the canonical store of cross-session decisions/learnings/reference."
+
+[[params]]
+  name = "query"
+  type = "string"
+  required = true
+  description = "Free-text search query."
+
+[[params]]
+  name = "top_k"
+  type = "integer"
+  required = false
+  description = "Number of top results to return. Defaults to 5."

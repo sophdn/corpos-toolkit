@@ -1,0 +1,601 @@
+{
+  "_general": {
+    "surface": "measure",
+    "action": "_general",
+    "purpose": "Benchmark recording/query/replay plus the Qwen-local rubric-classify family. Pass 'project' to scope.",
+    "notes": "The classify_* family shares a result shape: every classifier returns {label, latency_ms, model_name}. Each call also writes a row to benchmark_results (queryable via benchmark_query) so call provenance is captured for later analysis and replay. benchmark_replay re-executes a prior run from its captured provenance bundle (T6) and returns identical/diff against the original.\n\nENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). benchmark_replay requires a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / \u003c6-char rationales with `error: \"rationale_required\"`. The rationale should explain WHY the replay is being run (debugging non-determinism, validating a model swap, post-incident reproduction). benchmark_record and the classify_* family do NOT require rationale — their provenance payload carries the why.\n"
+  },
+  "bench_run": {
+    "surface": "measure",
+    "action": "bench_run",
+    "purpose": "Execute a registered bench harness subprocess and diff its output against the stored baseline. Reads the row from bench_harnesses (forged via forge(bench)), runs the binary with the recorded flag_set (plus any override_flags), parses stdout per parse_output_as (v1: json only), compares against baseline_json_path, prints + persists a per-metric diff as a BenchmarkDiff event. With update_baseline=true, overwrites the baseline file BEFORE diffing so the diff is zero by construction; a BenchmarkBaselineUpdated event records the explicit baseline shift.",
+    "params": [
+      {
+        "name": "slug",
+        "type": "string",
+        "required": true,
+        "description": "The bench's kebab/snake-case slug as registered in bench_harnesses (e.g. 'parse-context'). Must exist in the project_id scope — reject otherwise."
+      },
+      {
+        "name": "update_baseline",
+        "type": "bool",
+        "required": false,
+        "description": "Default false (compare-against-existing-baseline path). True overwrites baseline_json_path with the observed values BEFORE computing the diff; the resulting BenchmarkDiff has zero deltas by construction, and a sibling BenchmarkBaselineUpdated event records the baseline shift with previous + new SHA-256 for round-trip audit."
+      },
+      {
+        "name": "override_flags",
+        "type": "object[]",
+        "required": false,
+        "description": "List of {flag, value} entries that override or augment the registered flag_set for this single run. Matching flag names replace the registered value (preserving order); new flag names append. Used for one-off probes (e.g. --session-id \u003cother\u003e) without re-forging the bench. NOT persisted — only affects this invocation."
+      }
+    ],
+    "examples": [
+      {
+        "description": "Standard run — compare against the stored baseline, emit BenchmarkDiff",
+        "call": "{\"action\":\"bench_run\",\"project\":\"mcp-servers\",\"rationale\":\"post-T6 sanity bench against parse-context baseline\",\"params\":{\"slug\":\"parse-context\"}}"
+      },
+      {
+        "description": "Refresh the baseline (e.g. after a fixed regression where the baseline is the new ground truth)",
+        "call": "{\"action\":\"bench_run\",\"project\":\"mcp-servers\",\"rationale\":\"refresh parse-context baseline after bug 866 fix\",\"params\":{\"slug\":\"parse-context\",\"update_baseline\":true}}"
+      },
+      {
+        "description": "Override the session-id flag for a one-off cache-disabled probe",
+        "call": "{\"action\":\"bench_run\",\"project\":\"mcp-servers\",\"rationale\":\"probe cache-disabled latency vs cache-warm baseline\",\"params\":{\"slug\":\"parse-context\",\"override_flags\":[{\"flag\":\"--session-id\",\"value\":\"\"}]}}"
+      }
+    ],
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). bench_run is mutating (writes events; with update_baseline=true also overwrites a file on disk). Rationale should explain why this run is happening — perf-touch validation, baseline refresh after a known-fixed regression, post-deploy sanity.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ],
+    "returns": {
+      "shape": "BenchRunResult",
+      "description": "Carries ok + slug + metrics[] + markdown_table + run_latency_ms + baseline_updated + stderr_log_path + baseline_path + bench_event_id. On error: error names the failure mode (subprocess timeout, non-zero exit, parse failure, baseline_not_found); metrics may be empty if the parse stage didn't reach the diff. The markdown_table field is the human-readable per-metric diff suitable for the operator's view + future reports."
+    }
+  },
+  "benchmark_query": {
+    "surface": "measure",
+    "action": "benchmark_query",
+    "purpose": "Return previously-recorded benchmark result rows, with optional filters. Each classify_* call writes one row implicitly, so this is the entry point for inspecting what was classified, when, and what came back. project comes from the dispatch envelope (empty project = cross-project); all params below are optional filters.",
+    "params": [
+      {
+        "name": "tool_name",
+        "type": "optional_string",
+        "required": false,
+        "description": "Filter to rows whose tool_name matches exactly."
+      },
+      {
+        "name": "model_name",
+        "type": "optional_string",
+        "required": false,
+        "description": "Filter to rows whose model_name matches exactly."
+      },
+      {
+        "name": "run_id",
+        "type": "optional_string",
+        "required": false,
+        "description": "Filter to rows whose run_id matches exactly."
+      },
+      {
+        "name": "since",
+        "type": "integer",
+        "required": false,
+        "description": "Lower-bound run_at (unix seconds); returns only rows with run_at \u003e= since."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "required": false,
+        "description": "Cap the number of rows returned (most recent first by run_at)."
+      }
+    ]
+  },
+  "benchmark_record": {
+    "surface": "measure",
+    "action": "benchmark_record",
+    "purpose": "Record a benchmark result row. Captures the provenance bundle (scenario/tool/model identity, timing, outcome flags, optional rubric scores) used by benchmark_replay to reconstruct the run later. project comes from the dispatch envelope, NOT params.",
+    "params": [
+      {
+        "name": "scenario_id",
+        "type": "string",
+        "required": true,
+        "description": "Scenario identifier the run exercised."
+      },
+      {
+        "name": "tool_name",
+        "type": "string",
+        "required": true,
+        "description": "Name of the tool/surface under benchmark."
+      },
+      {
+        "name": "model_name",
+        "type": "string",
+        "required": true,
+        "description": "Model that produced the run (e.g. the Qwen-local or Claude-remote id)."
+      },
+      {
+        "name": "run_at",
+        "type": "integer",
+        "required": true,
+        "description": "Unix-seconds timestamp of the run. Accepts a JSON integer or boolean (boolean-flavoured INTEGER column)."
+      },
+      {
+        "name": "wall_clock_ms",
+        "type": "integer",
+        "required": true,
+        "description": "End-to-end wall-clock latency in milliseconds. Accepts a JSON integer or boolean."
+      },
+      {
+        "name": "invocation_ok",
+        "type": "integer",
+        "required": true,
+        "description": "1/0 (or true/false) — whether the invocation itself succeeded (transport/parse OK), independent of answer quality."
+      },
+      {
+        "name": "provenance_id",
+        "type": "string",
+        "required": true,
+        "description": "benchmark_provenance(id) joining this result to its replayable provenance row. Required-by-trigger after migration 035 (T6 cutover); a missing value is surfaced as a structured param error rather than a trigger-text failure at INSERT."
+      },
+      {
+        "name": "id",
+        "type": "optional_string",
+        "required": false,
+        "description": "benchmark_results UUID. Auto-generated (v4) when omitted."
+      },
+      {
+        "name": "run_id",
+        "type": "optional_string",
+        "required": false,
+        "description": "Caller-supplied run grouping id; falls back to the row id when absent."
+      },
+      {
+        "name": "input_tokens",
+        "type": "integer",
+        "required": false,
+        "description": "Prompt token count, when measured."
+      },
+      {
+        "name": "output_tokens",
+        "type": "integer",
+        "required": false,
+        "description": "Completion token count, when measured."
+      },
+      {
+        "name": "invoked_contextually",
+        "type": "integer",
+        "required": false,
+        "description": "1/0 (or true/false) — whether the tool was invoked in-context vs. forced. Defaults to 1 when omitted."
+      },
+      {
+        "name": "args_match",
+        "type": "integer",
+        "required": false,
+        "description": "1/0 (or true/false) — whether the extracted args matched the expected args."
+      },
+      {
+        "name": "interpretation_ok",
+        "type": "integer",
+        "required": false,
+        "description": "1/0 (or true/false) — whether the model interpreted the task correctly."
+      },
+      {
+        "name": "extracted_args",
+        "type": "optional_string",
+        "required": false,
+        "description": "The args the model actually produced (free-form, for diffing against expectations)."
+      },
+      {
+        "name": "detected_tool",
+        "type": "optional_string",
+        "required": false,
+        "description": "The tool the model selected, when the scenario tests tool selection."
+      },
+      {
+        "name": "notes",
+        "type": "optional_string",
+        "required": false,
+        "description": "Free-form notes about the run."
+      },
+      {
+        "name": "task_shape",
+        "type": "optional_string",
+        "required": false,
+        "description": "Task-shape tag for grouping results across scenarios."
+      },
+      {
+        "name": "accuracy_score",
+        "type": "float",
+        "required": false,
+        "description": "Optional rubric accuracy score (float, typically 0.0–1.0)."
+      },
+      {
+        "name": "honesty_score",
+        "type": "float",
+        "required": false,
+        "description": "Optional rubric honesty score (float, typically 0.0–1.0)."
+      },
+      {
+        "name": "ranking_quality_score",
+        "type": "float",
+        "required": false,
+        "description": "Optional ranking-quality score (float, typically 0.0–1.0)."
+      },
+      {
+        "name": "within_budget_score",
+        "type": "float",
+        "required": false,
+        "description": "Optional within-budget score (float, typically 0.0–1.0)."
+      }
+    ]
+  },
+  "benchmark_replay": {
+    "surface": "measure",
+    "action": "benchmark_replay",
+    "purpose": "Re-execute a prior run from its captured provenance bundle and return identical/diff against the original. Loads the original benchmark_results row by row_id, re-emits its result_columns under a new run, and diffs the score-shaped columns.",
+    "params": [
+      {
+        "name": "row_id",
+        "type": "string",
+        "required": true,
+        "description": "benchmark_results(id) of the original run to replay. The row must have a non-empty provenance_id (pre-T6-cutover legacy rows are not replayable)."
+      }
+    ],
+    "errors": [
+      {
+        "condition": "missing row_id",
+        "message": "Returns error envelope: missing required params: params.row_id."
+      },
+      {
+        "condition": "row_id not found",
+        "message": "Returns error envelope: benchmark row \"\u003cid\u003e\" not found."
+      },
+      {
+        "condition": "row has no provenance (legacy pre-cutover row)",
+        "message": "Returns error envelope: benchmark row \"\u003cid\u003e\" has no provenance (pre-T6-cutover legacy row); not replayable."
+      }
+    ],
+    "envelope_requirements": [
+      {
+        "field": "rationale",
+        "required": true,
+        "reason": "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. benchmark_replay is mutating (writes a new result row); the rationale should explain why the replay is being run (debugging non-determinism, validating a model swap). Rejected on empty / whitespace / boilerplate / \u003c6-char rationales with error=rationale_required.",
+        "applies_to_actor_kinds": [
+          "agent"
+        ]
+      }
+    ]
+  },
+  "classify_artifact_review_criterion": {
+    "surface": "measure",
+    "action": "classify_artifact_review_criterion",
+    "purpose": "Dispatches the artifact-review rubric via Qwen — evaluates ONE criterion against ONE artifact excerpt under a named review purpose; purpose ∈ {safety, completeness, scope-fit, quality, coherence, scope-drift, custom}; label ∈ {pass, fail, mixed, n-a}; bias-toward-mixed clause: use mixed over fail when violation is partial; writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "artifact_excerpt",
+        "type": "string",
+        "required": true,
+        "description": "The artifact excerpt to evaluate."
+      },
+      {
+        "name": "purpose",
+        "type": "string",
+        "required": true,
+        "description": "Review purpose. One of: safety, completeness, scope-fit, quality, coherence, scope-drift, custom."
+      },
+      {
+        "name": "criterion",
+        "type": "string",
+        "required": true,
+        "description": "The single criterion to evaluate against this excerpt under this purpose."
+      }
+    ],
+    "notes": "Bias-toward-mixed clause: use mixed over fail when violation is partial."
+  },
+  "classify_artifact_tier": {
+    "surface": "measure",
+    "action": "classify_artifact_tier",
+    "purpose": "Dispatches the tiered-context-loading rubric via Qwen — classifies an artifact by the session tier at which it should be loaded; label ∈ {tier-zero, tier-one, tier-two, tier-three} (word-form; digit-suffix form trips a parser bug); writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "artifact_descriptor",
+        "type": "string",
+        "required": true,
+        "description": "The artifact descriptor to classify by tier."
+      }
+    ],
+    "notes": "Use the word-form labels (tier-zero, tier-one, …); the digit-suffix form (tier-0, tier-1) trips a parser bug."
+  },
+  "classify_audit_finding_severity": {
+    "surface": "measure",
+    "action": "classify_audit_finding_severity",
+    "purpose": "Dispatches the agentic-architecture-audit severity rubric via Qwen — classifies ONE audit finding by consequence severity; label ∈ {critical, high, medium, low}; severity tracks consequence NOT effort (critical=actively harmful trust/data violation, high=structurally wrong compounds over time, medium=naive misses opportunity, low=hygiene no architectural consequence); writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "finding_prose",
+        "type": "string",
+        "required": true,
+        "description": "The audit finding prose to classify."
+      }
+    ],
+    "notes": "Severity tracks CONSEQUENCE, not effort. critical = actively harmful trust/data violation. high = structurally wrong, compounds over time. medium = naive, misses opportunity. low = hygiene, no architectural consequence."
+  },
+  "classify_bug_severity": {
+    "surface": "measure",
+    "action": "classify_bug_severity",
+    "purpose": "Dispatches the bug-severity rubric via Qwen — classifies a filed bug report along the two-axis observer-impact × blast-radius matrix from skill:bug-filing-discipline; label ∈ {low, medium, high, unclear}; writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "bug_report",
+        "type": "string",
+        "required": true,
+        "description": "The filed bug report to classify."
+      }
+    ],
+    "notes": "Severity is two-axis (observer-impact × blast-radius) per skill:bug-filing-discipline. unclear = either axis is insufficiently determined; use as a signal to surface the bug for human review rather than auto-routing it."
+  },
+  "classify_chain_task_proportionality": {
+    "surface": "measure",
+    "action": "classify_chain_task_proportionality",
+    "purpose": "Dispatches the chain-assessment rubric via Qwen — derives team-context from telemetry (closures-per-week + vault-decision-keyword-scan) when no override is supplied, calls the rubric registry, writes a benchmark_results row, and returns {label, latency_ms, model_name, team_context_prose}.",
+    "params": [
+      {
+        "name": "task_spec",
+        "type": "string",
+        "required": true,
+        "description": "The task specification to assess proportionality against."
+      },
+      {
+        "name": "team_context_override",
+        "type": "optional_string",
+        "required": false,
+        "description": "Override the auto-derived team context. When absent, team context is derived from telemetry: closures-per-week + vault-decision-keyword-scan."
+      }
+    ]
+  },
+  "classify_docstring_drift": {
+    "surface": "measure",
+    "action": "classify_docstring_drift",
+    "purpose": "Dispatches the docstring-drift detection rubric via Qwen — given a function body and its doc comment, decides whether the docstring has drifted; label ∈ {matches, doesn't_match, unclear}; matches=drift detected, doesn't_match=still accurate, unclear=insufficient evidence (use as fallback trigger); writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "function_snippet",
+        "type": "string",
+        "required": true,
+        "description": "The function body plus its doc comment to check for drift."
+      }
+    ],
+    "notes": "Label semantics are counter-intuitive: matches = drift DETECTED, doesn't_match = doc STILL ACCURATE, unclear = insufficient evidence (use as fallback trigger)."
+  },
+  "classify_pre_commit_failure": {
+    "surface": "measure",
+    "action": "classify_pre_commit_failure",
+    "purpose": "Dispatches the pre-commit-failure rubric via Qwen — classifies the dominant failure cause in a pre-commit hook stderr dump; label ∈ {lint, typecheck, test, lifecycle, unclassifiable}; writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "stderr",
+        "type": "string",
+        "required": true,
+        "description": "The pre-commit hook stderr dump to classify."
+      }
+    ]
+  },
+  "classify_retirement_observation": {
+    "surface": "measure",
+    "action": "classify_retirement_observation",
+    "purpose": "Dispatches the retirement-signal rubric via Qwen — classifies a project activity observation by retirement artifact-type; label ∈ {tool-retirement, skill-retirement, workflow-retirement, not-retirement}; writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "observation_text",
+        "type": "string",
+        "required": true,
+        "description": "The observation text describing project activity to classify."
+      }
+    ]
+  },
+  "classify_session_routing_trigger": {
+    "surface": "measure",
+    "action": "classify_session_routing_trigger",
+    "purpose": "Dispatches the session-routing rubric via Qwen; label ∈ {context-handoff, execute-document, retirement-dispatch, chain-execution, tool-suggest, no-trigger}; writes a benchmark_results row; returns {label, latency_ms, model_name}.",
+    "params": [
+      {
+        "name": "user_input",
+        "type": "string",
+        "required": true,
+        "description": "The user input text to classify for session-routing intent."
+      }
+    ]
+  },
+  "gate_run": {
+    "surface": "measure",
+    "action": "gate_run",
+    "purpose": "Run corpos-gate over a repo (loads its gate.yml, runs the reused internal/gate core for the tier) and return the aggregated verdict: overall_ok + per-check results + parsed coverage/mutation. The verdict is IDENTICAL to `corpos-gate run --tier=\u003ctier\u003e` on the same repo/commit (same core, not a fork). Persists the run as EVENT-SOURCED trend data (a GateRunCompleted event → proj_gate_runs + proj_gate_check_results) so coverage/mutation/verdict become a time series per project, read back via gate_trend. Persistence is ADDITIVE + DB-optional: if no DB is available or no project is supplied, the verdict is still returned with persisted=false and a note (a gate run must work with storage unavailable, e.g. in CI).",
+    "params": [
+      {
+        "name": "repo_dir",
+        "type": "string",
+        "required": true,
+        "description": "Absolute (or CWD-relative) path to the repo root — the directory holding gate.yml. The gate runs against this tree."
+      },
+      {
+        "name": "tier",
+        "type": "optional_string",
+        "required": false,
+        "description": "Gate tier to run: 'pre-commit', 'pre-push', or 'ci' (tiers are a superset: ci ⊃ pre-push ⊃ pre-commit). Defaults to 'pre-push' when omitted."
+      },
+      {
+        "name": "project",
+        "type": "optional_string",
+        "required": false,
+        "description": "Project the trend row is recorded under. Falls back to the dispatch envelope's project. When empty (and none in the envelope), the verdict is still returned but the trend row is skipped (persisted=false)."
+      },
+      {
+        "name": "commit_sha",
+        "type": "optional_string",
+        "required": false,
+        "description": "The commit SHA the gate ran against, stored verbatim on the trend row so it can be joined back to a revision. Empty for a dirty / uncommitted working-tree run."
+      }
+    ],
+    "examples": [
+      {
+        "description": "Run the pre-push gate over a repo and record the trend row",
+        "call": "{\"action\":\"gate_run\",\"project\":\"corpos-toolkit\",\"params\":{\"repo_dir\":\"/home/user/dev/corpos-toolkit\",\"tier\":\"pre-push\",\"commit_sha\":\"95eeca1\"}}"
+      }
+    ],
+    "returns": {
+      "shape": "GateRunResult",
+      "description": "Always carries the verdict: overall_ok, tier, per-check checks[] (name/tier/ok/skipped/duration_ms/note), coverage_pct, branch_pct, mutation_score (-1 = N/A), duration_ms. persisted reports whether a trend row was written; persist_note explains a skip/failure. error is set only on a param error or a gate-core infra failure (missing gate.yml, a check that could not run) — a check that merely FAILS is a verdict (overall_ok=false), not an error."
+    }
+  },
+  "gate_trend": {
+    "surface": "measure",
+    "action": "gate_trend",
+    "purpose": "Read the corpos-gate trend for a project from proj_gate_runs — the coverage / mutation / verdict time series recorded by gate_run, most-recent runs first (ran_at DESC). Each point carries ran_at, commit_sha, tier, overall_ok, coverage_pct, and mutation_score.",
+    "params": [
+      {
+        "name": "project",
+        "type": "string",
+        "required": true,
+        "description": "Project whose gate trend to read. Falls back to the dispatch envelope's project."
+      },
+      {
+        "name": "metric",
+        "type": "optional_string",
+        "required": false,
+        "description": "Optional filter: 'coverage' returns only runs with a coverage metric, 'mutation' only runs with a mutation score, 'verdict' the full series (default when omitted). Any other value is a param error."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "required": false,
+        "description": "Cap the number of runs returned (most recent first). No limit when omitted or \u003c= 0."
+      }
+    ],
+    "examples": [
+      {
+        "description": "Read the last 20 gate runs for a project",
+        "call": "{\"action\":\"gate_trend\",\"project\":\"corpos-toolkit\",\"params\":{\"limit\":20}}"
+      },
+      {
+        "description": "Read only runs that carry a coverage metric",
+        "call": "{\"action\":\"gate_trend\",\"project\":\"corpos-toolkit\",\"params\":{\"metric\":\"coverage\"}}"
+      }
+    ],
+    "returns": {
+      "shape": "GateTrendResult",
+      "description": "Carries project, metric (echo), and points[] — each {ran_at, commit_sha, tier, overall_ok, coverage_pct, mutation_score} ordered most-recent first. On param error: error names the missing/invalid param."
+    }
+  },
+  "study_run_record": {
+    "surface": "measure",
+    "action": "study_run_record",
+    "purpose": "Persist one corpos-lab behavioral-assay study run (parent provenance record + N child score-grid rows). Emits a StudyRunRecorded event whose fold writes proj_study_runs + proj_study_run_scores; on commit publishes an artifact_created SSE event so the dashboard refreshes live. Stores hashes/pointers only — responses_dir is a filesystem path, materials_hashes are SHA-256 digests; raw responses stay on disk. project comes from the dispatch envelope, NOT params.",
+    "params": [
+      {
+        "name": "name",
+        "type": "string",
+        "required": true,
+        "description": "Human-facing run name (e.g. 'casg-direct-v3-smoke')."
+      },
+      {
+        "name": "assay",
+        "type": "string",
+        "required": true,
+        "description": "The behavioral assay exercised (e.g. 'grounded-glyph-probe'). Primary dashboard filter."
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "required": true,
+        "description": "Terminal status — 'completed' or 'failed'. Any other value is rejected with a structured param error."
+      },
+      {
+        "name": "run_at",
+        "type": "string",
+        "required": true,
+        "description": "RFC 3339 (UTC) timestamp of the run. Stored verbatim; the observe surface orders by run_at DESC."
+      },
+      {
+        "name": "rows",
+        "type": "object[]",
+        "required": false,
+        "description": "Score grid — one entry per condition×run cell. Each carries item, condition, run (index), rationale, and a verdict: EITHER flat (verdict_kind/verdict_reason) OR nested ({verdict:{kind,reason}}) — the handler flattens the nested form."
+      },
+      {
+        "name": "run_id",
+        "type": "optional_string",
+        "required": false,
+        "description": "Stable run id (entity slug + parent primary key). Auto-generated (UUIDv4) when omitted."
+      },
+      {
+        "name": "item_id",
+        "type": "optional_string",
+        "required": false,
+        "description": "Study item / scenario id (e.g. 'casg-direct')."
+      },
+      {
+        "name": "image",
+        "type": "optional_string",
+        "required": false,
+        "description": "Container image reference the run executed under."
+      },
+      {
+        "name": "image_digest",
+        "type": "optional_string",
+        "required": false,
+        "description": "Immutable image digest (sha256:...) pinning the image bytes."
+      },
+      {
+        "name": "error",
+        "type": "optional_string",
+        "required": false,
+        "description": "Failure detail; set when status='failed'."
+      },
+      {
+        "name": "study_digest",
+        "type": "optional_string",
+        "required": false,
+        "description": "SHA-256 (hex) digest of study.json."
+      },
+      {
+        "name": "materials_hashes",
+        "type": "object",
+        "required": false,
+        "description": "Map of material filename → SHA-256 hex digest. Small hashes, NOT blobs."
+      },
+      {
+        "name": "model_id",
+        "type": "optional_string",
+        "required": false,
+        "description": "Model identifier the run used (e.g. 'Qwen2.5-32B-Instruct-Q4_K_M.gguf')."
+      },
+      {
+        "name": "model_version",
+        "type": "optional_string",
+        "required": false,
+        "description": "Model version / quantization tag (e.g. 'q4km')."
+      },
+      {
+        "name": "responses_dir",
+        "type": "optional_string",
+        "required": false,
+        "description": "On-disk POINTER to the raw responses directory. Path only — blobs never enter the ledger."
+      }
+    ],
+    "examples": [
+      {
+        "description": "Persist a completed smoke run with a two-cell score grid",
+        "call": "{\"action\":\"study_run_record\",\"project\":\"corpos-lab\",\"params\":{\"name\":\"casg-direct-v3-smoke\",\"assay\":\"grounded-glyph-probe\",\"item_id\":\"casg-direct\",\"status\":\"completed\",\"run_at\":\"2026-07-09T00:33:10Z\",\"model_id\":\"Qwen2.5-32B-Instruct-Q4_K_M.gguf\",\"model_version\":\"q4km\",\"responses_dir\":\"/abs/path/out/responses\",\"rows\":[{\"item\":\"casg-direct\",\"condition\":\"baseline\",\"run\":1,\"verdict_kind\":\"fail\",\"verdict_reason\":\"\",\"rationale\":\"…\"},{\"item\":\"casg-direct\",\"condition\":\"glyph_only\",\"run\":1,\"verdict_kind\":\"pass\",\"verdict_reason\":\"\",\"rationale\":\"…\"}]}}"
+      }
+    ],
+    "returns": {
+      "shape": "StudyRunRecordResult",
+      "description": "On success: {run_id, status}. On param error: {error} naming the missing/invalid params."
+    }
+  }
+}

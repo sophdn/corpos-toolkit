@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskRetired.json",
+  "title": "TaskRetired payload",
+  "description": "Emitted when a task is removed entirely from the projection (not transitioned to a status like 'cancelled' / 'closed' — the row is gone). Used by the synthetic-event backfill in migration 062 to retire the 6 phantom task slugs (flip-write-contract-*) that the pre-8f2cb87 buggy forge-task-delete path removed from CRUD without emitting a retirement event. Future use cases: any code path that legitimately removes a task from existence (rare; the substrate generally prefers status transitions). The fold DELETEs the projection row and any task_blockers edges it participates in.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "reason": {
+      "type": ["string", "null"],
+      "description": "Why the task was retired. Free text — typically references the historical cause (e.g. 'pre-8f2cb87 forge-task-delete buggy path; retired retroactively in migration 062'). Optional."
+    }
+  }
+}

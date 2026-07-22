@@ -1,0 +1,18 @@
+surface = "sys"
+action = "ports"
+purpose = "List listening TCP and bound UDP sockets (ss-equivalent), with the owning pid/process when visible. Read-only and ungated."
+notes = "Backed by `ss -tulnpH`. The owning pid/process comes from ss's users:((...)) column, present only for the caller's own sockets without root. The address column is split on its last ':' so IPv6 and scoped addresses parse. See go/internal/sys/testdata/INTROSPECTION_CONTRACT.md."
+
+[[params]]
+  name = "proto"
+  type = "optional_string"
+  required = false
+  description = "Restrict to a protocol: tcp or udp."
+
+[[errors]]
+  condition = "the ss tool is not installed"
+  message = "sys.ports: ss not found on PATH"
+
+[returns]
+  shape = "PortsResult"
+  description = "ports (rows of {proto, state, local_addr, local_port, pid, process}) and count."

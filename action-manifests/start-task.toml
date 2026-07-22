@@ -1,0 +1,32 @@
+# Canonical Go action: work.task_start (see go/internal/actiondocs/corpus/work/task_start.toml).
+# This kebab-case manifest is the agent-facing skill discovery shape — natural-
+# language triggers map here, then dispatch the canonical action.
+
+[skill]
+name = "start-task"
+version = "1.0.0"
+description = "Transition a task from pending to active when picking it up — record the moment work begins so the DB row reflects work-in-progress and an interrupted session is discoverable later."
+spectrum = "lifecycle"
+
+[trigger]
+keywords = [
+    "start the task",
+    "pick up the task",
+    "pick up this task",
+    "begin work on",
+    "starting on",
+    "task pickup",
+    "activate task",
+    "mark task active",
+    "i'm working on",
+    "start_task",
+]
+when_not = [
+    "reading task content for review only — use read_task instead",
+    "closing or completing a task — use complete_task instead",
+    "task is already active or closed — start_task only accepts pending state",
+    "moving a task between chains — use move_task instead",
+]
+
+[instructions]
+path = "action-manifests/instructions/start-task.md"

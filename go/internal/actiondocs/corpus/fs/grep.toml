@@ -1,0 +1,106 @@
+surface = "fs"
+action = "grep"
+purpose = "Search file contents with a regular expression (ripgrep). The owned, substrate-native replacement for the harness Grep tool; the default output is faithful to it. Paths are reported relative to the search root."
+notes = "CONTRACT (see go/internal/fs/testdata/parity/GREP_GLOB_CONTRACT.md): ripgrep-backed, hidden-aware, version-control metadata dirs excluded, lines clamped to 500 columns. files_with_matches is sorted newest-first by modification time. In content mode the filename is always emitted (path:line:text) so a single-file search stays addressable. head_limit/offset page the result set; applied_limit is reported only when truncation occurred. Harness carve-outs (plugin-cache exclusions, permission-context ignore patterns, the test-only sort hook) are dropped."
+
+[[params]]
+  name = "pattern"
+  type = "string"
+  required = true
+  description = "The regular expression to search for. A pattern beginning with '-' is passed explicitly so it is not parsed as a flag."
+
+[[params]]
+  name = "path"
+  type = "optional_string"
+  required = false
+  description = "File or directory to search; defaults to the working directory. The search root — results are relative to it."
+
+[[params]]
+  name = "glob"
+  type = "optional_string"
+  required = false
+  description = "Glob filter on filenames (e.g. \"*.go\", \"*.{ts,tsx}\"); whitespace/comma-separated, brace groups preserved."
+
+[[params]]
+  name = "type"
+  type = "optional_string"
+  required = false
+  description = "ripgrep file type to restrict the search (e.g. go, py, rust, js)."
+
+[[params]]
+  name = "output_mode"
+  type = "optional_string"
+  required = false
+  description = "content (matching lines, supports context + line numbers), files_with_matches (paths, the default), or count (per-file match counts)."
+
+[[params]]
+  name = "context_before"
+  type = "integer"
+  required = false
+  description = "Lines of context before each match (content mode only)."
+
+[[params]]
+  name = "context_after"
+  type = "integer"
+  required = false
+  description = "Lines of context after each match (content mode only)."
+
+[[params]]
+  name = "context"
+  type = "integer"
+  required = false
+  description = "Lines of context before AND after each match (content mode only); takes precedence over context_before/context_after."
+
+[[params]]
+  name = "show_line_numbers"
+  type = "bool"
+  required = false
+  description = "Show line numbers (content mode only); default true."
+
+[[params]]
+  name = "case_insensitive"
+  type = "bool"
+  required = false
+  description = "Case-insensitive search; default false."
+
+[[params]]
+  name = "head_limit"
+  type = "integer"
+  required = false
+  description = "Cap output to the first N entries (lines/files/counts); default 250. Pass 0 for unlimited."
+
+[[params]]
+  name = "offset"
+  type = "integer"
+  required = false
+  description = "Skip the first N entries before applying head_limit; default 0."
+
+[[params]]
+  name = "multiline"
+  type = "bool"
+  required = false
+  description = "Patterns may span lines and '.' matches newlines; default false."
+
+[[param_aliases]]
+  from = "file_path"
+  to = "path"
+
+[[errors]]
+  condition = "pattern missing or empty"
+  message = "fs.grep requires pattern"
+
+[[errors]]
+  condition = "output_mode is not content/files_with_matches/count"
+  message = "fs.grep: invalid output_mode <mode> (want content|files_with_matches|count)"
+
+[[errors]]
+  condition = "the search path does not exist"
+  message = "fs.grep: path does not exist: <path>"
+
+[[errors]]
+  condition = "ripgrep is not installed"
+  message = "fs.grep: ripgrep (rg) not found on PATH"
+
+[returns]
+  shape = "GrepResult"
+  description = "mode, num_files, filenames (files_with_matches), content (content/count text), num_lines (content), num_matches (count total), and applied_limit/applied_offset paging markers (set only when they took effect)."

@@ -1,0 +1,13 @@
+surface = "ecosystem"
+action = "list"
+purpose = "Enumerate the learned ecosystem: all hosts (with service counts) and services."
+
+[[params]]
+  name = "include_retired"
+  type = "bool"
+  required = false
+  description = "Include retired hosts and retired services (default false → live only)."
+
+[returns]
+  shape = "ListResult"
+  description = "hosts, services, and a total count."

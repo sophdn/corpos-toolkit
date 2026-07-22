@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/RoadmapUpdated.json",
+  "title": "RoadmapUpdated payload",
+  "description": "Emitted by every roadmap-mutating action handler (roadmap_set, roadmap_insert, roadmap_update, roadmap_mark_reassessed) after the mutation lands. The arcreview substrate listener (chain arc-close-filing-review-substrate-listener-wiring T4) subscribes to this type — every emission triggers a session-scoped review fire for the project's most-recently-active session, debouncer-coalesced so multi-step roadmap edits in one turn yield one review. roadmap_preview_set is a dry-run and does NOT emit. The schema reflects only the action shape; the affected roadmap state is queryable via roadmap_list at the row's commit time + the row's caused_by_event_id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action_kind"],
+  "properties": {
+    "action_kind": {
+      "type": "string",
+      "enum": ["set", "insert", "update", "mark_reassessed"],
+      "description": "Which roadmap-mutating action emitted this event. The substrate listener treats all kinds identically (any roadmap change is a trigger); downstream telemetry projections can distinguish bulk replacement (set) from single-row mutations (insert / update) when computing edit-cadence metrics. Cascade-removal on chain close / task close goes through the ChainClosed / TaskCompleted / TaskCancelled events (the projection fold reacts), not a RoadmapUpdated emit."
+    },
+    "positions": {
+      "type": ["array", "null"],
+      "items": {"type": "integer"},
+      "description": "Affected positions. For 'set', the full list of positions after replacement; for 'insert' / 'update', the single position. 'mark_reassessed' has no positions and omits the field."
+    },
+    "ref_kind": {
+      "type": ["string", "null"],
+      "description": "ref_kind of the affected row when action_kind is 'insert' or 'update'. NULL for 'set' (multiple rows changed) and 'mark_reassessed'."
+    },
+    "ref_slug": {
+      "type": ["string", "null"],
+      "description": "ref_slug of the affected row when action_kind is 'insert' or 'update'. NULL for 'set' and 'mark_reassessed'."
+    },
+    "item_count": {
+      "type": ["integer", "null"],
+      "description": "For 'set': how many items the new roadmap contains. For other actions: null."
+    },
+    "items": {
+      "type": ["array", "null"],
+      "description": "T5-roadmap additive bump (2026-05-21): per-position layout for 'set' / 'insert' / 'update' / 'delete' so the projection fold can reconstruct proj_roadmap_view from the event payload alone. NULL for 'mark_reassessed'.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["position", "ref_kind", "ref_slug"],
+        "properties": {
+          "position": {"type": "integer"},
+          "ref_kind": {"type": "string", "enum": ["chain", "task"]},
+          "ref_slug": {"type": "string"},
+          "chain_slug": {"type": ["string", "null"]},
+          "note": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

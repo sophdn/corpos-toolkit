@@ -1,0 +1,43 @@
+surface = "measure"
+action = "bench_run"
+purpose = "Execute a registered bench harness subprocess and diff its output against the stored baseline. Reads the row from bench_harnesses (forged via forge(bench)), runs the binary with the recorded flag_set (plus any override_flags), parses stdout per parse_output_as (v1: json only), compares against baseline_json_path, prints + persists a per-metric diff as a BenchmarkDiff event. With update_baseline=true, overwrites the baseline file BEFORE diffing so the diff is zero by construction; a BenchmarkBaselineUpdated event records the explicit baseline shift."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "The bench's kebab/snake-case slug as registered in bench_harnesses (e.g. 'parse-context'). Must exist in the project_id scope — reject otherwise."
+
+[[params]]
+  name = "update_baseline"
+  type = "bool"
+  required = false
+  description = "Default false (compare-against-existing-baseline path). True overwrites baseline_json_path with the observed values BEFORE computing the diff; the resulting BenchmarkDiff has zero deltas by construction, and a sibling BenchmarkBaselineUpdated event records the baseline shift with previous + new SHA-256 for round-trip audit."
+
+[[params]]
+  name = "override_flags"
+  type = "object[]"
+  required = false
+  description = "List of {flag, value} entries that override or augment the registered flag_set for this single run. Matching flag names replace the registered value (preserving order); new flag names append. Used for one-off probes (e.g. --session-id <other>) without re-forging the bench. NOT persisted — only affects this invocation."
+
+[[examples]]
+  description = "Standard run — compare against the stored baseline, emit BenchmarkDiff"
+  call = "{\"action\":\"bench_run\",\"project\":\"mcp-servers\",\"rationale\":\"post-T6 sanity bench against parse-context baseline\",\"params\":{\"slug\":\"parse-context\"}}"
+
+[[examples]]
+  description = "Refresh the baseline (e.g. after a fixed regression where the baseline is the new ground truth)"
+  call = "{\"action\":\"bench_run\",\"project\":\"mcp-servers\",\"rationale\":\"refresh parse-context baseline after bug 866 fix\",\"params\":{\"slug\":\"parse-context\",\"update_baseline\":true}}"
+
+[[examples]]
+  description = "Override the session-id flag for a one-off cache-disabled probe"
+  call = "{\"action\":\"bench_run\",\"project\":\"mcp-servers\",\"rationale\":\"probe cache-disabled latency vs cache-warm baseline\",\"params\":{\"slug\":\"parse-context\",\"override_flags\":[{\"flag\":\"--session-id\",\"value\":\"\"}]}}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). bench_run is mutating (writes events; with update_baseline=true also overwrites a file on disk). Rationale should explain why this run is happening — perf-touch validation, baseline refresh after a known-fixed regression, post-deploy sanity."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "BenchRunResult"
+  description = "Carries ok + slug + metrics[] + markdown_table + run_latency_ms + baseline_updated + stderr_log_path + baseline_path + bench_event_id. On error: error names the failure mode (subprocess timeout, non-zero exit, parse failure, baseline_not_found); metrics may be empty if the parse stage didn't reach the diff. The markdown_table field is the human-readable per-metric diff suitable for the operator's view + future reports."

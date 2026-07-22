@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ArcCloseFilingReviewed.json",
+  "title": "ArcCloseFilingReviewed payload",
+  "description": "Emitted on every successful fire of the work.review_arc_for_filing action. Captures the inputs (triggers, snapshot dimensions), outputs (parsed decisions, partition counts), and runtime characteristics (latency, token counts) so the row becomes the training corpus for the eventual trained-classifier swap per docs/ARC_CLOSE_FILING_REVIEW.md §Telemetry. Lean shape: each FilingDecision summarized to {action, confidence, reasoning} — the full payload (problem_statement bodies, vault note content) is NOT stamped here to keep the events table size bounded; the caller's forge dispatch carries the full payload through the normal BugReported/TaskCreated/etc. emit path.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "triggers",
+    "snapshot_truncated",
+    "snapshot_token_count",
+    "snapshot_message_count",
+    "decisions",
+    "auto_execute_count",
+    "surface_for_confirm_count",
+    "skip_count",
+    "latency_ms"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Caller-provided session identifier. The same slug the debouncer keyed off; lets future projections join per-session fire history."
+    },
+    "triggers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ordered list of trigger slugs that contributed to this fire (e.g. counter_user_turns_5, user_shape_done, event_chain_closed). For harness-side fires the slugs come from hooks/arc-close-detector.sh; substrate-side fires use event_<type_snake> form. The array is required but may be empty for ad-hoc reviews."
+    },
+    "snapshot_truncated": {
+      "type": "boolean",
+      "description": "True when the transcript was longer than the configured turn/token budget and earlier turns were dropped. Distinct signal from a low snapshot_token_count — a truncated short snapshot indicates either a tight budget or an oversize final turn."
+    },
+    "snapshot_token_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Estimated tokens in the snapshot the review ran against (char/4 heuristic; see go/internal/arcreview/snapshot.go::estimateTokens). Approximate within ~10-20% of the real Qwen tokenizer count; the budget exists to prevent context-window overflow, not for precise accounting."
+    },
+    "snapshot_message_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of {role, content} pairs in the snapshot after truncation. Useful for analyzing the relationship between snapshot size and decision quality once the corpus accumulates."
+    },
+    "arc_summary": {
+      "type": ["string", "null"],
+      "description": "Qwen's arc-summary pre-call output (one paragraph). Null when the pre-call failed and the main review ran with the snapshot-only fallback."
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "confidence", "reasoning"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["forge_bug", "forge_vault_note", "skill_update", "memory_write", "nothing_to_file"]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reasoning": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Validated FilingDecision summaries from the review. Out-of-schema decisions are dropped at parse time and do NOT appear here; the count of dropped decisions surfaces only in the dispatcher log (not yet a structured signal on this event)."
+    },
+    "auto_execute_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions in the AutoExecute partition (forge_bug / forge_vault_note / memory_write at confidence >= 0.85). Sum of three partition counts equals len(decisions)."
+    },
+    "surface_for_confirm_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions in the SurfaceForConfirm partition (skill_update at any confidence, or other actions at confidence in [0.50, 0.85))."
+    },
+    "skip_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions in the Skip partition (low-confidence decisions and all nothing_to_file decisions)."
+    },
+    "latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock total latency across both Qwen calls (arc-summary pre-call + main review). Tracking lets the eventual classifier promotion gate compare against Qwen baseline latency."
+    },
+    "input_tokens": {
+      "type": ["integer", "null"],
+      "description": "Sum of input tokens across both Qwen calls when llama-server returned usage info; null when the binding omitted it (older builds / certain streaming responses)."
+    },
+    "output_tokens": {
+      "type": ["integer", "null"],
+      "description": "Sum of output tokens across both Qwen calls when llama-server returned usage info; null when omitted."
+    },
+    "f4_rejected_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions rejected by F4's CheckBoilerplate content-validation pass (chain arc-close-filing-review-dedupe-and-noise-reduction). Rejected decisions DO NOT appear in `decisions[]` — they were filtered before partitioning. Surfaces the filter's live catch rate against the historical 45% corpus baseline."
+    },
+    "f4_rejected_reasons": {
+      "type": ["object", "null"],
+      "additionalProperties": { "type": "integer", "minimum": 1 },
+      "description": "Per-reason histogram of F4 rejections in this fire. Keys are BoilerplateRejectionReason values (e.g. vault_note_test_restatement, bug_operator_error_marker). Absent / null when f4_rejected_count is 0. Lets F5's retrospective distinguish which rules trip most often in live use vs the F1 corpus replay."
+    },
+    "f2_deduped_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions in `decisions[]` whose proposed payload matched an existing artifact (bug/suggestion/vault) per F2's Jaccard threshold. These decisions stay in the array but acquire a deduped_against marker (not surfaced in this lean event); partitionDecisions demotes them one bucket from auto_execute / surface_for_confirm."
+    },
+    "f3_same_session_deduped_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions in `decisions[]` whose payload matches a prior arc-close fire in the same session_id within the retention window per F3's Jaccard threshold. Demoted one bucket the same way F2 matches are."
+    },
+    "staged_for_authoring_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of in-scope body-heavy decisions (forge_vault_note / memory_write) in the auto-execute band that were STAGED for the in-session agent to author rather than auto-forged with Qwen's draft body (chain arc-close-decision-authoring-split T4). The 'staged' state of the author-vs-fallback instrument; pairs with the ArcCloseAuthoringResolved events that record how each staged decision resolved (authored vs unreviewed-fallback)."
+    },
+    "enrich_existing_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of decisions downgraded to enrich-existing by T6's same-session dedup guard — the agent already filed a matching artifact this session, so the decision surfaces as 'enrich the existing one' rather than staging a duplicate."
+    }
+  }
+}

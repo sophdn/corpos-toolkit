@@ -1,0 +1,7 @@
+surface = "work"
+action = "_general"
+purpose = "Surface-wide conventions for the work meta-tool. Read actions are cross-project by default; write actions on project-scoped schemas REQUIRE a top-level 'project' parameter. Chain identifiers accept 'slug', 'chain', or 'chain_slug'."
+
+notes = """
+All four SHA-accepting actions (bug_resolve, bug_stamp_sha, task_complete, task_stamp_sha) accept commit_sha='unversioned' for fixes whose artifacts live outside any git repo. forge and forge_edit REQUIRE schema_name at the top level of params — omitting schema_name is the most common first-call mistake.
+"""

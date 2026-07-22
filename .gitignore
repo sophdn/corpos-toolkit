@@ -1,0 +1,22 @@
+/target/
+*.db
+*.db-shm
+*.db-wal
+/data/
+test-results/
+tools/installed/
+
+# Vite/TS build cache — regenerated per build, not source.
+*.tsbuildinfo
+
+# TT1.5 spike output — regenerable via scripts/spike_label_coverage.py
+/tt15_spike/
+
+# Agent-local session state + parallel worktrees (.claude/worktrees/) —
+# ephemeral, never tracked. Force-add a specific file if one ever needs
+# versioning: git add -f .claude/<path>.
+/.claude/
+
+# One-off rollback backups of the MCP binding (e.g. .mcp.json.pre-t7-flip,
+# created by the T7 proxy cutover); the pre-flip content lives in git history.
+/.mcp.json.*

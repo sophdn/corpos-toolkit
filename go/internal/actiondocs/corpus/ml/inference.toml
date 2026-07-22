@@ -1,0 +1,58 @@
+surface = "ml"
+action = "inference"
+purpose = "Run inference against a trained_model. Accepts either model_id (specific version) or task (resolves the currently-promoted row). Writes a model_predictions telemetry row keyed by span_id + features_hash."
+notes = "MODEL RESOLUTION: model_id wins when both are supplied. The status='promoted' filter is the only loadable lookup through `task`; `evaluating` / `ab_testing` rows reach the serving layer only via model_id.\n\nTELEMETRY: every successful inference writes one model_predictions row, content-keyed by features_hash (SHA-256 of canonical-serialized features) and spanned via span_id from the agent-first-substrate envelope.\n\nDEGRADED MODE: when ML_MODELS_ROOT isn't configured or libonnxruntime.so isn't loadable (scripts/setup-ml-deps.sh not run on this box), inference returns a typed error envelope rather than panicking.\n\nSURFACE BOUNDARY: ml inference happens here; trained_model lifecycle (forge / list / promote / retire) lives on the work surface (work.trained_model_*)."
+
+[[params]]
+  name = "model_id"
+  type = "integer"
+  required = false
+  description = "trained_models.id — serve this exact version (useful for the A/B harness when comparing exact versions). Wins when both model_id and task are supplied."
+
+[[params]]
+  name = "task"
+  type = "optional_string"
+  required = false
+  description = "Task identifier (kebab-case); resolves to the trained_models row where status='promoted'. Resolution is project-scoped, so a task lookup requires project at the dispatch envelope."
+
+[[params]]
+  name = "features_data"
+  type = "object[]"
+  required = true
+  description = "Flattened input tensor ([]float32), row-major. len(features_data) must equal the product of features_shape."
+
+[[params]]
+  name = "features_shape"
+  type = "object[]"
+  required = true
+  description = "Tensor shape ([]int64) declaring the dims of features_data."
+
+[[params]]
+  name = "grounding_event_id"
+  type = "integer"
+  required = false
+  description = "grounding_events.id when this inference resolves a search-triggered call (cross-encoder reranker, source router); populates model_predictions.grounding_event_id for downstream join-against-clicks projections."
+
+[[errors]]
+  condition = "neither model_id nor task supplied"
+  message = "ml.inference requires either model_id or task"
+
+[[errors]]
+  condition = "task supplied without project at the dispatch envelope"
+  message = "ml.inference requires project when resolving by task; pass project at the dispatch envelope"
+
+[[errors]]
+  condition = "no promoted row for the task, or no row with the supplied model_id"
+  message = "ml: trained model not found (ErrModelNotFound)"
+
+[[errors]]
+  condition = "the resolved row is in a gated lifecycle state (training / retired)"
+  message = "ml: trained model is in a gated lifecycle state (training/retired) (ErrModelGated)"
+
+[[errors]]
+  condition = "features_data length does not equal the product of features_shape (or either is empty, or a dim is non-positive)"
+  message = "ml: input features don't match expected shape (ErrInputShape)"
+
+[returns]
+  shape = "InferenceResult"
+  description = "On success: prediction.output ([]float32) + prediction.output_shape ([]int64); prediction.latency_ms; prediction.model_id (the trained_model.id served); prediction.feat_hash (SHA-256 of canonical-serialized features); span_id (the agent-first-substrate span the model_predictions row was written under); prediction_row_id (model_predictions.id). Caller-controlled errors return as a JSON envelope (error + hint), not a Go error."

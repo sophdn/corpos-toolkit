@@ -1,0 +1,9 @@
+surface = "measure"
+action = "_general"
+purpose = "Benchmark recording/query/replay plus the Qwen-local rubric-classify family. Pass 'project' to scope."
+
+notes = """
+The classify_* family shares a result shape: every classifier returns {label, latency_ms, model_name}. Each call also writes a row to benchmark_results (queryable via benchmark_query) so call provenance is captured for later analysis and replay. benchmark_replay re-executes a prior run from its captured provenance bundle (T6) and returns identical/diff against the original.
+
+ENVELOPE-LEVEL REQUIREMENT — rationale gate (bug 1436). benchmark_replay requires a top-level `rationale` field when called by an agent actor — sits next to `action`, `params`, `project` on the dispatch envelope, NOT inside `params`. The dispatcher rejects empty / whitespace / boilerplate / <6-char rationales with `error: "rationale_required"`. The rationale should explain WHY the replay is being run (debugging non-determinism, validating a model swap, post-incident reproduction). benchmark_record and the classify_* family do NOT require rationale — their provenance payload carries the why.
+"""

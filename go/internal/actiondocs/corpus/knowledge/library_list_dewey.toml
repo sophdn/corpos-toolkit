@@ -1,0 +1,3 @@
+surface = "knowledge"
+action = "library_list_dewey"
+purpose = "Enumerate library entries grouped by Dewey code — the structural classification view of the project's catalogue."

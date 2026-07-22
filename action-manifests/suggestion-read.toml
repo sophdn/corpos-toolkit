@@ -1,0 +1,25 @@
+[skill]
+name = "suggestion-read"
+version = "1.0.0"
+description = "Return the full body of a single suggestion (title, problem_statement, surface, priority, AC, constraints, current status + resolution fields). Identify by slug or numeric id."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "read suggestion",
+    "show suggestion",
+    "open suggestion",
+    "suggestion detail",
+    "full suggestion",
+    "suggestion body",
+    "suggestion_read",
+]
+when_not = [
+    "scanning a set of suggestions — use suggestion_list",
+    "resolving the suggestion — use suggestion_resolve",
+    "reopening a resolved suggestion — use suggestion_reopen",
+    "reading a bug — use bug_read (separate entity, separate surface)",
+]
+
+[instructions]
+path = "action-manifests/instructions/suggestion-read.md"

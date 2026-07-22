@@ -1,0 +1,4 @@
+surface = "admin"
+action = "apply_recipe"
+purpose = "Apply a setup-recipe to a host (deferred stub in the current Go server). Callers receive a structured deferred-stub envelope identifying the action rather than a real execution."
+notes = "Deferred stub: the full port lands when a concrete need (host re-setup) drives it. Until then, calls return the deferred envelope unchanged."

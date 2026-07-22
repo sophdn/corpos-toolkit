@@ -1,0 +1,30 @@
+supported_ops = ["create", "update"]
+
+[schema]
+name = "beta"
+prefix = "BETA"
+output_dir = "process-docs/beta"
+filename_pattern = "{prefix}_{slug}_{date}.md"
+
+[storage]
+target = "db"
+table = "betas"
+key_columns = ["chain_slug", "slug"]
+scope_param = "chain_slug"
+
+[[fields]]
+name = "chain_slug"
+type = "string"
+description = "Parent chain slug."
+foreign_key = { shape = "chain", column = "slug" }
+
+[[fields]]
+name = "status"
+type = "optional_string"
+description = "Beta status."
+enum_values = ["open", "closed"]
+
+[[fields]]
+name = "body"
+type = "string"
+description = "Body."

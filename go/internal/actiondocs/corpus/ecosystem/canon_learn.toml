@@ -1,0 +1,79 @@
+surface = "ecosystem"
+action = "canon_learn"
+purpose = "Learn (upsert) a canonical artifact entry + its retired-alias set. Idempotent; rationale-gated. This is how the canonical-names map is populated as data."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Stable canonical id, e.g. 'corpos-toolkit', 'toolkit-db', 'toolkit-port'."
+
+[[params]]
+  name = "kind"
+  type = "string"
+  required = true
+  description = "repo | path | project | db | port | service | other."
+
+[[params]]
+  name = "canonical"
+  type = "string"
+  required = true
+  description = "The canonical value, e.g. 'sophdn/corpos-toolkit', '~/.local/share/toolkit/data/toolkit.db', '3001'."
+
+[[params]]
+  name = "status"
+  type = "optional_string"
+  required = false
+  description = "current | retired (default current)."
+
+[[params]]
+  name = "replacement"
+  type = "optional_string"
+  required = false
+  description = "For a retired entry: the current canonical form/slug that supersedes it."
+
+[[params]]
+  name = "gitea_owner"
+  type = "optional_string"
+  required = false
+  description = "For repo/service: 'sophdn' | 'shared' (the org-owner facet)."
+
+[[params]]
+  name = "local_path"
+  type = "optional_string"
+  required = false
+  description = "For repo: '~/dev/corpos-toolkit'."
+
+[[params]]
+  name = "port"
+  type = "integer"
+  required = false
+  description = "For port/service: the numeric port."
+
+[[params]]
+  name = "aliases"
+  type = "list"
+  required = false
+  description = "Retired/alternate tokens that resolve to this entry, e.g. ['mcp-servers','sophdn/toolkit','~/dev/mcp-servers']. Replaces the entry's alias set."
+
+[[params]]
+  name = "notes"
+  type = "optional_string"
+  required = false
+  description = "Freeform notes."
+
+[[params]]
+  name = "soft_ref"
+  type = "optional_string"
+  required = false
+  description = "Pointer to the vault retirement/history note."
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "LearnResult"
+  description = "ok + kind='canon_entry' + slug."

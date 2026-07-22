@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/BugStamped.json",
+  "title": "BugStamped payload",
+  "description": "Emitted when a bug's commit_sha is set via bug_stamp_sha. Distinct from BugResolved(kind=\"fixed\", commit_sha=...) because bug_stamp_sha is a separate action used when a fix lands AFTER a bug was resolved (e.g., resolve at decision time with the resolution note, stamp later when the commit lands). Distinct from BugEdited(updated_fields=[\"commit_sha\"]) so readers can filter for SHA stamps without parsing field-name arrays — bug_stamp_sha is its own MCP action and gets its own event type.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commit_sha"],
+  "properties": {
+    "commit_sha": {
+      "type": "string",
+      "description": "The commit that lands the fix, or the literal sentinel 'unversioned' for fixes whose artifacts live outside any git repo (user-level scripts, vault docs) per mcp__toolkit-server__work convention."
+    }
+  }
+}

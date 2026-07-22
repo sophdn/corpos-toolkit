@@ -1,0 +1,25 @@
+surface = "work"
+action = "recent_activity"
+purpose = "Resume briefing — answers \"where did we leave off?\". Reads the append-only events ledger as a time-ordered timeline (cross-project by default; pass `project` to scope), plus an in_flight section (currently-active tasks) and a recent_closures section (chains closed / tasks completed). Cross-status by construction, so closed chains and landed commits are visible — unlike chain_status, which lists only open chains and cannot answer recency."
+notes = "Read-only — no rationale required. Scope is CROSS-PROJECT by default; pass a top-level `project` to scope to one project.\n\nThis is the durable fix for the open-only chain_status recency gap: chain_status (no slug) returns only OPEN chains, so its newest entry is not the newest activity — closed chains and CommitLanded events are absent. recent_activity reads the events ledger directly (migration 032), so every lifecycle event is in scope.\n\nSections: `in_flight` = active tasks + their chains (what's mid-stream now); `recent_closures` = ChainClosed / TaskCompleted / TaskCancelled in the window; `timeline` = the raw recent events, newest first, each with a one-line summary derived from the event type + payload + rationale."
+
+[[params]]
+  name = "since"
+  type = "optional_string"
+  required = false
+  description = "ISO-8601 lower bound on event ts. Overrides `days`. Compared lexically against the ledger's RFC-3339 timestamps."
+
+[[params]]
+  name = "days"
+  type = "integer"
+  required = false
+  description = "Convenience window: events from the last N days. Ignored when `since` is set. Defaults to 7."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Caps the timeline and recent_closures sections (each). Default 30."
+
+[[examples]]
+  call = "{\"days\":2}"

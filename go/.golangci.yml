@@ -1,0 +1,132 @@
+# golangci-lint configuration — chain go-typed-returns-rollout T5.
+#
+# The rule we care about is forbidigo's `\bany\b` ban. The chain's design
+# decisions document the policy:
+#
+#   - `any` boundary concentrated in internal/db (SQL driver variadic) and
+#     internal/dispatch (MCP protocol's params/Handler/Adapt).
+#   - Generic-constraint `[T any]` is the right way to name the JSON-
+#     encoding stdlib boundary for the two small marshaling helpers
+#     (observehttp.writeJSON, testutil.JSON).
+#   - Test files are exempt — `map[string]any` literals are fine in test
+#     fixtures.
+#   - No //nolint:forbidigo comments anywhere. If a use can't fit under
+#     one of the four exemption shapes above, the structural fix is
+#     wrong; don't reach for the escape hatch.
+#
+# Run: `golangci-lint run ./...` from go/.
+# Path: gates Rust+Go via scripts/precommit.sh (chain T6).
+
+run:
+  timeout: 5m
+  build-tags:
+    - sqlite_fts5
+
+linters:
+  disable-all: true
+  enable:
+    - forbidigo
+
+linters-settings:
+  forbidigo:
+    forbid:
+      - p: '^any$'
+        msg: "Bare `any` is restricted to the concentrated stdlib boundaries (internal/db, internal/dispatch) and to generic-constraint helpers. See vault reference/2026-05-15_go-mcp-dispatch-typed-returns-pattern.md for the canonical pattern. NEVER use //nolint:forbidigo to suppress this; find the structural fix instead."
+      - p: '^interface\{\}$'
+        msg: "Use `any` (the same type, but the canonical spelling) — or define a concrete interface."
+    analyze-types: false
+    exclude-godoc-examples: false
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    # internal/db — SQL driver stdlib boundary. database/sql's variadic
+    # arg lists and Scan(...any) are unavoidable; Args/Scanner concentrate
+    # them with named, doc-commented types per the chain design.
+    - path: 'internal/db/'
+      linters: [forbidigo]
+
+    # internal/dispatch — MCP protocol structural boundary. Args.Params
+    # carries any client-shaped JSON object; Handler returns any because
+    # it's the JSON-marshal seam; Adapt helpers widen typed handlers
+    # back to any there exactly once each. Same shape as internal/db.
+    - path: 'internal/dispatch/'
+      linters: [forbidigo]
+
+    # internal/events — jsonschema-go validator structural boundary. The
+    # library's Resolved.Validate(any) signature consumes a dynamic-typed
+    # JSON value (per its docs: "a Go value that looks like the result
+    # of unmarshaling a JSON value into an any"). It rejects typed Go
+    # structs at runtime — see google/jsonschema-go issue #23. The
+    # marshal-roundtrip in validator.go is therefore unavoidable, and
+    # the intermediate `any` is the concentrated boundary.
+    #
+    # The PUBLIC API of internal/events is fully typed: every event-type
+    # payload is its own Go struct (payloads.go), Emit takes a typed
+    # Payload interface, the envelope struct is statically typed. Callers
+    # outside the package never touch `any`. Same architectural shape as
+    # internal/db (database/sql.Scan boundary) and internal/dispatch
+    # (MCP Handler boundary) — see the chain agent-first-substrate T2.
+    - path: 'internal/events/'
+      linters: [forbidigo]
+
+    # internal/obs — log/slog + fmt structural boundary. slog.Logger's
+    # Info/Warn/Error and fmt.Sprintf both take `args ...any` variadic
+    # tails; obs.Fatalf mirrors that variadic shape so the migration
+    # from log.Fatalf is a mechanical rename for handler authors. The
+    # PUBLIC API of internal/obs is otherwise fully typed (Span, SpanEvent,
+    # SpanSink are concrete structs/interfaces); callers outside the
+    # package go through Logger(ctx).Info(...) or SpanStart(ctx, name)
+    # without writing `any` themselves. Same architectural shape as
+    # internal/events — see chain agent-first-substrate T5.
+    - path: 'internal/obs/'
+      linters: [forbidigo]
+
+    # observehttp.writeJSON[T any] — JSON-encoding stdlib boundary, named
+    # with a generic constraint per the typed-returns pattern. The file
+    # is small (~55 LOC); a path-level exemption is fine. Reassess if
+    # observehttp/router.go grows other responsibilities.
+    - path: 'internal/observehttp/router\.go'
+      linters: [forbidigo]
+
+    # testutil.JSON[T any] — generic test helper that wraps json.Marshal.
+    # Mock servers also take map[string]json.RawMessage; the generic
+    # constraint is the only any-shaped surface left here.
+    - path: 'internal/testutil/testutil\.go'
+      linters: [forbidigo]
+
+    # mcpresult.MarshalOkOrError[T any] / MarshalOkOrErrorList[T any] —
+    # generic-constraint helpers for the JSON-marshal stdlib boundary,
+    # same pattern as observehttp.writeJSON. Centralises the
+    # success-or-error MarshalJSON shape used across the work package's
+    # result types. Wire format pinned by wireshape_test.go.
+    - path: 'internal/mcpresult/'
+      linters: [forbidigo]
+
+    # cmd/toolkit-server — mcp-go-sdk seam. mcp.AddTool's callback
+    # signature returns (*mcp.CallToolResult, any, error); the middle
+    # `any` is the SDK's "structured content" slot that our handlers
+    # always pass nil for (the body is in CallToolResult.Content). We
+    # can't change the SDK signature; this file is the wiring layer
+    # where the SDK boundary meets our dispatch table.
+    - path: 'cmd/toolkit-server/main\.go'
+      linters: [forbidigo]
+
+    # cmd/toolkit-proxy — the stdio→HTTP proxy (chain auto-startup-dev-
+    # services T7). Same mcp-go-sdk seam as cmd/toolkit-server above:
+    # mcp.AddTool's callback returns (*mcp.CallToolResult, any, error)
+    # and forward() carries that same SDK signature through. The middle
+    # `any` is the SDK's structured-content slot we always pass nil for.
+    - path: 'cmd/toolkit-proxy/main\.go'
+      linters: [forbidigo]
+
+    # Test files are exempt across the board — test fixtures legitimately
+    # use map[string]any for arbitrary mock JSON shapes; the production
+    # code consuming them goes through json.RawMessage at the seam.
+    - path: '_test\.go$'
+      linters: [forbidigo]
+
+    # Embedded migration SQL files reference `interface{}` in their
+    # generated Go binding output — but we don't have those here. Kept
+    # as a placeholder for future regen tooling.

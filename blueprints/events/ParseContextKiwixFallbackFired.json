@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ParseContextKiwixFallbackFired.json",
+  "title": "ParseContextKiwixFallbackFired payload",
+  "description": "Emitted by the parse_context handler on every call that evaluated the low-confidence kiwix fallback gate (chain parse-context-lean-orienting T8). Fires on BOTH the fire and the suppress branches so T10's measurement has a fire-rate denominator and a suppress-mix breakdown — the suppress mix tells T10 whether the gate is too loose / too tight. The no-evaluation case (handler skipped the gate entirely, e.g. no intent detector ran) does NOT emit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent_shape", "fired", "suppressed_reason", "candidates_returned", "kiwix_search_latency_ms"],
+  "properties": {
+    "intent_shape": {
+      "type": "string",
+      "enum": ["verify", "implement", "fix", "audit", "explain", "summarize", "status", "list", "none"],
+      "description": "The directive intent on the envelope when the gate evaluated. Read-shape intents (status/list/summarize) appear here paired with suppressed_reason=read_shape_intent."
+    },
+    "fired": {
+      "type": "boolean",
+      "description": "True iff the gate produced at least one ResolvedReference. When false, suppressed_reason names which branch suppressed."
+    },
+    "suppressed_reason": {
+      "type": "string",
+      "enum": ["", "single_exact_present", "read_shape_intent", "kiwix_bridge_already_fired", "no_qualifying_no_hits"],
+      "description": "Empty when fired=true. Otherwise names the gate branch that suppressed: single_exact_present (envelope already has a confident hit), read_shape_intent (intent ∈ {status,list,summarize}), kiwix_bridge_already_fired (anti-amplification — kiwix_bridge resolver already produced candidates), no_qualifying_no_hits (no external_technical / domain_term no-hit refs to orient against)."
+    },
+    "candidates_returned": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2,
+      "description": "Number of fallback ResolvedReferences appended to the envelope. Hard-capped at 2 per the noise-budget rule."
+    },
+    "kiwix_search_latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock cost of the kiwix_search call when the gate fired. Zero on every suppressed branch (no kiwix call made)."
+    }
+  }
+}

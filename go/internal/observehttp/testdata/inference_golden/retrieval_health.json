@@ -1,0 +1,65 @@
+[
+  {
+    "action": "kiwix_search",
+    "by_kind": [
+      {
+        "click_kind": "followed",
+        "count": 10,
+        "rate": 0.3333333333333333,
+        "weight": 1
+      }
+    ],
+    "grounding_count": 30,
+    "interaction_count": 10,
+    "warming_up": false,
+    "weighted_score": 0.3333333333333333
+  },
+  {
+    "action": "vault_search",
+    "by_kind": [
+      {
+        "click_kind": "followed",
+        "count": 8,
+        "rate": 0.4,
+        "weight": 1
+      },
+      {
+        "click_kind": "cited",
+        "count": 1,
+        "rate": 0.05,
+        "weight": 0.8
+      },
+      {
+        "click_kind": "mentioned",
+        "count": 3,
+        "rate": 0.15,
+        "weight": 0.4
+      },
+      {
+        "click_kind": "resolved-from",
+        "count": 2,
+        "rate": 0.1,
+        "weight": 1
+      }
+    ],
+    "grounding_count": 20,
+    "interaction_count": 14,
+    "warming_up": false,
+    "weighted_score": 0.6
+  },
+  {
+    "action": "knowledge_search",
+    "by_kind": [
+      {
+        "click_kind": "cited",
+        "count": 4,
+        "rate": 0.3333333333333333,
+        "weight": 0.8
+      }
+    ],
+    "grounding_count": 12,
+    "interaction_count": 4,
+    "warming_up": false,
+    "weighted_score": 0.26666666666666666
+  }
+]

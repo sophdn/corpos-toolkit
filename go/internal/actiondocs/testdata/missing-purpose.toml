@@ -1,0 +1,3 @@
+surface = "work"
+action = "missing-purpose"
+# purpose intentionally omitted to exercise the required-field rejection path

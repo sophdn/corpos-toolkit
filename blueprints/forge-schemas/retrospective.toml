@@ -1,0 +1,118 @@
+# Retrospective schema — chain-closing self-reflection doc.
+#
+# Captures the template the predecessor chains' close docs followed
+# (docs/REFERENCE_RESOLUTION_MIGRATION_RETROSPECTIVE_2026-05-18.md,
+# docs/PARSE_CONTEXT_LEAN_ORIENTING_RETROSPECTIVE_2026-05-23.md) so
+# the next chain that closes doesn't re-read the template + hand-stamp
+# the date. Authoring discipline: each section is the chain author's
+# verbatim markdown, written for a reader who wants the chain's full
+# context-load without re-reading every per-task handoff.
+#
+# Section bodies are markdown VERBATIM — no template expansion or
+# variable substitution; the schema's job is the file-path discipline
+# (chain-slug-upper + date stamp) + the frontmatter shape + the
+# section skeleton, NOT content generation. T4 acceptance criteria.
+#
+# Sister schema: report-card.toml (post-chain third-party grading).
+# Same file-path discipline (docs/<UPPER>_<KIND>_<DATE>.md) but
+# distinct section skeleton and distinct event type — the chain
+# author's self-reflection vs the fresh sub-agent's external grade
+# are different artifacts at different points in the chain lifecycle,
+# kept as distinct schemas per chain decision 3.
+
+supported_ops = ["create", "update"]
+
+[schema]
+name = "retrospective"
+prefix = ""
+output_dir = "docs"
+filename_pattern = "{chain_slug_upper}_RETROSPECTIVE_{date}.md"
+
+[storage]
+target = "markdown"
+prefix = ""
+output_dir = "docs"
+filename_pattern = "{chain_slug_upper}_RETROSPECTIVE_{date}.md"
+
+[[fields]]
+name = "chain_slug"
+type = "string"
+description = "The chain this retrospective closes. Required — the file path encodes the chain via the kebab→SCREAMING_SNAKE_CASE transform on this slug. Rejected with chain_not_found if the slug doesn't resolve to a chain in the project's chains table."
+render_as = "frontmatter"
+
+[[fields]]
+name = "title"
+type = "optional_string"
+description = "Display title for the H1. Defaults to '<chain_slug> — Retrospective' when omitted. Most retros take the default; supply a custom title only when the chain-name alone undersells the artifact."
+
+[[fields]]
+name = "what_landed"
+type = "optional_string"
+description = "Section: what shipped during the chain. The forward record — per-task deliverables, key commit anchors, dashboards live, gates flipped. Predecessor shape: short prose + a per-task table when 4+ tasks. Verbatim markdown."
+
+[[fields]]
+name = "token_budget_delta"
+type = "optional_string"
+description = "Section: before/after token measurement against this chain's baseline. Usually a table comparing pre-chain vs post-chain envelope sizes / call counts / latency on a representative session corpus. The numbers are estimates unless the chain shipped wire-level token telemetry; calibration caveats live here."
+
+[[fields]]
+name = "what_didnt_land"
+type = "optional_string"
+description = "Section: scope the chain cut. Tasks that closed cancelled, deferred work explicitly scoped out, follow-on chains that absorbed the descope. Distinct from Surprises (which is post-hoc realizations) — this is in-chain scope-management."
+
+[[fields]]
+name = "surprises"
+type = "optional_string"
+description = "Section: post-hoc realizations the chain author wants to flag. Anti-patterns surfaced, design decisions revisited mid-chain, bugs that turned out to be features (or vice versa). The retrospective's confession booth — be candid here so the next chain's author has the full context."
+
+[[fields]]
+name = "next_chain_candidates"
+type = "optional_string"
+description = "Section: follow-on chains the work surfaced. Each as a one-line candidate slug + one-sentence pitch. Successor chains pick from this list; if nothing surfaced, write '(none)' rather than omitting so future readers see the chain author explicitly considered the question. CAPTURE GATE: at forge time, any candidate LINE that references no existing tracked artifact (chain/bug/suggestion slug) is auto-filed as a suggestion ('<chain>-uncaptured-next-chain-candidates') so out-of-budget follow-ons aren't lost — reference the slug you forged it as to keep a line out of that suggestion."
+
+[[fields]]
+name = "closing_event"
+type = "optional_string"
+description = "Section: the closing event identifier this chain emitted (typically the audit-completed event id from blueprints/events/). Anchors the chain's substrate-side closure to the events ledger so readers can re-traverse the chain's full event chain from one starting event_id."
+
+[[fields]]
+name = "acceptance_criteria_status"
+type = "optional_string"
+description = "Section: per-criterion status against the chain's completion_condition field. Walk each lettered criterion (a, b, c, …) marking PASS / PARTIAL / DEFERRED with a one-line evidence anchor (commit SHA, doc path, test name). Reader can audit chain closure without re-reading each per-task handoff."
+
+[[fields]]
+name = "additional_sections"
+type = "optional_string"
+description = "Catch-all verbatim markdown appended after the skeleton sections. For custom section headings the skeleton doesn't predict (e.g. 'Cumulative-latency assertion: BREACHED' from the parse-context retro, 'Surface fire-rate from natural traffic' for chains that ship telemetry). Write your own ## Heading + body here; no schema enforcement."
+
+[[sections]]
+heading = "What landed"
+fields = ["what_landed"]
+
+[[sections]]
+heading = "Token-budget delta"
+fields = ["token_budget_delta"]
+
+[[sections]]
+heading = "What didn't land"
+fields = ["what_didnt_land"]
+
+[[sections]]
+heading = "Surprises"
+fields = ["surprises"]
+
+[[sections]]
+heading = "Next chain candidates"
+fields = ["next_chain_candidates"]
+
+[[sections]]
+heading = "Closing event"
+fields = ["closing_event"]
+
+[[sections]]
+heading = "Acceptance criteria status"
+fields = ["acceptance_criteria_status"]
+
+[[sections]]
+heading = "Additional sections"
+fields = ["additional_sections"]

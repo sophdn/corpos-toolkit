@@ -1,0 +1,9 @@
+surface = "measure"
+action = "classify_session_routing_trigger"
+purpose = "Dispatches the session-routing rubric via Qwen; label ∈ {context-handoff, execute-document, retirement-dispatch, chain-execution, tool-suggest, no-trigger}; writes a benchmark_results row; returns {label, latency_ms, model_name}."
+
+[[params]]
+  name = "user_input"
+  type = "string"
+  required = true
+  description = "The user input text to classify for session-routing intent."

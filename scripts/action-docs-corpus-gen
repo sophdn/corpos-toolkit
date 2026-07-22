@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# scripts/action-docs-corpus-gen — regenerate go/internal/actiondocs/corpus/work/*.toml
+# from the canonical work.actionSpecs catalog (chain single-source-action-describe).
+#
+# Thin wrapper around go/cmd/action-docs-corpus-gen. Go is the single source
+# of truth for the work surface's action docs; the on-disk TOML corpus is a
+# generated artifact, NOT hand-authored. Editing a work chunk by hand is a
+# mistake — change work.actionSpecs (go/internal/work/actions_discovery.go)
+# and rerun this. Only the work surface is generated; knowledge / measure /
+# admin chunks and work/_general.toml stay hand-authored.
+#
+# Usage:
+#   scripts/action-docs-corpus-gen           # regenerate the work corpus
+#   scripts/action-docs-corpus-gen --check   # exit 1 if any chunk drifts
+#   scripts/action-docs-corpus-gen --stdout <action>   # print one chunk (debug)
+
+set -euo pipefail
+# Pre-commit hooks run with GIT_DIR / GIT_INDEX_FILE pre-set by git; under
+# those vars `git rev-parse --show-toplevel` collapses to cwd rather than
+# the worktree root, which then derails the downstream `cd $REPO_ROOT/go`.
+# Unset the inherited git-context vars so the rev-parse below behaves the
+# same in hook and standalone invocations. The Go binary's internal
+# repoRoot() call gets the same treatment via env passthrough.
+unset GIT_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_WORK_TREE GIT_PREFIX
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT/go"
+exec go run -tags sqlite_fts5 ./cmd/action-docs-corpus-gen "$@"

@@ -1,0 +1,12 @@
+# Quadlet volume unit — the containerized toolkit-server's OWN DB volume.
+#
+# DB strategy (c): the container gets its own volume; the native :3000 daemon
+# stays the canonical sole-writer of data/toolkit.db until the containerized
+# surface is validated and flipped. This volume is therefore SEPARATE from the
+# live host ledger — no cross-mount-namespace SQLite WAL hazard (the CRUX).
+# Fresh on first start; the binary auto-migrates an empty DB on Open.
+[Unit]
+Description=toolkit-server container DB volume (own copy; DB strategy c)
+
+[Volume]
+VolumeName=tks-data

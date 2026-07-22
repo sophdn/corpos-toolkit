@@ -1,0 +1,66 @@
+surface = "ecosystem"
+action = "host_learn"
+purpose = "Learn (upsert) a host into the shared-infra host registry, plus its alternate addresses. The inline ssh_user/ssh_key_path ARE the host's SSH access method. Idempotent; rationale-gated."
+notes = "Reuses the `hosts` table (migration 003). Ships empty; nothing is hardcoded — this is how a tenant's ecosystem is populated as data."
+
+[[params]]
+  name = "slug"
+  type = "string"
+  required = true
+  description = "Stable host identifier, e.g. 'example-host'."
+
+[[params]]
+  name = "addr"
+  type = "string"
+  required = true
+  description = "Canonical address (IP or hostname)."
+
+[[params]]
+  name = "ssh_user"
+  type = "optional_string"
+  required = false
+  description = "SSH principal (the login user — NOT necessarily the local box user)."
+
+[[params]]
+  name = "ssh_port"
+  type = "integer"
+  required = false
+  description = "SSH port (default 22)."
+
+[[params]]
+  name = "ssh_key_path"
+  type = "optional_string"
+  required = false
+  description = "POINTER to the SSH key, e.g. '~/.ssh/id_ed25519' — never an inline key."
+
+[[params]]
+  name = "passwordless_sudo"
+  type = "bool"
+  required = false
+  description = "Whether the host grants passwordless sudo."
+
+[[params]]
+  name = "notes"
+  type = "optional_string"
+  required = false
+  description = "Freeform notes."
+
+[[params]]
+  name = "addresses"
+  type = "object[]"
+  required = false
+  description = "Alternate reachable addresses: [{kind: tailnet|lan|magicdns|hostname|other, value, preferred, notes}]. Replaces the host's address set."
+
+[[errors]]
+  condition = "ssh_key_path looks like an inline secret"
+  message = "ssh_key_path looks like an inline secret; store a POINTER instead"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]
+
+[returns]
+  shape = "LearnResult"
+  description = "ok + kind='host' + slug."

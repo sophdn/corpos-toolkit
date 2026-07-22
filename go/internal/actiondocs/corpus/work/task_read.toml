@@ -1,0 +1,25 @@
+surface = "work"
+action = "task_read"
+purpose = "Return a task's full content. Identify by `id` (preferred — globally unique) OR `slug` + `chain_slug`."
+notes = "task_read accepts {slug} or {id} (bug 1329 parity)."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Task id. Preferred when known — slug alone is not globally unique."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Task slug. Pair with chain_slug to disambiguate."
+
+[[params]]
+  name = "chain_slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug. Required when identifying by slug."
+
+[[examples]]
+  call = "{\"slug\":\"design-telemetry-substrate\",\"chain_slug\":\"query-telemetry-substrate\"}"

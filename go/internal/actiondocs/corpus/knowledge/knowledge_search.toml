@@ -1,0 +1,15 @@
+surface = "knowledge"
+action = "knowledge_search"
+purpose = "Unified FTS5+Qwen retrieval over all indexed knowledge sources (vault, kiwix, tasks, chains, library, bugs); returns ranked hits with id, source_type, source_ref, question, invoke_when, quality_score. Reach for this when picking up an unfamiliar problem area BEFORE web search or guessing — the index points to the most likely existing answer across every surface this server knows about."
+
+[[params]]
+  name = "query"
+  type = "string"
+  required = true
+  description = "Free-text search query."
+
+[[params]]
+  name = "top_k"
+  type = "integer"
+  required = false
+  description = "Number of top results to return. Defaults to 5."

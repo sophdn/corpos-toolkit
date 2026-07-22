@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/ParseContextDisciplineSurfaced.json",
+  "title": "ParseContextDisciplineSurfaced payload",
+  "description": "Emitted by the parse_context handler on every call that ran the intent → discipline surfacing pass (chain parse-context-lean-orienting T7). T10's measurement consumes the event for fire-rate, dedup-rate, opt-out-rate, and recent-fire-suppression-rate dashboards. The four arrays partition the would-fire discipline set across the four observable outcomes so T10 can validate the noise-budget rule under live traffic.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intent_shape"],
+  "properties": {
+    "intent_shape": {
+      "type": "string",
+      "enum": ["verify", "implement", "fix", "audit", "explain", "summarize", "status", "list", "none"],
+      "description": "The directive intent that drove this pass. Always one of the discipline-firing set today (verify/implement/fix/audit); explain/summarize/status/list/none never appear here because the resolver short-circuits on those shapes per T7's docs-shape constraint. Kept as the full vocabulary so future expansion doesn't need a schema bump."
+    },
+    "disciplines_surfaced": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Discipline names that surfaced as ResolvedReferences in this envelope. Capped at 2 per envelope per T7's noise-budget rule."
+    },
+    "disciplines_suppressed_by_dedup": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Discipline names that would have surfaced via intent-mapping but were already in the envelope via keyword-triggered surfacing. Keyword wins; intent-map defers."
+    },
+    "disciplines_suppressed_by_optout": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Discipline names suppressed because the message matched the opt-out pattern (\"don't worry about disciplines\", \"skip the linters\", etc.)."
+    },
+    "disciplines_suppressed_by_recent_fire": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Discipline names suppressed because the (session, intent, discipline) tuple fired within the last 5 minutes. Prevents repeat-firing under back-to-back work on the same intent shape."
+    }
+  }
+}

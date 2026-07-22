@@ -1,0 +1,20 @@
+surface = "sys"
+action = "ps"
+purpose = "Enumerate live processes by reading /proc directly (no ps dependency). Read-only and ungated."
+notes = "Self-defined (the harness has no process tool). /proc/<pid>/stat is parsed by splitting comm at the last ')'; rss_kb = rss_pages * pagesize/1024. command is the full cmdline (space-joined), or [comm] for kernel threads. See go/internal/sys/testdata/INTROSPECTION_CONTRACT.md."
+
+[[params]]
+  name = "contains"
+  type = "optional_string"
+  required = false
+  description = "Only include processes whose command contains this substring."
+
+[[params]]
+  name = "limit"
+  type = "integer"
+  required = false
+  description = "Cap the number of rows returned (0 = all). Rows are ordered by pid."
+
+[returns]
+  shape = "PSResult"
+  description = "processes (rows of {pid, ppid, state, command, rss_kb}) and count."

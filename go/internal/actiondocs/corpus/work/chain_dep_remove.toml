@@ -1,0 +1,24 @@
+surface = "work"
+action = "chain_dep_remove"
+purpose = "Remove a chain-level dependency edge (dependent → prerequisite). Use to break a cycle roadmap_plan reports, or when a prerequisite no longer gates the dependent."
+
+[[params]]
+  name = "dependent_chain"
+  type = "string"
+  required = true
+  description = "Dependent chain slug. Alias: dependent."
+
+[[params]]
+  name = "prerequisite_chain"
+  type = "string"
+  required = true
+  description = "Prerequisite chain slug. Aliases: prerequisite, depends_on."
+
+[[examples]]
+  call = "{\"dependent_chain\":\"http-api\",\"prerequisite_chain\":\"typed-core\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

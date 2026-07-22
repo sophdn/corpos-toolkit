@@ -1,0 +1,7 @@
+surface = "work"
+action = "roadmap_plan"
+purpose = "Computed roadmap — open chains in dependency topological order, derived from chain_deps edges (cross-project by default; pass `project` to scope). Each entry is tagged ready (no open prerequisites — actionable now) or blocked, and carries its depends_on (the gating prerequisite edges + reasons): the 'why this order' the manual roadmap never had. Self-maintaining — closing a prerequisite promotes its dependents to ready on the next call. Read-only."
+notes = "Order is recomputed on every call from the edge graph, so it never needs manual position-setting. Among chains that are simultaneously ready, the tiebreak is manual roadmap position (roadmap_set/insert) ascending, then created_at, then slug — so a manual position still nudges priority without owning the whole order.\n\nA dependency cycle is reported, not hung: the response carries `error` plus a `cycle` list naming the chains in the cycle, and `order` holds the chains that could be placed before the cycle. Break the cycle with chain_dep_remove.\n\nOnly edges between two open chains gate ordering; a closed prerequisite is treated as satisfied and dropped."
+
+[[examples]]
+  call = "{}"

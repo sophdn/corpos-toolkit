@@ -1,0 +1,15 @@
+surface = "knowledge"
+action = "kiwix_search"
+purpose = "Query the local Kiwix instance for matching pages in a chosen ZIM archive — 371 GB of offline DevDocs (Rust, Python, JS/TS, Postgres, Redis, SQLite, Node, MDN, etc.), the Rust Book, StackExchange snapshots, and Wikipedia. Reach for this BEFORE web search or guessing a function signature: authoritative, offline, faster."
+
+[[params]]
+  name = "zim_id"
+  type = "string"
+  required = true
+  description = "The versioned ZIM identifier (e.g. devdocs_en_rust_2026-04). Call kiwix_list_books to enumerate available ZIMs when you don't know which to query."
+
+[[params]]
+  name = "pattern"
+  type = "string"
+  required = true
+  description = "Search pattern."

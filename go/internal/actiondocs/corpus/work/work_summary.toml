@@ -1,0 +1,18 @@
+surface = "work"
+action = "work_summary"
+purpose = "One-call open-work portfolio rollup: open_bugs, open_chains, non-terminal task counts (pending/active/blocked), and open_suggestions. Cross-project by default; pass `project` to scope, or `by_project:true` for a per-project breakdown alongside the totals. Read-only — collapses the four separate list verbs into a single resume-briefing read."
+
+[[params]]
+  name = "project"
+  type = "optional_string"
+  required = false
+  description = "Optional project to scope the rollup to. Omit for cross-project totals."
+
+[[params]]
+  name = "by_project"
+  type = "bool"
+  required = false
+  description = "When true, adds a `projects` array with the same counts grouped per project, alongside the top-level totals."
+
+[[examples]]
+  call = "{\"by_project\":true}"

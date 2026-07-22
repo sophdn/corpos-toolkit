@@ -1,0 +1,30 @@
+[skill]
+name = "forge-delete"
+version = "1.0.0"
+description = "Hard-delete an existing artifact: markdown file, DB row, or both. Refuses task / chain — use cancel_task / close_chain for those lifecycle transitions."
+spectrum = "contextual"
+
+[trigger]
+keywords = [
+    "forge_delete",
+    "delete artifact",
+    "remove artifact",
+    "delete pitch",
+    "delete role",
+    "delete skill",
+    "remove pitch",
+    "hard delete artifact",
+    "drop a row",
+    "remove the file",
+]
+when_not = [
+    "cancelling a task — use cancel_task",
+    "closing a chain — use close_chain",
+    "editing — use forge_edit",
+    "creating — use forge",
+    "listing — use forge_list",
+    "resolving a bug — use bug_resolve",
+]
+
+[instructions]
+path = "action-manifests/instructions/forge-delete.md"

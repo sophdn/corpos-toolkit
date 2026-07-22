@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/TaskStamped.json",
+  "title": "TaskStamped payload",
+  "description": "Emitted when a task's commit_sha is set via task_stamp_sha. Distinct from TaskCompleted(commit_sha=...) because task_stamp_sha is a separate action used when the commit lands AFTER task_complete (e.g., the task closes on a note and the commit follows on a follow-up edit). Distinct from TaskEdited(updated_fields=[\"commit_sha\"]) so readers can filter for SHA stamps without parsing field-name arrays — task_stamp_sha is its own MCP action and gets its own event type.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commit_sha"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "description": "Chain slug disambiguating which chain's task this event targets, so the fold scopes to one task rather than fanning out across same-slug tasks in the project (bug task-lifecycle-event-folds-fan-out-across-duplicate-task-slugs). Optional: pre-fix events omit it and the fold falls back to the legacy slug+project match."
+    },
+    "commit_sha": {
+      "type": "string",
+      "description": "The commit that landed the task's deliverable, or the literal sentinel 'unversioned' for tasks whose artifacts live outside any git repo (user-level scripts, vault docs) per mcp__toolkit-server__work convention."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+surface = "knowledge"
+action = "curation_promote"
+purpose = "Promote a pending candidate to a knowledge_pointer. Emits a CurationCandidatePromoted substrate event visible in AuditLedger. Optional overrides refine metadata at promotion time."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = true
+  description = "The candidate id."
+
+[[params]]
+  name = "override_question"
+  type = "optional_string"
+  required = false
+  description = "Override the candidate's question at promotion time."
+
+[[params]]
+  name = "override_invoke_when"
+  type = "optional_string"
+  required = false
+  description = "Override the candidate's invoke_when at promotion time."
+
+[[params]]
+  name = "override_description"
+  type = "optional_string"
+  required = false
+  description = "Override the candidate's description at promotion time."

@@ -1,0 +1,42 @@
+surface = "work"
+action = "chain_close"
+purpose = "Close a chain, optionally with a closure summary."
+
+[[params]]
+  name = "id"
+  type = "integer"
+  required = false
+  description = "Chain id (preferred — globally unique)."
+
+[[params]]
+  name = "slug"
+  type = "optional_string"
+  required = false
+  description = "Chain slug."
+
+[[params]]
+  name = "closure_summary"
+  type = "optional_string"
+  required = false
+  description = "Free-form closing note for the chain."
+
+[[param_aliases]]
+  from = "chain_id"
+  to = "id"
+
+[[param_aliases]]
+  from = "chain"
+  to = "slug"
+
+[[param_aliases]]
+  from = "chain_slug"
+  to = "slug"
+
+[[examples]]
+  call = "{\"slug\":\"agent-first-substrate\",\"closure_summary\":\"All 8 tasks closed; retrospective at docs/...\"}"
+
+[[envelope_requirements]]
+  field = "rationale"
+  required = true
+  reason = "Dispatcher policy gate (action-manifests/dispatch-policy.toml). Lives at the call envelope level (next to action/params/project), NOT inside params. Rejected on empty / whitespace / boilerplate / <6-char rationales with error=rationale_required."
+  applies_to_actor_kinds = ["agent"]

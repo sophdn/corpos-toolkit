@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-servers/blueprints/events/RetrospectiveForged.json",
+  "title": "RetrospectiveForged payload",
+  "description": "Emitted by forge(schema_name='retrospective', ...) on every successful create. The chain's substrate-side closure event lands an audit-completed type (architecture-audit, telemetry-audit, etc.); RetrospectiveForged is the *content* counterpart — it records that the chain author's prose retrospective doc landed on disk + indexed into knowledge_pointers. Consumers (the curate-discover binary, future trained chain-closure-completeness classifier) can join RetrospectiveForged + the chain's audit-completed event to find chains that closed audit-wise but never produced a retro for human readers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["chain_slug", "file_path", "section_count"],
+  "properties": {
+    "chain_slug": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The chain this retrospective closes. Matches the slug in proj_chain_status."
+    },
+    "chain_id": {
+      "type": ["integer", "null"],
+      "description": "Numeric chain id resolved from chain_slug at create time. Optional because legacy chains may not resolve; populated when the forge handler's chain lookup succeeded."
+    },
+    "file_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative path to the written retrospective doc (e.g. docs/PARSE_CONTEXT_LEAN_ORIENTING_RETROSPECTIVE_2026-05-23.md). The kebab→SCREAMING_SNAKE transform on chain_slug produces the file's base name."
+    },
+    "section_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of skeleton sections the caller populated with non-empty bodies. The schema has 7 skeleton sections + a catch-all (additional_sections); section_count counts only the skeleton sections that landed with content. 0 = fully-skeleton retro (placeholder doc); 7 = every skeleton section filled."
+    }
+  }
+}
